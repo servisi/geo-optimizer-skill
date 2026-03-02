@@ -24,6 +24,9 @@ LABEL org.opencontainers.image.title="GEO Optimizer Web API" \
 
 COPY --from=builder /install /usr/local
 
+# Certificati SSL per richieste HTTPS verso siti esterni
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # Utente non-root
 RUN useradd --create-home --shell /bin/bash geo
 USER geo
