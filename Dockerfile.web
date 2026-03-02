@@ -1,0 +1,41 @@
+# ─── GEO Optimizer Web — Docker image per Railway ──────────────────────────
+# Avvia il server FastAPI per servire l'API di audit
+#
+# Build:  docker build -f Dockerfile.web -t geo-optimizer-web .
+# Run:    docker run -p 8000:8000 geo-optimizer-web
+
+# ─── Stage 1: build ─────────────────────────────────────────────────────────
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+COPY pyproject.toml README.md ./
+COPY src/ src/
+
+# Installa con le dipendenze web (FastAPI + uvicorn)
+RUN pip install --no-cache-dir --prefix=/install ".[web]"
+
+# ─── Stage 2: runtime ───────────────────────────────────────────────────────
+FROM python:3.12-slim
+
+LABEL org.opencontainers.image.title="GEO Optimizer Web API" \
+      org.opencontainers.image.description="FastAPI audit service for GEO Score" \
+      org.opencontainers.image.source="https://github.com/auriti-labs/geo-optimizer-skill"
+
+COPY --from=builder /install /usr/local
+
+# Utente non-root
+RUN useradd --create-home --shell /bin/bash geo
+USER geo
+WORKDIR /home/geo
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+
+# Avvia il server FastAPI
+CMD ["uvicorn", "geo_optimizer.web.app:app", "--host", "0.0.0.0", "--port", "8000"]
