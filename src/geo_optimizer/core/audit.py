@@ -82,7 +82,8 @@ def audit_llms_txt(base_url: str) -> LlmsTxtResult:
         return result
 
     result.found = True
-    content = r.text
+    # Rimuovi BOM UTF-8 se presente (es. file generati da Yoast SEO)
+    content = r.text.lstrip("\ufeff")
     lines = content.splitlines()
     result.word_count = len(content.split())
 
@@ -484,7 +485,8 @@ def _audit_llms_from_response(r) -> LlmsTxtResult:
         return result
 
     result.found = True
-    content = r.text
+    # Rimuovi BOM UTF-8 se presente (es. file generati da Yoast SEO)
+    content = r.text.lstrip("\ufeff")
     lines = content.splitlines()
     result.word_count = len(content.split())
 
