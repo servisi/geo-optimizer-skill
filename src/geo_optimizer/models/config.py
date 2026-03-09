@@ -11,6 +11,13 @@ USER_AGENT = "GEO-Optimizer/2.0 (https://github.com/auriti-labs/geo-optimizer-sk
 
 HEADERS = {"User-Agent": USER_AGENT}
 
+# Limite dimensione risposta HTTP: 10 MB (previene DoS da risposte enormi) — fix #91
+MAX_RESPONSE_SIZE: int = 10 * 1024 * 1024
+
+# Numero massimo di sub-sitemap da processare in un sitemap index — fix #90
+MAX_SUB_SITEMAPS: int = 10
+
+
 # ─── AI bots that should be listed in robots.txt ─────────────────────────────
 
 AI_BOTS = {
@@ -102,6 +109,8 @@ SCHEMA_TEMPLATES = {
         "headline": "{{title}}",
         "description": "{{description}}",
         "url": "{{url}}",
+        # Campo image obbligatorio per Google Rich Results (#112)
+        "image": "{{image_url}}",
         "datePublished": "{{date_published}}",
         "dateModified": "{{date_modified}}",
         "author": {"@type": "Person", "name": "{{author}}"},
@@ -117,7 +126,8 @@ SCHEMA_TEMPLATES = {
         "name": "{{name}}",
         "url": "{{url}}",
         "description": "{{description}}",
-        "logo": "{{logo_url}}",
+        # logo deve essere ImageObject, non stringa URL (#113)
+        "logo": {"@type": "ImageObject", "url": "{{logo_url}}"},
         "sameAs": [],
     },
     "breadcrumb": {
@@ -131,20 +141,41 @@ SCHEMA_TEMPLATES = {
 
 CATEGORY_PATTERNS = [
     (r"/blog/", "Blog & Articles"),
-    (r"/article", "Articles"),
+    (r"/article/", "Articles"),
+    (r"/articles/", "Articles"),
     (r"/post/", "Posts"),
+    (r"/news/", "News"),
     (r"/finance/", "Finance Tools"),
     (r"/health/", "Health & Wellness"),
     (r"/math/", "Math"),
     (r"/calcul", "Calculators"),
-    (r"/tool", "Tools"),
+    (r"/tool/", "Tools"),
+    (r"/tools/", "Tools"),
     (r"/app/", "Applications"),
     (r"/docs?/", "Documentation"),
     (r"/guide/", "Guides"),
-    (r"/tutorial", "Tutorials"),
-    (r"/product", "Products"),
-    (r"/service", "Services"),
-    (r"/about", "About"),
+    (r"/tutorial/", "Tutorials"),
+    (r"/tutorials/", "Tutorials"),
+    # Pattern con slash per evitare falsi positivi (#117)
+    # /product → /production-process, /service → /service-terms
+    (r"/products/", "Products"),
+    (r"/product/", "Products"),
+    (r"/services/", "Services"),
+    (r"/service/", "Services"),
+    # Nuove categorie (#118)
+    (r"/faq/", "FAQ"),
+    (r"/faqs/", "FAQ"),
+    (r"/pricing/", "Pricing"),
+    (r"/price/", "Pricing"),
+    (r"/portfolio/", "Portfolio"),
+    (r"/case-stud", "Case Studies"),
+    (r"/support/", "Support"),
+    (r"/help/", "Support"),
+    (r"/team/", "Team"),
+    (r"/about-us(?:/|$)", "About"),
+    (r"/about(?:/|$)", "About"),
+    (r"/careers/", "Careers"),
+    (r"/jobs/", "Careers"),
     (r"/contact", "Contact"),
     (r"/privacy", "Privacy & Legal"),
     (r"/terms", "Terms"),
@@ -164,6 +195,12 @@ SKIP_PATTERNS = [
     r"/tag/",
     r"/category/\w+/page/",
     r"/page/\d+",
+    # Pattern skip aggiuntivi (#118)
+    r"/feed/",
+    r"/author/",
+    r"/amp/",
+    r"/api/",
+    r"/wp-json/",
 ]
 
 # llms.txt section ordering
@@ -181,8 +218,16 @@ SECTION_PRIORITY_ORDER = [
     "Blog & Articles",
     "Articles",
     "Posts",
+    "News",
     "Products",
     "Services",
+    "FAQ",
+    "Pricing",
+    "Portfolio",
+    "Case Studies",
+    "Support",
+    "Team",
+    "Careers",
     "About",
     "Contact",
     "Other",

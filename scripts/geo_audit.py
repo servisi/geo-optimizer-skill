@@ -629,10 +629,22 @@ Examples:
     global VERBOSE
     VERBOSE = args.verbose
 
-    # Normalize URL
+    # Normalizza URL: aggiunge schema se mancante
     base_url = args.url.rstrip("/")
     if not base_url.startswith(("http://", "https://")):
         base_url = "https://" + base_url
+
+    # Valida che l'URL abbia un hostname plausibile (almeno un punto nel TLD o localhost)
+    # Questo previene tentativi di connessione a URL malformati che causerebbero timeout.
+    parsed_check = urlparse(base_url)
+    hostname = parsed_check.hostname or ""
+    if not hostname or ("." not in hostname and hostname != "localhost"):
+        if args.format == "json":
+            error_data = {"error": f"URL non valido: '{args.url}'. Fornire un URL completo, es. https://example.com", "url": args.url}
+            print(json.dumps(error_data, indent=2))
+        else:
+            print(f"\n❌ ERRORE: URL non valido: '{args.url}'. Fornire un URL completo, es. https://example.com")
+        sys.exit(1)
 
     # Suppress verbose output in JSON mode
     json_mode = args.format == "json"

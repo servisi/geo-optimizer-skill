@@ -20,6 +20,7 @@ import os
 import tempfile
 from unittest.mock import MagicMock, Mock, patch
 
+import requests
 from bs4 import BeautifulSoup
 
 # ─── Core imports ────────────────────────────────────────────────────────────
@@ -256,6 +257,178 @@ class TestClassifyBot:
         rules = {"GPTBot": AgentRules(disallow=[""])}
         status = classify_bot("GPTBot", "OpenAI", rules)
         assert status.status == "allowed"
+
+
+class TestRobotsParserRFC9309:
+    """Test RFC 9309 compliance: BOM, 500KB limit, longest-match, partial (#106-#111)."""
+
+    # ── #108 — BOM UTF-8 ─────────────────────────────────────────────────────
+
+    def test_bom_strippato_all_inizio(self):
+        """BOM UTF-8 all'inizio del file non compromette il parsing."""
+        content = "\ufeffUser-agent: GPTBot\nDisallow: /\n"
+        result = parse_robots_txt(content)
+        assert "GPTBot" in result
+        assert "/" in result["GPTBot"].disallow
+
+    def test_bom_non_presente_non_altera_risultato(self):
+        """File senza BOM funziona normalmente."""
+        content = "User-agent: GPTBot\nAllow: /\n"
+        result = parse_robots_txt(content)
+        assert "GPTBot" in result
+        assert "/" in result["GPTBot"].allow
+
+    def test_bom_con_wildcard(self):
+        """BOM + wildcard User-agent viene parsato correttamente."""
+        content = "\ufeffUser-agent: *\nDisallow: /private/\n"
+        result = parse_robots_txt(content)
+        assert "*" in result
+        assert "/private/" in result["*"].disallow
+
+    # ── #110 — Limite 500KB ───────────────────────────────────────────────────
+
+    def test_limite_500kb_tronca_contenuto(self):
+        """Contenuto oltre 500KB viene troncato prima del parsing."""
+        # Genera contenuto > 500KB
+        header = "User-agent: GPTBot\nAllow: /\n\n"
+        padding = "# " + "x" * 1000 + "\n"
+        big_content = header + padding * 600  # ~600KB di commenti
+        result = parse_robots_txt(big_content)
+        # Il header è nei primi bytes, deve essere parsato
+        assert "GPTBot" in result
+
+    def test_limite_500kb_log_warning(self, caplog):
+        """Warning loggato quando il contenuto supera 500KB."""
+        import logging
+
+        padding = "# " + "x" * 1000 + "\n"
+        big_content = padding * 600  # ~600KB
+        with caplog.at_level(logging.WARNING, logger="geo_optimizer.utils.robots_parser"):
+            parse_robots_txt(big_content)
+        assert any("500" in record.message or "troncato" in record.message for record in caplog.records)
+
+    def test_contenuto_sotto_500kb_non_tronca(self):
+        """Contenuto sotto 500KB viene parsato integralmente."""
+        content = "User-agent: GPTBot\nDisallow: /private/\n"
+        result = parse_robots_txt(content)
+        assert "GPTBot" in result
+        assert "/private/" in result["GPTBot"].disallow
+
+    # ── #109 — Longest-match (RFC 9309 §2.2.2) ───────────────────────────────
+
+    def test_longest_match_allow_prevale_su_disallow_root(self):
+        """Allow: /public/ vince su Disallow: / per path /public/page (longest match)."""
+        rules = {"GPTBot": AgentRules(disallow=["/"], allow=["/public/"])}
+        status = classify_bot("GPTBot", "OpenAI", rules)
+        # /public/ (8 chars) > / (1 char): Allow prevale
+        assert status.status in ("allowed", "partial")
+
+    def test_longest_match_disallow_specifico_prevale(self):
+        """Disallow: /secret/ vince su Allow: / per path /secret/doc."""
+        from geo_optimizer.utils.robots_parser import _is_path_allowed
+
+        rules = AgentRules(disallow=["/secret/"], allow=["/"])
+        # /secret/ (8 chars) > / (1 char): Disallow prevale
+        assert _is_path_allowed("/secret/doc", rules) is False
+
+    def test_longest_match_allow_prevale_parita(self):
+        """In caso di parità di lunghezza, Allow prevale su Disallow."""
+        from geo_optimizer.utils.robots_parser import _is_path_allowed
+
+        rules = AgentRules(disallow=["/page"], allow=["/page"])
+        # Stessa lunghezza: Allow vince
+        assert _is_path_allowed("/page/content", rules) is True
+
+    def test_is_path_allowed_nessuna_regola_corrisponde(self):
+        """Path senza regole corrispondenti restituisce None."""
+        from geo_optimizer.utils.robots_parser import _is_path_allowed
+
+        rules = AgentRules(disallow=["/private/"], allow=["/docs/"])
+        # /other/ non corrisponde a nessuna regola
+        result = _is_path_allowed("/other/page", rules)
+        assert result is None
+
+    # ── #106 — Partial classification ────────────────────────────────────────
+
+    def test_partial_disallow_root_con_allow_specifico(self):
+        """Disallow: / + Allow: /public/ → stato 'partial' (#106)."""
+        rules = {"GPTBot": AgentRules(disallow=["/"], allow=["/public/"])}
+        status = classify_bot("GPTBot", "OpenAI", rules)
+        assert status.status == "partial"
+        assert status.matched_agent == "GPTBot"
+
+    def test_partial_not_when_allow_root(self):
+        """Disallow: / + Allow: / → stato 'allowed' (non partial)."""
+        rules = {"GPTBot": AgentRules(disallow=["/"], allow=["/"])}
+        status = classify_bot("GPTBot", "OpenAI", rules)
+        assert status.status == "allowed"
+
+    def test_blocked_senza_allow_specifici(self):
+        """Disallow: / senza Allow specifici → stato 'blocked'."""
+        rules = {"GPTBot": AgentRules(disallow=["/"])}
+        status = classify_bot("GPTBot", "OpenAI", rules)
+        assert status.status == "blocked"
+
+    def test_partial_via_wildcard_tracciato(self):
+        """Bot che corrisponde via wildcard ha via_wildcard=True."""
+        rules = {"*": AgentRules(disallow=["/"], allow=["/public/"])}
+        status = classify_bot("UnknownBot", "Unknown", rules)
+        assert status.status == "partial"
+        assert status.via_wildcard is True
+
+    # ── #111 — Wildcard fallback vs esplicito ─────────────────────────────────
+
+    def test_via_wildcard_false_per_agente_esplicito(self):
+        """Bot con regola esplicita ha via_wildcard=False."""
+        rules = {"GPTBot": AgentRules(allow=["/"])}
+        status = classify_bot("GPTBot", "OpenAI", rules)
+        assert status.status == "allowed"
+        assert status.via_wildcard is False
+
+    def test_via_wildcard_true_per_fallback(self):
+        """Bot senza regola esplicita e fallback wildcard ha via_wildcard=True."""
+        rules = {"*": AgentRules(allow=["/"])}
+        status = classify_bot("GPTBot", "OpenAI", rules)
+        assert status.status == "allowed"
+        assert status.via_wildcard is True
+
+    def test_citation_bots_explicit_true_con_regole_specifiche(self):
+        """citation_bots_explicit=True quando tutti i citation bot hanno regole specifiche."""
+        from unittest.mock import Mock, patch
+
+        robots_content = (
+            "User-agent: OAI-SearchBot\nAllow: /\n\n"
+            "User-agent: ClaudeBot\nAllow: /\n\n"
+            "User-agent: PerplexityBot\nAllow: /\n"
+        )
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = robots_content
+
+        with patch("geo_optimizer.core.audit.fetch_url", return_value=(mock_response, None)):
+            from geo_optimizer.core.audit import audit_robots_txt
+
+            result = audit_robots_txt("https://example.com")
+
+        assert result.citation_bots_ok is True
+        assert result.citation_bots_explicit is True
+
+    def test_citation_bots_explicit_false_con_solo_wildcard(self):
+        """citation_bots_explicit=False quando i citation bot passano solo via wildcard."""
+        from unittest.mock import Mock, patch
+
+        robots_content = "User-agent: *\nAllow: /\n"
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = robots_content
+
+        with patch("geo_optimizer.core.audit.fetch_url", return_value=(mock_response, None)):
+            from geo_optimizer.core.audit import audit_robots_txt
+
+            result = audit_robots_txt("https://example.com")
+
+        assert result.citation_bots_ok is True
+        assert result.citation_bots_explicit is False
 
 
 # ============================================================================
@@ -1031,12 +1204,23 @@ class TestComputeGeoScore:
         assert score == 0
 
     def test_full_robots_score(self):
-        robots = RobotsResult(found=True, citation_bots_ok=True)
+        # #111 — punteggio pieno richiede citation_bots_explicit=True
+        robots = RobotsResult(found=True, citation_bots_ok=True, citation_bots_explicit=True)
         score = compute_geo_score(
             robots, LlmsTxtResult(), SchemaResult(),
             MetaResult(), ContentResult(),
         )
         assert score == SCORING["robots_found"] + SCORING["robots_citation_ok"]
+
+    def test_full_robots_score_wildcard_only(self):
+        """citation_bots_ok via wildcard dà punteggio parziale (non pieno)."""
+        # #111 — wildcard fallback → punteggio robots_some_allowed, non citation_ok
+        robots = RobotsResult(found=True, citation_bots_ok=True, citation_bots_explicit=False)
+        score = compute_geo_score(
+            robots, LlmsTxtResult(), SchemaResult(),
+            MetaResult(), ContentResult(),
+        )
+        assert score == SCORING["robots_found"] + SCORING["robots_some_allowed"]
 
     def test_robots_some_allowed(self):
         robots = RobotsResult(found=True, bots_allowed=["GPTBot"], citation_bots_ok=False)
@@ -1428,7 +1612,8 @@ class TestFetchSitemap:
     @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
     def test_sitemap_fetch_error(self, mock_create):
         mock_session = MagicMock()
-        mock_session.get.side_effect = Exception("Network error")
+        # Usa RequestException coerente con il catch specifico in fetch_sitemap
+        mock_session.get.side_effect = requests.exceptions.ConnectionError("Network error")
         mock_create.return_value = mock_session
 
         urls = fetch_sitemap("https://example.com/sitemap.xml")

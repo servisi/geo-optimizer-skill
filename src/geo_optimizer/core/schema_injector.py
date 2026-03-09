@@ -5,9 +5,12 @@ All functions return data; no printing.
 """
 
 import json
+import logging
 import re
 import shutil
 from typing import Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from bs4 import BeautifulSoup
 
@@ -96,6 +99,9 @@ def fill_template(template: dict, values: dict) -> dict:
 
     I valori vengono serializzati con json.dumps per evitare
     JSON injection tramite caratteri speciali (virgolette, backslash).
+
+    Dopo la sostituzione, logga un warning se rimangono placeholder
+    non sostituiti (previene iniezione di template incompleti #114).
     """
     template_str = json.dumps(template)
     for key, value in values.items():
@@ -104,6 +110,15 @@ def fill_template(template: dict, values: dict) -> dict:
         # ma manteniamo l'escape interno (", \, newline, ecc.)
         escaped = json.dumps(safe_value)[1:-1]
         template_str = template_str.replace(f"{{{{{key}}}}}", escaped)
+
+    # Verifica placeholder residui non sostituiti (#114)
+    residui = re.findall(r"\{\{\w+\}\}", template_str)
+    if residui:
+        logger.warning(
+            "Placeholder non sostituiti nel template: %s",
+            ", ".join(residui),
+        )
+
     return json.loads(template_str)
 
 
@@ -186,8 +201,9 @@ def analyze_html_file(file_path: str) -> SchemaAnalysis:
                 else:
                     schema_type = data.get("@type", "Unknown")
                     found_schemas.append({"type": schema_type, "data": data, "index": idx})
-        except (json.JSONDecodeError, Exception):
-            pass
+        except json.JSONDecodeError as exc:
+            # Logga in debug — non blocca l'analisi degli altri script (#119)
+            logger.debug("JSON-LD non valido nello script #%d: %s", idx, exc)
 
     found_types = [s["type"] for s in found_schemas]
     missing = []

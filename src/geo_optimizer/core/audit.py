@@ -16,8 +16,12 @@ from geo_optimizer.models.config import (  # noqa: F401 (VALUABLE_SCHEMAS re-exp
     SCORING,
     VALUABLE_SCHEMAS,
 )
+import logging
+import requests
+
 from geo_optimizer.models.results import (
     AuditResult,
+    CachedResponse,
     ContentResult,
     LlmsTxtResult,
     MetaResult,
@@ -49,7 +53,7 @@ def audit_robots_txt(base_url: str) -> RobotsResult:
     # Parse robots.txt into structured rules
     agent_rules = parse_robots_txt(content)
 
-    # Classify each AI bot
+    # Classifica ogni AI bot
     for bot, description in AI_BOTS.items():
         bot_status = classify_bot(bot, description, agent_rules)
 
@@ -57,12 +61,26 @@ def audit_robots_txt(base_url: str) -> RobotsResult:
             result.bots_missing.append(bot)
         elif bot_status.status == "blocked":
             result.bots_blocked.append(bot)
+        elif bot_status.status == "partial":
+            # #106 — Parzialmente bloccato: lo trattiamo come allowed per compatibilità
+            # ma lo tracciamo separatamente in bots_partial
+            result.bots_allowed.append(bot)
+            result.bots_partial.append(bot)
         else:
-            # "allowed" (fully or partially)
+            # "allowed" (pienamente consentito)
             result.bots_allowed.append(bot)
 
-    # Check citation bots
+    # Check citation bots (allowed include anche partial)
     result.citation_bots_ok = all(b in result.bots_allowed for b in CITATION_BOTS)
+
+    # #111 — Verifica che i citation bot siano consentiti ESPLICITAMENTE (non solo wildcard)
+    # Score pieno solo con regole specifiche per i citation bot
+    citation_explicit = []
+    for bot in CITATION_BOTS:
+        bot_status = classify_bot(bot, "", agent_rules)
+        if bot_status.status in ("allowed", "partial") and not bot_status.via_wildcard:
+            citation_explicit.append(bot)
+    result.citation_bots_explicit = len(citation_explicit) == len(CITATION_BOTS)
 
     return result
 
@@ -149,8 +167,9 @@ def audit_schema(soup, url: str) -> SchemaResult:
                     elif t == "FAQPage":
                         result.has_faq = True
 
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as exc:
+            # Parsing fallito: logga a debug (non critico, script di terze parti) — fix #81
+            logging.debug("Schema JSON non valido ignorato: %s", exc)
 
     return result
 
@@ -237,11 +256,16 @@ def compute_geo_score(robots, llms, schema, meta, content) -> int:
     """Calculate GEO score 0-100 from SCORING weights."""
     score = 0
 
-    # robots.txt (20 points)
+    # robots.txt (20 punti)
     if robots.found:
         score += SCORING["robots_found"]
     if robots.citation_bots_ok:
-        score += SCORING["robots_citation_ok"]
+        if robots.citation_bots_explicit:
+            # #111 — Punteggio pieno solo se i citation bot sono esplicitamente consentiti
+            score += SCORING["robots_citation_ok"]
+        else:
+            # Consentiti solo via wildcard: punteggio parziale
+            score += SCORING["robots_some_allowed"]
     elif robots.bots_allowed:
         score += SCORING["robots_some_allowed"]
 
@@ -330,17 +354,14 @@ def run_full_audit(url: str, use_cache: bool = False) -> AuditResult:
         cache = FileCache()
         cached = cache.get(base_url)
         if cached:
-            # Costruisci un oggetto response-like dalla cache
+            # Costruisci oggetto response-like dalla cache (fix #83: usa dataclass)
             status_code, text, headers = cached
-
-            class CachedResponse:
-                pass
-
-            r = CachedResponse()
-            r.status_code = status_code
-            r.text = text
-            r.content = text.encode("utf-8")
-            r.headers = headers
+            r = CachedResponse(
+                status_code=status_code,
+                text=text,
+                content=text.encode("utf-8"),
+                headers=headers,
+            )
             err = None
         else:
             r, err = fetch_url(base_url)
@@ -470,10 +491,22 @@ def _audit_robots_from_response(r) -> RobotsResult:
             result.bots_missing.append(bot)
         elif bot_status.status == "blocked":
             result.bots_blocked.append(bot)
+        elif bot_status.status == "partial":
+            result.bots_allowed.append(bot)
+            result.bots_partial.append(bot)
         else:
             result.bots_allowed.append(bot)
 
     result.citation_bots_ok = all(b in result.bots_allowed for b in CITATION_BOTS)
+
+    # #111 — Distingui permesso esplicito da fallback wildcard
+    citation_explicit = []
+    for bot in CITATION_BOTS:
+        bot_status = classify_bot(bot, "", agent_rules)
+        if bot_status.status in ("allowed", "partial") and not bot_status.via_wildcard:
+            citation_explicit.append(bot)
+    result.citation_bots_explicit = len(citation_explicit) == len(CITATION_BOTS)
+
     return result
 
 

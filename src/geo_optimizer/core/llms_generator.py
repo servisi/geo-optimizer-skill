@@ -8,6 +8,8 @@ nothing is printed to stdout.  Status updates go through an optional
 
 import logging
 import re
+
+import requests
 from collections import defaultdict
 from typing import Callable, List, Optional
 from urllib.parse import urljoin, urlparse
@@ -17,6 +19,7 @@ from bs4 import BeautifulSoup
 from geo_optimizer.models.config import (
     CATEGORY_PATTERNS,
     HEADERS,
+    MAX_SUB_SITEMAPS,
     OPTIONAL_CATEGORIES,
     SECTION_PRIORITY_ORDER,
     SKIP_PATTERNS,
@@ -71,10 +74,26 @@ def fetch_sitemap(
         session = create_session_with_retry()
         r = session.get(sitemap_url, headers=HEADERS, timeout=15)
         r.raise_for_status()
-    except Exception as e:
-        logger.error("Sitemap error (after retries): %s", e)
+    except requests.exceptions.Timeout as e:
+        logger.warning("Sitemap timeout: %s", sitemap_url)
+        if on_status:
+            on_status(f"Sitemap timeout: {sitemap_url}")
+        return urls
+    except requests.exceptions.HTTPError as e:
+        logger.warning("Sitemap HTTP error: %s — %s", sitemap_url, e)
+        if on_status:
+            on_status(f"Sitemap HTTP error: {e}")
+        return urls
+    except requests.exceptions.RequestException as e:
+        logger.warning("Sitemap request error (after retries): %s", e)
         if on_status:
             on_status(f"Sitemap error (after retries): {e}")
+        return urls
+    except Exception as e:
+        # Catch finale per errori imprevisti (es. mock nei test) — fix #78
+        logger.warning("Sitemap errore imprevisto: %s", e)
+        if on_status:
+            on_status(f"Sitemap error: {e}")
         return urls
 
     soup = BeautifulSoup(r.content, "xml")
@@ -85,7 +104,7 @@ def fetch_sitemap(
         logger.info("Sitemap index found: %d sitemaps", len(sitemap_tags))
         if on_status:
             on_status(f"Sitemap index found: {len(sitemap_tags)} sitemaps")
-        for sitemap in sitemap_tags[:10]:  # Limit to 10 sub-sitemaps
+        for sitemap in sitemap_tags[:MAX_SUB_SITEMAPS]:  # Limit sub-sitemaps (fix #90)
             loc = sitemap.find("loc")
             if loc:
                 sub_url = urljoin(sitemap_url, loc.text.strip())
@@ -226,7 +245,11 @@ def url_to_label(url: str, base_domain: str) -> str:
     # If it's only digits, use the full path
     if label.isdigit():
         label = "/".join(parts[-2:]).replace("-", " ").replace("_", " ").title()
-    return label or path
+    final = label or path
+    # Tronca label troppo lunghe (fix #85)
+    if len(final) > 80:
+        final = final[:77] + "..."
+    return final
 
 
 # ---------------------------------------------------------------------------
@@ -237,8 +260,8 @@ def url_to_label(url: str, base_domain: str) -> str:
 def generate_llms_txt(
     base_url: str,
     urls: List[SitemapUrl],
-    site_name: str = None,
-    description: str = None,
+    site_name: Optional[str] = None,
+    description: Optional[str] = None,
     fetch_titles: bool = False,
     max_urls_per_section: int = 20,
 ) -> str:
@@ -395,7 +418,7 @@ def discover_sitemap(
 
     session = create_session_with_retry(total_retries=2, backoff_factor=0.5)
 
-    # Controlla robots.txt per la direttiva Sitemap:
+    # Controlla robots.txt per TUTTE le direttive Sitemap: (#116)
     parsed_base = urlparse(base_url)
     base_domain = parsed_base.netloc
     robots_url = urljoin(base_url, "/robots.txt")
@@ -416,11 +439,13 @@ def discover_sitemap(
                 logger.info("Sitemap found in robots.txt: %s", sitemap_url)
                 if on_status:
                     on_status(f"Sitemap found in robots.txt: {sitemap_url}")
+                # Restituisce il primo URL valido trovato in robots.txt
+                # (gli altri vengono scoperti ricorsivamente da fetch_sitemap)
                 return sitemap_url
     except Exception:
         pass
 
-    # Try common paths
+    # Prova i percorsi comuni: HEAD prima, fallback GET se 405/timeout (#115)
     for path in common_paths:
         url = urljoin(base_url, path)
         try:
@@ -430,8 +455,26 @@ def discover_sitemap(
                 if on_status:
                     on_status(f"Sitemap found: {url}")
                 return url
+            if r.status_code == 405:
+                # Server non supporta HEAD — fallback a GET (#115)
+                logger.debug("HEAD 405 per %s, fallback a GET", url)
+                r_get = session.get(url, headers=HEADERS, timeout=5)
+                if r_get.status_code == 200:
+                    logger.info("Sitemap found (via GET): %s", url)
+                    if on_status:
+                        on_status(f"Sitemap found: {url}")
+                    return url
         except Exception:
-            continue
+            # Timeout o errore di rete: prova GET come fallback (#115)
+            try:
+                r_get = session.get(url, headers=HEADERS, timeout=5)
+                if r_get.status_code == 200:
+                    logger.info("Sitemap found (via GET fallback): %s", url)
+                    if on_status:
+                        on_status(f"Sitemap found: {url}")
+                    return url
+            except Exception:
+                continue
 
     logger.warning("No sitemap found automatically for %s", base_url)
     if on_status:

@@ -60,7 +60,10 @@ def _robots_score(r: AuditResult) -> int:
 
 
 def _llms_score(r: AuditResult) -> int:
-    s = SCORING["llms_found"] if r.llms.found else 0
+    # Guardia: senza llms.txt trovato il punteggio è zero (#105)
+    if not r.llms.found:
+        return 0
+    s = SCORING["llms_found"]
     s += SCORING["llms_h1"] if r.llms.has_h1 else 0
     s += SCORING["llms_sections"] if r.llms.has_sections else 0
     s += SCORING["llms_links"] if r.llms.has_links else 0

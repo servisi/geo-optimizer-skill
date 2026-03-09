@@ -328,13 +328,22 @@ async def badge(
             from geo_optimizer.core.audit import run_full_audit
 
             # Esegui in thread separato per non bloccare l'event loop
-            result = await asyncio.to_thread(run_full_audit, url)
+            # Timeout 60s per non bloccare l'event loop (fix #82)
+            result = await asyncio.wait_for(
+                asyncio.to_thread(run_full_audit, url),
+                timeout=60.0,
+            )
             data = _audit_result_to_dict(result)
             _set_cached(url, data)
             score = data["score"]
             band = data["band"]
+        except asyncio.TimeoutError:
+            # Timeout: mostra badge con score 0 (fix #82)
+            logger.warning("Badge audit timeout (60s) per URL: %s", url)
+            score = 0
+            band = "critical"
         except Exception:
-            # In caso di errore, mostra badge con score 0
+            # Errore generico: mostra badge con score 0
             score = 0
             band = "critical"
 
@@ -376,8 +385,17 @@ async def _run_audit(url: str) -> JSONResponse:
     try:
         from geo_optimizer.core.audit import run_full_audit
 
-        # Esegui in thread separato per non bloccare l'event loop
-        result = await asyncio.to_thread(run_full_audit, url)
+        # Esegui in thread separato con timeout 60s per non bloccare l'event loop (fix #82)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(run_full_audit, url),
+            timeout=60.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Audit timeout (60s) per URL: %s", url)
+        raise HTTPException(
+            status_code=504,
+            detail="Audit timeout: il sito impiega troppo tempo a rispondere.",
+        )
     except Exception as e:
         logger.error("Errore audit per %s: %s", url, e)
         raise HTTPException(

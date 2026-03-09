@@ -9,6 +9,22 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
+# ─── HTTP cache ───────────────────────────────────────────────────────────────
+
+
+@dataclass
+class CachedResponse:
+    """Risposta HTTP sintetica costruita dalla cache su disco (fix #83).
+
+    Usata da run_full_audit() quando use_cache=True e la risposta
+    è già presente nel FileCache, evitando una nuova richiesta HTTP.
+    """
+
+    status_code: int
+    text: str
+    content: bytes
+    headers: Dict[str, str] = field(default_factory=dict)
+
 # ─── Robots.txt ──────────────────────────────────────────────────────────────
 
 
@@ -18,7 +34,11 @@ class RobotsResult:
     bots_allowed: List[str] = field(default_factory=list)
     bots_missing: List[str] = field(default_factory=list)
     bots_blocked: List[str] = field(default_factory=list)
+    # Bot parzialmente bloccati (Disallow: / + Allow specifici — #106)
+    bots_partial: List[str] = field(default_factory=list)
     citation_bots_ok: bool = False
+    # True se i citation bot sono consentiti esplicitamente (non solo via wildcard — #111)
+    citation_bots_explicit: bool = False
 
 
 # ─── llms.txt ────────────────────────────────────────────────────────────────
