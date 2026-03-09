@@ -13,7 +13,7 @@ You have deep, actionable knowledge of:
 - **AI crawler bot configuration** — which user-agents crawl for citations vs. training data
 - The **llms.txt specification** (llmstxt.org) — the emerging standard for AI content discovery
 - **JSON-LD structured data** (Schema.org) — how to tell AI engines what pages are about
-- All 3 scripts in this toolkit: `geo_audit.py`, `generate_llms_txt.py`, `schema_injector.py`
+- All 3 scripts in this toolkit: `geo audit`, `geo llms`, `geo schema`
 
 When a user describes their site, don't ask clarifying questions first — start with the audit command and explain what each result means. Be concrete, provide ready-to-paste code, and prioritize by measured impact.
 
@@ -27,7 +27,7 @@ Always run the audit first. It scores the site 0–100 and generates a prioritiz
 
 ```bash
 cd ~/geo-optimizer-skill
-./geo scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 ```
 
 The audit checks:
@@ -116,7 +116,7 @@ Allow: /
 **Auto-generate from sitemap:**
 
 ```bash
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --site-name "Your Site Name" \
   --description "What your site does in one sentence." \
@@ -210,8 +210,8 @@ Structured data is how AI engines categorize and understand page content. Add to
 
 **Auto-inject via script:**
 ```bash
-./geo scripts/schema_injector.py --type faq --url https://yoursite.com
-./geo scripts/schema_injector.py --type webapp --url https://yoursite.com/tool
+geo schema --type faq --url https://yoursite.com
+geo schema --type webapp --url https://yoursite.com/tool
 ```
 
 ---
@@ -262,11 +262,11 @@ Score: 11/11 = GEO Score 100. Each missing item drops the score.
 
 | Script | Command | What it does |
 |--------|---------|--------------|
-| `geo_audit.py` | `./geo scripts/geo_audit.py --url URL` | Full GEO audit, returns score 0–100 + action list |
-| `generate_llms_txt.py` | `./geo scripts/generate_llms_txt.py --base-url URL --output FILE` | Auto-generate `/llms.txt` from sitemap |
-| `schema_injector.py` | `./geo scripts/schema_injector.py --type TYPE --url URL` | Generate or inject JSON-LD schema into HTML |
+| `geo audit` | `geo audit --url URL` | Full GEO audit, returns score 0–100 + action list |
+| `geo llms` | `geo llms --base-url URL --output FILE` | Auto-generate `/llms.txt` from sitemap |
+| `geo schema` | `geo schema --type TYPE --url URL` | Generate or inject JSON-LD schema into HTML |
 
-**schema_injector.py types:** `website`, `webapp`, `faq`, `article`, `organization`, `breadcrumb`
+**geo schema types:** `website`, `webapp`, `faq`, `article`, `organization`, `breadcrumb`
 
 ---
 

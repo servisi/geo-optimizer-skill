@@ -27,7 +27,7 @@ Never list URLs without descriptions.
 Always place `llms.txt` at the site root (`/llms.txt`), not in a subdirectory.
 Keep llms.txt under 200 lines — AI crawlers prefer concise files.
 
-Generate llms.txt with: `./geo scripts/generate_llms_txt.py --base-url URL --site-name NAME --description DESC --output ./public/llms.txt`
+Generate llms.txt with: `geo llms --base-url URL --site-name NAME --description DESC --output ./public/llms.txt`
 
 ## JSON-LD Schema
 
@@ -42,7 +42,7 @@ Use `WebApplication` for: tools, calculators, apps, generators.
 Use `FAQPage` for: FAQ sections, how-to pages, question-based content.
 Use `Article` for: blog posts, guides, tutorials.
 
-Inject schema automatically: `./geo scripts/schema_injector.py --type TYPE --url URL`
+Inject schema automatically: `geo schema --type TYPE --url URL`
 Types available: `website`, `webapp`, `faq`, `article`, `organization`, `breadcrumb`
 
 ## Content (Princeton GEO Methods)
@@ -66,7 +66,7 @@ Always run the GEO audit before making optimization recommendations.
 Always interpret the GEO Score: 0–40 = critical, 41–70 = foundation, 71–90 = good, 91–100 = excellent.
 Never skip the audit step — score determines priority.
 
-Run audit: `./geo scripts/geo_audit.py --url https://yoursite.com`
+Run audit: `geo audit --url https://yoursite.com`
 
 The audit checks: robots.txt, llms.txt, JSON-LD schema, meta tags, content quality signals.
 
@@ -74,18 +74,18 @@ The audit checks: robots.txt, llms.txt, JSON-LD schema, meta tags, content quali
 
 ```bash
 # Full GEO audit — returns score 0-100 + prioritized action list
-./geo scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 
 # Generate /llms.txt from sitemap
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --site-name "Site Name" \
   --description "One-sentence description." \
   --output ./public/llms.txt
 
 # Inject JSON-LD schema (types: website, webapp, faq, article, organization, breadcrumb)
-./geo scripts/schema_injector.py --type faq --url https://yoursite.com/page
-./geo scripts/schema_injector.py --type webapp --url https://yoursite.com/tool
+geo schema --type faq --url https://yoursite.com/page
+geo schema --type webapp --url https://yoursite.com/tool
 ```
 
 Always use the exact `./geo` prefix — it is the toolkit entry point.

@@ -43,15 +43,15 @@ Then verify:
 **Fix:** Always use `./geo` instead of `python3`:
 
 ```diff
-- python3 scripts/geo_audit.py --url https://yoursite.com
-+ ./geo scripts/geo_audit.py --url https://yoursite.com
+- geo audit --url https://yoursite.com
++ geo audit --url https://yoursite.com
 ```
 
 If you need to use the venv directly:
 
 ```bash
 source ~/geo-optimizer-skill/.venv/bin/activate
-python3 scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 ```
 
 Or reinstall dependencies into the venv:
@@ -76,9 +76,9 @@ bash ~/geo-optimizer-skill/update.sh
 After updating, `--help` will always work regardless of venv state:
 
 ```bash
-./geo scripts/geo_audit.py --help
-./geo scripts/generate_llms_txt.py --help
-./geo scripts/schema_injector.py --help
+geo audit --help
+geo llms --help
+geo schema --help
 ```
 
 ---
@@ -90,7 +90,7 @@ After updating, `--help` will always work regardless of venv state:
 **Fix:** Pass the sitemap URL explicitly:
 
 ```bash
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --sitemap https://yoursite.com/sitemap_index.xml \
   --output ./llms.txt
@@ -153,10 +153,10 @@ To be safe, place specific bot entries before the catch-all `User-agent: *` bloc
 
 ```bash
 # Option 1: generate from a JSON file
-./geo scripts/schema_injector.py --type faq --faq-file faqs.json --file page.html --inject
+geo schema --type faq --faq-file faqs.json --file page.html --inject
 
 # Option 2: generate and print to copy manually
-./geo scripts/schema_injector.py --type faq --faq-file faqs.json
+geo schema --type faq --faq-file faqs.json
 ```
 
 FAQPage schema alone can increase your score by 8 points. Combined with adding external citations (5 points) and a few more statistics (5 points), you can move from 70 to 85.
@@ -188,7 +188,7 @@ curl -I https://yoursite.com/sitemap-0.xml
 Once found, pass it explicitly:
 
 ```bash
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --sitemap https://yoursite.com/wp-sitemap.xml
 ```
@@ -243,7 +243,7 @@ Open your HTML file and add the schema block manually, just before the closing `
 Generate the schema JSON first (without `--inject`):
 
 ```bash
-./geo scripts/schema_injector.py --type faq --faq-file faqs.json
+geo schema --type faq --faq-file faqs.json
 ```
 
 Copy the output and paste it manually into your file.
@@ -269,7 +269,7 @@ After WSL2 installs and you restart:
 # Inside the WSL terminal (Ubuntu by default)
 curl -sSL https://raw.githubusercontent.com/auriti-labs/geo-optimizer-skill/main/install.sh | bash
 cd ~/geo-optimizer-skill
-./geo scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 ```
 
 WSL2 gives you a full Linux environment. Python 3.8+ is included by default in Ubuntu 20.04+.
@@ -282,7 +282,7 @@ cd geo-optimizer-skill
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-python scripts\geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 ```
 
 Note: the `./geo` wrapper does not work on Windows. Use `python scripts\<script>.py` directly with the venv activated.

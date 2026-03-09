@@ -84,7 +84,7 @@ geo-optimizer/
 
 ```bash
 # From PyPI (recommended)
-pip install geo-optimizer
+pip install geo-optimizer-skill
 
 # Or from source
 git clone https://github.com/auriti-labs/geo-optimizer-skill.git
@@ -116,14 +116,14 @@ geo schema --file index.html --analyze
 
 ---
 
-## What's New in v2.0
+## What's New in v3.0
 
 **Complete rewrite as installable Python package with modern CLI.**
 
-- **Installable package** — `pip install geo-optimizer` then use `geo` CLI anywhere
+- **Installable package** — `pip install geo-optimizer-skill` then use `geo` CLI anywhere
 - **Click CLI** — `geo audit`, `geo llms`, `geo schema` subcommands
 - **Security hardened** — SSRF prevention, XSS/injection protection, path traversal validation, DoS limits
-- **600+ tests** — comprehensive unit + security test coverage with Codecov integration
+- **800+ tests** — comprehensive unit + security test coverage with Codecov integration
 - **Dataclass-based** — all core functions return typed dataclasses, no side effects
 - **JSON-LD validation** — manual schema validation without external dependency on jsonschema
 
@@ -450,7 +450,7 @@ pytest tests/test_core.py -v
 pytest tests/test_core.py::TestAudit::test_name -v
 ```
 
-**600+ tests** covering core audit, CLI, security fixes, and edge cases. All use `unittest.mock` — no real network calls.
+**800+ tests** covering core audit, CLI, security fixes, and edge cases. All use `unittest.mock` — no real network calls.
 
 See [Codecov](https://codecov.io/gh/auriti-labs/geo-optimizer-skill) for live coverage analysis.
 

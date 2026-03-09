@@ -46,9 +46,18 @@ runs:
 
     - name: Install geo-optimizer-skill
       shell: bash
+      # Sanitizzazione inputs.version: usa env variable per prevenire injection (#134)
+      # La versione viene validata con regex prima di essere usata nell'installazione
+      env:
+        GEO_VERSION: ${{ inputs.version }}
       run: |
-        if [ -n "${{ inputs.version }}" ]; then
-          pip install "geo-optimizer-skill==${{ inputs.version }}"
+        if [ -n "$GEO_VERSION" ]; then
+          # Valida formato versione: solo caratteri alfanumerici e .-
+          if ! echo "$GEO_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+[a-z0-9.-]*$'; then
+            echo "::error::Valore inputs.version non valido: '$GEO_VERSION'. Formato atteso: X.Y.Z[suffisso]"
+            exit 1
+          fi
+          pip install "geo-optimizer-skill==$GEO_VERSION"
         else
           pip install geo-optimizer-skill
         fi
@@ -56,10 +65,12 @@ runs:
     - name: Run GEO Audit
       id: audit
       shell: bash
+      env:
+        GEO_URL: ${{ inputs.url }}
       run: |
         # Esegui audit e salva report JSON
         REPORT_FILE="geo-audit-report.json"
-        geo audit --url "${{ inputs.url }}" --format json --output "$REPORT_FILE" || true
+        geo audit --url "$GEO_URL" --format json --output "$REPORT_FILE" || true
 
         if [ ! -f "$REPORT_FILE" ]; then
           echo "::error::GEO Audit failed — unable to generate report"
@@ -152,9 +163,12 @@ runs:
 
     - name: Check minimum score
       shell: bash
+      env:
+        GEO_SCORE: ${{ steps.audit.outputs.score }}
+        GEO_MIN_SCORE: ${{ inputs.min-score }}
       run: |
-        SCORE="${{ steps.audit.outputs.score }}"
-        MIN_SCORE="${{ inputs.min-score }}"
+        SCORE="$GEO_SCORE"
+        MIN_SCORE="$GEO_MIN_SCORE"
 
         if [ "$MIN_SCORE" -gt 0 ] 2>/dev/null; then
           if [ "$SCORE" -lt "$MIN_SCORE" ] 2>/dev/null; then

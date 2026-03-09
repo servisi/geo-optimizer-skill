@@ -38,17 +38,53 @@ def _svg_escape(text: str) -> str:
     return html_lib.escape(text, quote=True)
 
 
-def generate_badge_svg(score: int, band: str, label: str = "GEO Score") -> str:
+def generate_badge_svg(score: int, band: str, label: str = "GEO Score", error: bool = False) -> str:
     """Genera badge SVG con score e colore per fascia.
 
     Args:
         score: Punteggio 0-100.
         band: Fascia (excellent, good, foundation, critical).
         label: Etichetta lato sinistro del badge (max 50 char, sanitizzata).
+        error: Se True, mostra "Error" con colore grigio invece del punteggio.
+               Fix #152: evita badge "0/100 CRITICAL" su errori di audit.
 
     Returns:
         Stringa SVG completa.
     """
+    # Fix #152: se audit fallisce, mostra badge errore con colore grigio
+    if error:
+        color = "#999999"
+        score_text = "Error"
+        # Valida band e label normalmente (per la parte sinistra del badge)
+        if band not in BAND_COLORS:
+            band = "critical"
+        safe_label = _svg_escape(label)
+        safe_label = safe_label[:_MAX_LABEL_LENGTH]
+        label_width = len(label[:_MAX_LABEL_LENGTH]) * 6.5 + 12
+        score_width = len(score_text) * 7 + 12
+        total_width = label_width + score_width
+        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{safe_label}: {score_text}">
+  <title>{safe_label}: {score_text}</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="{total_width}" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{label_width}" height="20" fill="#555"/>
+    <rect x="{label_width}" width="{score_width}" height="20" fill="{color}"/>
+    <rect width="{total_width}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
+    <text aria-hidden="true" x="{label_width / 2}" y="15" fill="#010101" fill-opacity=".3">{safe_label}</text>
+    <text x="{label_width / 2}" y="14">{safe_label}</text>
+    <text aria-hidden="true" x="{label_width + score_width / 2}" y="15" fill="#010101" fill-opacity=".3">{score_text}</text>
+    <text x="{label_width + score_width / 2}" y="14">{score_text}</text>
+  </g>
+</svg>"""
+
     # Valida band contro whitelist
     if band not in BAND_COLORS:
         band = "critical"

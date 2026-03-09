@@ -1,6 +1,6 @@
 # GEO Audit Script
 
-`geo_audit.py` scores your website from 0 to 100 across five GEO dimensions and tells you exactly what to fix.
+`geo audit` scores your website from 0 to 100 across five GEO dimensions and tells you exactly what to fix.
 
 ---
 
@@ -20,7 +20,7 @@
 
 ```bash
 # Standard audit
-./geo scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 
 # --verbose flag is coming soon (currently has no effect)
 ```
@@ -106,9 +106,9 @@ The score is calculated from five weighted categories:
 | Problem | Fix | Docs |
 |---------|-----|------|
 | AI bot MISSING in robots.txt | Add the bot's `User-agent` block with `Allow: /` | [AI Bots Reference](ai-bots-reference.md) |
-| llms.txt not found | Generate with `generate_llms_txt.py`, place at site root | [Generating llms.txt](llms-txt.md) |
-| FAQPage schema missing | Generate with `schema_injector.py --type faq` | [Schema Injector](schema-injector.md) |
-| WebSite schema missing | Generate with `schema_injector.py --type website` | [Schema Injector](schema-injector.md) |
+| llms.txt not found | Generate with `geo llms`, place at site root | [Generating llms.txt](llms-txt.md) |
+| FAQPage schema missing | Generate with `geo schema --type faq` | [Schema Injector](schema-injector.md) |
+| WebSite schema missing | Generate with `geo schema --type website` | [Schema Injector](schema-injector.md) |
 | Meta description missing | Add `<meta name="description" content="...">` to `<head>` | — |
 | Open Graph tags missing | Add `og:title`, `og:description`, `og:image` to `<head>` | — |
 | Low statistics count | Add specific numbers, %, dates to page content | [GEO Methods](geo-methods.md#method-2--statistics) |

@@ -5,17 +5,19 @@ Endpoint principali:
     GET  /              — Homepage con form di audit
     POST /api/audit     — Esegui audit e ritorna JSON
     GET  /api/audit     — Esegui audit via query param
-    GET  /report/{id}   — Report HTML permanente
+    GET  /report/{id}   — Report HTML temporaneo (TTL 1h, in-memory)
     GET  /badge          — Badge SVG dinamico
     GET  /health        — Health check
 """
 
 import asyncio
+import dataclasses
 import hashlib
 import logging
 import os
 import secrets
 import time
+from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -99,6 +101,34 @@ app.add_middleware(
     allow_headers=["Content-Type"],            # Header minimi necessari
     max_age=3600,
 )
+
+# ─── Autenticazione Bearer token opzionale (fix #93) ─────────────────────────
+# Se GEO_API_TOKEN è impostato, le richieste POST /api/audit richiedono
+# l'header "Authorization: Bearer <token>". Se non impostato, nessuna auth.
+_API_TOKEN: Optional[str] = os.environ.get("GEO_API_TOKEN") or None
+
+
+def _verify_bearer_token(request: Request) -> bool:
+    """Verifica il token Bearer se GEO_API_TOKEN è configurato.
+
+    Ritorna True se:
+    - GEO_API_TOKEN non è impostato (demo pubblica)
+    - Il token nell'header Authorization corrisponde a GEO_API_TOKEN
+
+    Ritorna False se il token è errato o mancante.
+    """
+    # Nessun token configurato: accesso libero
+    if _API_TOKEN is None:
+        return True
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return False
+
+    # Confronto sicuro contro timing attack
+    provided_token = auth_header[len("Bearer "):]
+    return secrets.compare_digest(provided_token, _API_TOKEN)
+
 
 # ─── Rate Limiter in-memory ───────────────────────────────────────────────────
 _rate_limit_store: dict = {}  # {ip: [timestamp, ...]}
@@ -266,7 +296,15 @@ async def audit_post(request: Request, body: AuditRequest):
 
     Fix #149: Pydantic valida il body — url deve essere stringa.
     Fix #95: usa _get_client_ip per gestire request.client None e proxy trusted.
+    Fix #93: autenticazione Bearer token opzionale tramite GEO_API_TOKEN.
     """
+    # Verifica token se GEO_API_TOKEN è impostato
+    if not _verify_bearer_token(request):
+        raise HTTPException(
+            status_code=401,
+            detail="Token di autenticazione mancante o non valido.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if not _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Troppe richieste. Riprova tra poco.")
     return await _run_audit(body.url)
@@ -274,7 +312,7 @@ async def audit_post(request: Request, body: AuditRequest):
 
 @app.get("/report/{report_id}", response_class=HTMLResponse)
 async def report(report_id: str):
-    """Report HTML permanente (condivisibile)."""
+    """Report temporaneo valido per 1 ora, conservato in memoria. Riavviare il server azzera tutti i report."""
     # Valida che report_id sia un hash esadecimale valido
     if not report_id.isalnum() or len(report_id) > 64:
         raise HTTPException(status_code=400, detail="ID report non valido")
@@ -338,14 +376,24 @@ async def badge(
             score = data["score"]
             band = data["band"]
         except asyncio.TimeoutError:
-            # Timeout: mostra badge con score 0 (fix #82)
+            # Timeout: mostra badge con testo "Error" (fix #152)
             logger.warning("Badge audit timeout (60s) per URL: %s", url)
-            score = 0
-            band = "critical"
+            from geo_optimizer.web.badge import generate_badge_svg
+            svg = generate_badge_svg(0, "critical", label=label, error=True)
+            return Response(
+                content=svg,
+                media_type="image/svg+xml",
+                headers={"Cache-Control": "no-store"},
+            )
         except Exception:
-            # Errore generico: mostra badge con score 0
-            score = 0
-            band = "critical"
+            # Errore generico: mostra badge con testo "Error" (fix #152)
+            from geo_optimizer.web.badge import generate_badge_svg
+            svg = generate_badge_svg(0, "critical", label=label, error=True)
+            return Response(
+                content=svg,
+                media_type="image/svg+xml",
+                headers={"Cache-Control": "no-store"},
+            )
 
     from geo_optimizer.web.badge import generate_badge_svg
 
@@ -414,54 +462,67 @@ async def _run_audit(url: str) -> JSONResponse:
 
 
 def _audit_result_to_dict(result) -> dict:
-    """Converte AuditResult in dizionario serializzabile."""
-    return {
-        "url": result.url,
-        "score": result.score,
-        "band": result.band,
-        "timestamp": result.timestamp,
-        "http_status": result.http_status,
-        "page_size": result.page_size,
-        "checks": {
-            "robots_txt": {
-                "found": result.robots.found,
-                "citation_bots_ok": result.robots.citation_bots_ok,
-                "bots_allowed": result.robots.bots_allowed,
-                "bots_blocked": result.robots.bots_blocked,
-                "bots_missing": result.robots.bots_missing,
-            },
-            "llms_txt": {
-                "found": result.llms.found,
-                "has_h1": result.llms.has_h1,
-                "has_sections": result.llms.has_sections,
-                "has_links": result.llms.has_links,
-                "word_count": result.llms.word_count,
-            },
-            "schema_jsonld": {
-                "found_types": result.schema.found_types,
-                "has_website": result.schema.has_website,
-                "has_faq": result.schema.has_faq,
-                "has_webapp": result.schema.has_webapp,
-            },
-            "meta_tags": {
-                "has_title": result.meta.has_title,
-                "has_description": result.meta.has_description,
-                "has_canonical": result.meta.has_canonical,
-                "has_og_title": result.meta.has_og_title,
-                "has_og_description": result.meta.has_og_description,
-                "title_text": result.meta.title_text,
-                "description_length": result.meta.description_length,
-            },
-            "content": {
-                "has_h1": result.content.has_h1,
-                "heading_count": result.content.heading_count,
-                "has_numbers": result.content.has_numbers,
-                "has_links": result.content.has_links,
-                "word_count": result.content.word_count,
-            },
+    """Converte AuditResult in dizionario serializzabile.
+
+    Usa dataclasses.asdict() come base per non perdere campi,
+    poi aggiunge i campi calcolati nidificati (checks) per compatibilità API.
+    Fix #151: la versione precedente perdeva 10+ campi del risultato.
+    """
+    # Base completa tramite dataclasses.asdict (include tutti i campi)
+    base = dataclasses.asdict(result)
+
+    # Aggiungi il mapping "checks" (struttura attesa dal frontend)
+    base["checks"] = {
+        "robots_txt": {
+            "found": result.robots.found,
+            "citation_bots_ok": result.robots.citation_bots_ok,
+            "citation_bots_explicit": result.robots.citation_bots_explicit,
+            "bots_allowed": result.robots.bots_allowed,
+            "bots_blocked": result.robots.bots_blocked,
+            "bots_missing": result.robots.bots_missing,
+            "bots_partial": result.robots.bots_partial,
         },
-        "recommendations": result.recommendations,
+        "llms_txt": {
+            "found": result.llms.found,
+            "has_h1": result.llms.has_h1,
+            "has_description": result.llms.has_description,
+            "has_sections": result.llms.has_sections,
+            "has_links": result.llms.has_links,
+            "word_count": result.llms.word_count,
+        },
+        "schema_jsonld": {
+            "found_types": result.schema.found_types,
+            "has_website": result.schema.has_website,
+            "has_faq": result.schema.has_faq,
+            "has_webapp": result.schema.has_webapp,
+            "raw_schemas": result.schema.raw_schemas,
+        },
+        "meta_tags": {
+            "has_title": result.meta.has_title,
+            "has_description": result.meta.has_description,
+            "has_canonical": result.meta.has_canonical,
+            "has_og_title": result.meta.has_og_title,
+            "has_og_description": result.meta.has_og_description,
+            "has_og_image": result.meta.has_og_image,
+            "title_text": result.meta.title_text,
+            "description_text": result.meta.description_text,
+            "description_length": result.meta.description_length,
+            "title_length": result.meta.title_length,
+            "canonical_url": result.meta.canonical_url,
+        },
+        "content": {
+            "has_h1": result.content.has_h1,
+            "heading_count": result.content.heading_count,
+            "has_numbers": result.content.has_numbers,
+            "has_links": result.content.has_links,
+            "word_count": result.content.word_count,
+            "h1_text": result.content.h1_text,
+            "numbers_count": result.content.numbers_count,
+            "external_links_count": result.content.external_links_count,
+        },
     }
+
+    return base
 
 
 def _dict_to_audit_result(data: dict):
@@ -529,183 +590,16 @@ def _dict_to_audit_result(data: dict):
 
 
 def _render_homepage(nonce: str = "") -> str:
-    """Genera HTML homepage con form di audit.
+    """Carica e renderizza l'HTML homepage dal template file.
 
-    Fix #75: accetta il nonce CSP per il tag <script> inline.
-    Nota: il frontend usa textContent per i dati dell'audit
-    per prevenire XSS. Solo struttura HTML statica viene costruita
-    con metodi DOM sicuri.
+    Fix #89: HTML spostato in templates/index.html invece di essere inline.
+    Fix #75: accetta il nonce CSP e sostituisce il placeholder __NONCE_ATTR__.
+    Il template usa '__NONCE_ATTR__' come placeholder nell'attributo del tag <script>.
     """
-    # Usa "__NONCE_ATTR__" come placeholder nell'HTML — sostituito a fine funzione.
-    # Evita f-string sull'intero HTML perché { } in CSS/JS causerebbero conflitti.
+    template_path = Path(__file__).parent / "templates" / "index.html"
+    html = template_path.read_text(encoding="utf-8")
+    # Sostituisce il placeholder nonce con il valore reale per la CSP
+    # Con nonce: "<script__NONCE_ATTR__>" → "<script nonce='xxx'>"
+    # Senza nonce: "<script__NONCE_ATTR__>" → "<script>"
     nonce_attr = f' nonce="{nonce}"' if nonce else ""
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GEO Optimizer — AI Search Visibility Audit</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;
-align-items:center;justify-content:center;padding:2rem}
-.container{max-width:600px;width:100%;text-align:center}
-h1{font-size:2.5rem;margin-bottom:.5rem;background:linear-gradient(135deg,#60a5fa,#a78bfa);
--webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.subtitle{color:#94a3b8;margin-bottom:2rem;font-size:1.1rem}
-.form-group{display:flex;gap:.5rem;margin-bottom:1.5rem}
-input[type="url"]{flex:1;padding:.75rem 1rem;border:2px solid #334155;border-radius:8px;
-background:#1e293b;color:#e2e8f0;font-size:1rem;outline:none;transition:border-color .2s}
-input[type="url"]:focus{border-color:#60a5fa}
-button{padding:.75rem 1.5rem;border:none;border-radius:8px;background:#3b82f6;
-color:#fff;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s}
-button:hover{background:#2563eb}
-button:disabled{opacity:.5;cursor:not-allowed}
-.result{background:#1e293b;border-radius:12px;padding:1.5rem;margin-top:1rem;
-text-align:left;display:none}
-.score-display{text-align:center;margin:1rem 0}
-.score-number{font-size:3rem;font-weight:700}
-.score-band{font-size:1.2rem;font-weight:600;margin-top:.25rem}
-.checks{margin:1rem 0}
-.check-row{display:flex;justify-content:space-between;padding:.5rem 0;
-border-bottom:1px solid #334155}
-.recs{margin-top:1rem}
-.recs li{margin:.25rem 0;color:#94a3b8}
-.links{margin-top:2rem;color:#64748b;font-size:.85rem}
-.links a{color:#60a5fa;text-decoration:none}
-.spinner{display:none;margin:1rem auto}
-.spinner.active{display:block}
-.error{color:#ef4444;margin-top:1rem;display:none}
-.report-link{margin-top:1rem;text-align:center}
-.report-link a{color:#60a5fa;text-decoration:none;font-size:.9rem}
-</style>
-</head>
-<body>
-<div class="container">
-    <h1>GEO Optimizer</h1>
-    <p class="subtitle">Audit your website's visibility to AI search engines</p>
-
-    <div class="form-group">
-        <input type="url" id="url-input" placeholder="https://example.com" required>
-        <button id="btn" onclick="runAudit()">Audit</button>
-    </div>
-
-    <div class="spinner" id="spinner">Analyzing...</div>
-    <div class="error" id="error"></div>
-
-    <div class="result" id="result">
-        <div class="score-display">
-            <div class="score-number" id="score"></div>
-            <div class="score-band" id="band"></div>
-        </div>
-        <div class="checks" id="checks"></div>
-        <div class="recs"><ol id="recs"></ol></div>
-        <div class="report-link" id="report-link"></div>
-    </div>
-
-    <div class="links">
-        <p>CLI: <code>pip install geo-optimizer-skill</code></p>
-        <p><a href="https://github.com/auriti-labs/geo-optimizer-skill">GitHub</a> &middot;
-           <a href="/docs">API Docs</a></p>
-    </div>
-</div>
-
-<script__NONCE_ATTR__>
-async function runAudit() {
-    const url = document.getElementById('url-input').value;
-    if (!url) return;
-
-    const btn = document.getElementById('btn');
-    const spinner = document.getElementById('spinner');
-    const errorEl = document.getElementById('error');
-    const resultEl = document.getElementById('result');
-
-    btn.disabled = true;
-    spinner.classList.add('active');
-    errorEl.style.display = 'none';
-    resultEl.style.display = 'none';
-
-    try {
-        const res = await fetch('/api/audit?url=' + encodeURIComponent(url));
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.detail || 'Errore audit');
-        }
-
-        const colors = {excellent:'#22c55e',good:'#06b6d4',foundation:'#eab308',critical:'#ef4444'};
-        const color = colors[data.band] || '#888';
-
-        // Usa textContent per prevenire XSS
-        const scoreEl = document.getElementById('score');
-        scoreEl.textContent = data.score + '/100';
-        scoreEl.style.color = color;
-
-        const bandEl = document.getElementById('band');
-        bandEl.textContent = data.band.toUpperCase();
-        bandEl.style.color = color;
-
-        // Costruisci check rows con metodi DOM sicuri
-        const checksEl = document.getElementById('checks');
-        checksEl.textContent = '';
-        const checkNames = {robots_txt:'Robots.txt',llms_txt:'llms.txt',
-            schema_jsonld:'Schema JSON-LD',meta_tags:'Meta Tags',content:'Content Quality'};
-        const checks = data.checks;
-        for (const [key, label] of Object.entries(checkNames)) {
-            const c = checks[key];
-            const ok = key === 'robots_txt' ? c.citation_bots_ok :
-                       key === 'llms_txt' ? c.found :
-                       key === 'schema_jsonld' ? c.has_website :
-                       key === 'meta_tags' ? (c.has_title && c.has_description) :
-                       c.has_h1;
-            const row = document.createElement('div');
-            row.className = 'check-row';
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = label;
-            const statusSpan = document.createElement('span');
-            statusSpan.textContent = ok ? '\\u2705' : '\\u274c';
-            row.appendChild(nameSpan);
-            row.appendChild(statusSpan);
-            checksEl.appendChild(row);
-        }
-
-        // Raccomandazioni con metodi DOM sicuri
-        const recsEl = document.getElementById('recs');
-        recsEl.textContent = '';
-        for (const rec of data.recommendations) {
-            const li = document.createElement('li');
-            li.textContent = rec;
-            recsEl.appendChild(li);
-        }
-
-        // Link report con metodi DOM sicuri
-        const reportLinkEl = document.getElementById('report-link');
-        reportLinkEl.textContent = '';
-        if (data.report_url) {
-            const a = document.createElement('a');
-            a.href = data.report_url;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.textContent = 'View full HTML report';
-            reportLinkEl.appendChild(a);
-        }
-
-        resultEl.style.display = 'block';
-    } catch (e) {
-        errorEl.textContent = e.message;
-        errorEl.style.display = 'block';
-    } finally {
-        btn.disabled = false;
-        spinner.classList.remove('active');
-    }
-}
-
-document.getElementById('url-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') runAudit();
-});
-</script>
-</body>
-</html>"""
-    # Fix #75: sostituisce il placeholder con l'attributo nonce reale
     return html.replace("__NONCE_ATTR__", nonce_attr)

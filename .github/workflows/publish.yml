@@ -5,8 +5,35 @@ on:
     tags: ['v*']
 
 jobs:
+  # Job ci: esegue i test prima di qualsiasi pubblicazione
+  ci:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Installa dipendenze dev
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Esegui test suite
+        run: pytest tests/ -v --tb=short
+
   build:
     name: Build distribution
+    needs: [ci]
     runs-on: ubuntu-latest
 
     steps:
@@ -15,14 +42,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
 
-      - name: Install build tools
+      - name: Installa build tools
         run: pip install build
 
-      - name: Build package
+      - name: Build pacchetto
         run: python -m build
 
-      - name: Upload dist artifacts
+      - name: Carica artefatti dist
         uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -30,7 +58,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [ci, build]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -44,5 +72,5 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Publish to PyPI
+      - name: Pubblica su PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

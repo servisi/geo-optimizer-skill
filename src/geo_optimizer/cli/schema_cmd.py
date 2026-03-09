@@ -63,18 +63,18 @@ def schema(
     if file_path:
         safe, reason = validate_safe_path(file_path, allowed_extensions=_ALLOWED_HTML_EXT, must_exist=True)
         if not safe:
-            click.echo(f"❌ Percorso file non valido: {reason}")
+            click.echo(f"❌ Percorso file non valido: {reason}", err=True)
             sys.exit(1)
     if faq_file:
         safe, reason = validate_safe_path(faq_file, allowed_extensions={".json"}, must_exist=True)
         if not safe:
-            click.echo(f"❌ Percorso FAQ file non valido: {reason}")
+            click.echo(f"❌ Percorso FAQ file non valido: {reason}", err=True)
             sys.exit(1)
 
     # Mode 1: Analyze
     if analyze:
         if not file_path:
-            click.echo("❌ --file required for --analyze")
+            click.echo("❌ --file required for --analyze", err=True)
             sys.exit(1)
 
         analysis = analyze_html_file(file_path)
@@ -84,7 +84,7 @@ def schema(
     # Mode 2: Astro snippet
     if astro:
         if not url or not name:
-            click.echo("❌ --url and --name required for --astro")
+            click.echo("❌ --url and --name required for --astro", err=True)
             sys.exit(1)
 
         snippet = generate_astro_snippet(url, name)
@@ -98,7 +98,7 @@ def schema(
                 analysis = analyze_html_file(file_path)
                 faq_items = analysis.extracted_faqs
                 if not faq_items:
-                    click.echo("❌ No FAQ items found in HTML")
+                    click.echo("❌ No FAQ items found in HTML", err=True)
                     sys.exit(1)
                 click.echo(f"✅ Extracted {len(faq_items)} FAQ items")
                 schema_dict = generate_faq_schema(faq_items)
@@ -107,7 +107,7 @@ def schema(
                     faq_items = json.load(f)
                 schema_dict = generate_faq_schema(faq_items)
             else:
-                click.echo("❌ --auto-extract or --faq-file required for FAQ schema")
+                click.echo("❌ --auto-extract or --faq-file required for FAQ schema", err=True)
                 sys.exit(1)
         else:
             values = {
@@ -121,7 +121,7 @@ def schema(
 
         if inject:
             if not file_path:
-                click.echo("❌ --file required for --inject")
+                click.echo("❌ --file required for --inject", err=True)
                 sys.exit(1)
 
             success, error = inject_schema_into_html(
@@ -133,12 +133,12 @@ def schema(
             if success:
                 click.echo(f"✅ Schema injected into {file_path}")
             else:
-                click.echo(f"❌ {error or 'Failed to inject schema'}")
+                click.echo(f"❌ {error or 'Failed to inject schema'}", err=True)
                 sys.exit(1)
         else:
             click.echo(schema_to_html_tag(schema_dict))
     else:
-        click.echo("❌ Use --analyze, --astro, or --type to specify an action.")
+        click.echo("❌ Use --analyze, --astro, or --type to specify an action.", err=True)
         sys.exit(1)
 
 

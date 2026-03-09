@@ -10,7 +10,7 @@ This documentation covers every tool and concept in the toolkit. → [README](..
 | Page | Description |
 |------|-------------|
 | [Getting Started](getting-started.md) | Install the toolkit and run your first audit in 5 minutes |
-| [GEO Audit Script](geo-audit.md) | Full reference for `geo_audit.py` — flags, output, scoring |
+| [GEO Audit Script](geo-audit.md) | Full reference for `geo audit` — flags, output, scoring |
 | [Generating llms.txt](llms-txt.md) | Auto-generate `/llms.txt` from your sitemap for AI crawlers |
 | [Schema Injector](schema-injector.md) | Generate and inject JSON-LD structured data into your pages |
 | [Using SKILL.md as AI Context](ai-context.md) | Use the toolkit with Claude, ChatGPT, Gemini, Cursor, Windsurf |

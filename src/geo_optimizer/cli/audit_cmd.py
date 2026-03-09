@@ -4,6 +4,7 @@ CLI command: geo audit
 Runs the full GEO audit on a website and displays results.
 """
 
+import logging
 import sys
 
 import click
@@ -50,6 +51,19 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
         output_file = project_config.audit.output
     if not cache:
         cache = project_config.audit.cache
+
+    # Fix #121/#144: verbose da config/CLI configura il livello di logging
+    if not verbose:
+        verbose = project_config.audit.verbose
+    if verbose:
+        # --verbose: mostra log DEBUG per diagnostica dettagliata
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        # Senza --verbose: sopprimi log sotto WARNING (fix #144)
+        logging.basicConfig(level=logging.WARNING)
+
+    # Fix #121: leggi min_score dal config (CLI non ha ancora l'opzione --min-score)
+    min_score = project_config.audit.min_score
 
     if not url and not clear_cache:
         raise click.UsageError("Manca l'opzione '--url'. Specificala via CLI o in .geo-optimizer.yml")
@@ -116,5 +130,13 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
         click.echo(f"✅ Report written to: {output_file}")
     else:
         click.echo(output)
+
+    # Fix #121: exit code 2 se score < min_score (configurabile via .geo-optimizer.yml)
+    if min_score > 0 and result.score < min_score:
+        click.echo(
+            f"\n❌ Score {result.score}/100 sotto il minimo richiesto ({min_score})",
+            err=True,
+        )
+        sys.exit(2)
 
     return result.score

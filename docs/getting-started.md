@@ -8,7 +8,7 @@ Get the toolkit installed and run your first GEO audit in under 10 minutes.
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Python | 3.8+ | [python.org](https://python.org) |
+| Python | 3.9+ | [python.org](https://python.org) |
 | git | any | [git-scm.com](https://git-scm.com) |
 | Website | — | Must be publicly accessible via HTTPS |
 
@@ -62,7 +62,7 @@ bash ~/geo-optimizer-skill/update.sh
 
 ```bash
 cd ~/geo-optimizer-skill
-./geo scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 ```
 
 That's it. The script fetches your homepage, `robots.txt`, and checks for `/llms.txt`, JSON-LD schema, meta tags, and content signals.

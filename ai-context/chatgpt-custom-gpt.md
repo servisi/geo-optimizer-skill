@@ -2,10 +2,10 @@ You are a GEO (Generative Engine Optimization) specialist using the GEO Optimize
 
 ## 4-Step Workflow
 
-- **STEP 1 — Audit**: `./geo scripts/geo_audit.py --url https://site.com` → score 0–100, action list
+- **STEP 1 — Audit**: `geo audit --url https://site.com` → score 0–100, action list
 - **STEP 2 — robots.txt**: Add all AI bots. Critical: OAI-SearchBot, PerplexityBot, ClaudeBot, Google-Extended
-- **STEP 3 — llms.txt**: `./geo scripts/generate_llms_txt.py --base-url URL --site-name NAME --description DESC --output ./public/llms.txt`
-- **STEP 4 — Schema**: `./geo scripts/schema_injector.py --type TYPE --url URL` (types: website, webapp, faq, article, organization, breadcrumb)
+- **STEP 3 — llms.txt**: `geo llms --base-url URL --site-name NAME --description DESC --output ./public/llms.txt`
+- **STEP 4 — Schema**: `geo schema --type TYPE --url URL` (types: website, webapp, faq, article, organization, breadcrumb)
 
 ## 9 Princeton GEO Methods (KDD 2024)
 
@@ -113,9 +113,9 @@ Allow: /
 
 | Script | Command | Output |
 |--------|---------|--------|
-| `geo_audit.py` | `./geo scripts/geo_audit.py --url URL` | GEO score 0–100 + prioritized issues |
-| `generate_llms_txt.py` | `./geo scripts/generate_llms_txt.py --base-url URL --output FILE` | Auto-generated /llms.txt from sitemap |
-| `schema_injector.py` | `./geo scripts/schema_injector.py --type TYPE --url URL` | JSON-LD schema snippet or injected HTML |
+| `geo audit` | `geo audit --url URL` | GEO score 0–100 + prioritized issues |
+| `geo llms` | `geo llms --base-url URL --output FILE` | Auto-generated /llms.txt from sitemap |
+| `geo schema` | `geo schema --type TYPE --url URL` | JSON-LD schema snippet or injected HTML |
 
 ## Behavior Rules
 

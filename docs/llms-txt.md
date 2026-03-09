@@ -1,6 +1,6 @@
 # Generating llms.txt
 
-`generate_llms_txt.py` auto-generates an `/llms.txt` file from your sitemap so AI crawlers can understand your site's structure.
+`geo llms` auto-generates an `/llms.txt` file from your sitemap so AI crawlers can understand your site's structure.
 
 ---
 
@@ -28,10 +28,10 @@ AI crawlers (Perplexity, Claude, ChatGPT Search) use `llms.txt` as a trust and s
 
 ```bash
 # Minimal — auto-detects sitemap from robots.txt
-./geo scripts/generate_llms_txt.py --base-url https://yoursite.com
+geo llms --base-url https://yoursite.com
 
 # Full options
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --site-name "MySite" \
   --description "Free online calculators for finance and math" \
@@ -118,13 +118,13 @@ Place `llms.txt` at the root of your web server so it's accessible at `https://y
 
 ```bash
 # Astro
-./geo scripts/generate_llms_txt.py --base-url https://yoursite.com --output ./public/llms.txt
+geo llms --base-url https://yoursite.com --output ./public/llms.txt
 
 # Next.js (app router)
-./geo scripts/generate_llms_txt.py --base-url https://yoursite.com --output ./public/llms.txt
+geo llms --base-url https://yoursite.com --output ./public/llms.txt
 
 # Plain HTML
-./geo scripts/generate_llms_txt.py --base-url https://yoursite.com --output ./llms.txt
+geo llms --base-url https://yoursite.com --output ./llms.txt
 ```
 
 After running: deploy as you normally would. The file will be served at `/llms.txt`.
@@ -133,7 +133,7 @@ After running: deploy as you normally would. The file will be served at `/llms.t
 
 ```bash
 # Generate the file locally
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --sitemap https://yoursite.com/sitemap.xml \
   --output llms.txt
@@ -148,7 +148,7 @@ Or use a plugin like "WP Robots Txt" to serve a custom `llms.txt` via code.
 
 ```bash
 # Generate
-./geo scripts/generate_llms_txt.py --base-url https://yoursite.com --output llms.txt
+geo llms --base-url https://yoursite.com --output llms.txt
 
 # Upload via FTP/SCP to the web root
 scp llms.txt user@yourserver.com:/var/www/yoursite.com/llms.txt
@@ -173,7 +173,7 @@ If you get a 404, the file is not in the right location. Check your web root dir
 ### Astro — with custom sitemap
 
 ```bash
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --site-name "MySite" \
   --description "Free tools and calculators" \
@@ -186,7 +186,7 @@ If you get a 404, the file is not in the right location. Check your web root dir
 ### Next.js — standard setup
 
 ```bash
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --site-name "MySite" \
   --output ./public/llms.txt
@@ -195,7 +195,7 @@ If you get a 404, the file is not in the right location. Check your web root dir
 ### WordPress — with Yoast SEO sitemap
 
 ```bash
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --sitemap https://yoursite.com/sitemap_index.xml \
   --site-name "MySite" \

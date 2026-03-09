@@ -36,36 +36,38 @@ def llms(base_url, output, sitemap, site_name, description, fetch_titles, max_pe
         click.echo(f"\n❌ URL non sicuro: {reason}", err=True)
         sys.exit(1)
 
-    click.echo("\n🌐 GEO llms.txt Generator")
-    click.echo(f"   Site: {base_url}")
+    # Messaggi di stato su stderr per non interferire con l'output rediretto (fix #143)
+    click.echo("\n🌐 GEO llms.txt Generator", err=True)
+    click.echo(f"   Site: {base_url}", err=True)
 
     sitemap_url = sitemap
     if not sitemap_url:
-        click.echo("\n🔍 Searching for sitemap...")
-        sitemap_url = discover_sitemap(base_url, on_status=lambda msg: click.echo(f"   {msg}"))
+        click.echo("\n🔍 Searching for sitemap...", err=True)
+        sitemap_url = discover_sitemap(base_url, on_status=lambda msg: click.echo(f"   {msg}", err=True))
 
     if not sitemap_url:
-        click.echo("❌ No sitemap found. Specify --sitemap manually.")
+        click.echo("❌ No sitemap found. Specify --sitemap manually.", err=True)
         site_label = site_name or base_url.split("//")[1].split(".")[0].title()
         desc = description or f"Website available at {base_url}"
         minimal = f"# {site_label}\n\n> {desc}\n\n## Main Pages\n\n- [Homepage]({base_url})\n"
         if output:
             with open(output, "w") as f:
                 f.write(minimal)
-            click.echo(f"✅ Minimal llms.txt written to: {output}")
+            click.echo(f"✅ Minimal llms.txt written to: {output}", err=True)
         else:
-            click.echo(f"\n--- llms.txt ---\n{minimal}")
+            # Il contenuto llms.txt va su stdout
+            click.echo(minimal)
         return
 
-    click.echo("\n📥 Fetching URLs from sitemap...")
-    urls = fetch_sitemap(sitemap_url, on_status=lambda msg: click.echo(f"   {msg}"))
+    click.echo("\n📥 Fetching URLs from sitemap...", err=True)
+    urls = fetch_sitemap(sitemap_url, on_status=lambda msg: click.echo(f"   {msg}", err=True))
 
     if not urls:
-        click.echo("❌ No URLs found in sitemap")
+        click.echo("❌ No URLs found in sitemap", err=True)
         sys.exit(1)
 
-    click.echo(f"   Total URLs: {len(urls)}")
-    click.echo("\n📝 Generating llms.txt...")
+    click.echo(f"   Total URLs: {len(urls)}", err=True)
+    click.echo("\n📝 Generating llms.txt...", err=True)
 
     content = generate_llms_txt(
         base_url=base_url,
@@ -79,12 +81,13 @@ def llms(base_url, output, sitemap, site_name, description, fetch_titles, max_pe
     if output:
         with open(output, "w", encoding="utf-8") as f:
             f.write(content)
-        click.echo(f"\n✅ llms.txt written to: {output}")
-        click.echo(f"   Size: {len(content)} bytes")
-        click.echo(f"   Lines: {len(content.splitlines())}")
-        click.echo(f"\n   Upload the file to: {base_url}/llms.txt")
+        click.echo(f"\n✅ llms.txt written to: {output}", err=True)
+        click.echo(f"   Size: {len(content)} bytes", err=True)
+        click.echo(f"   Lines: {len(content.splitlines())}", err=True)
+        click.echo(f"\n   Upload the file to: {base_url}/llms.txt", err=True)
     else:
-        click.echo("\n" + "─" * 50)
+        # Il contenuto llms.txt va su stdout; il separatore decorativo su stderr
+        click.echo("\n" + "─" * 50, err=True)
         click.echo(content)
-        click.echo("─" * 50)
-        click.echo("\n✅ Save with: --output /path/to/public/llms.txt")
+        click.echo("─" * 50, err=True)
+        click.echo("\n✅ Save with: --output /path/to/public/llms.txt", err=True)

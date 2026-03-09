@@ -32,8 +32,14 @@ from geo_optimizer.utils.http import fetch_url
 from geo_optimizer.utils.robots_parser import classify_bot, parse_robots_txt
 
 
-def audit_robots_txt(base_url: str) -> RobotsResult:
-    """Check robots.txt for AI bot access. Returns RobotsResult."""
+def audit_robots_txt(base_url: str, bots: dict = None) -> RobotsResult:
+    """Check robots.txt for AI bot access. Returns RobotsResult.
+
+    Args:
+        base_url: URL base del sito.
+        bots: Dizionario bot da verificare. Default: AI_BOTS da config.
+              Fix #120: permette di passare bot aggiuntivi da project_config.extra_bots.
+    """
     robots_url = urljoin(base_url, "/robots.txt")
     r, err = fetch_url(robots_url)
 
@@ -53,8 +59,11 @@ def audit_robots_txt(base_url: str) -> RobotsResult:
     # Parse robots.txt into structured rules
     agent_rules = parse_robots_txt(content)
 
+    # Usa i bot forniti oppure il default AI_BOTS
+    effective_bots = bots if bots is not None else AI_BOTS
+
     # Classifica ogni AI bot
-    for bot, description in AI_BOTS.items():
+    for bot, description in effective_bots.items():
         bot_status = classify_bot(bot, description, agent_rules)
 
         if bot_status.status == "missing":
@@ -229,8 +238,9 @@ def audit_content_quality(soup, url: str) -> ContentResult:
     headings = soup.find_all(["h1", "h2", "h3", "h4"])
     result.heading_count = len(headings)
 
-    # Check for numbers/statistics
-    body_text = soup.get_text()
+    # Fix #107: separator=" " previene concatenazione parole di tag adiacenti
+    # Esempio: <span>Hello</span><span>World</span> → "Hello World" invece di "HelloWorld"
+    body_text = soup.get_text(separator=" ", strip=True)
     numbers = re.findall(r"\b\d+[%\u20ac$\u00a3]|\b\d+\.\d+|\b\d{3,}\b", body_text)
     result.numbers_count = len(numbers)
     if len(numbers) >= 3:
@@ -338,9 +348,20 @@ def build_recommendations(base_url, robots, llms, schema, meta, content) -> list
     return recommendations
 
 
-def run_full_audit(url: str, use_cache: bool = False) -> AuditResult:
-    """Run complete audit and return AuditResult with all sub-results, score, band, and recommendations."""
+def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> AuditResult:
+    """Run complete audit and return AuditResult with all sub-results, score, band, and recommendations.
+
+    Args:
+        url: URL del sito da analizzare.
+        use_cache: Se True, usa la cache su disco per le richieste HTTP.
+        project_config: ProjectConfig opzionale — se ha extra_bots, li merge con AI_BOTS (fix #120).
+    """
     from bs4 import BeautifulSoup
+
+    # Fix #120: se il config ha extra_bots, merge con AI_BOTS per questo audit
+    effective_bots = dict(AI_BOTS)
+    if project_config is not None and project_config.extra_bots:
+        effective_bots.update(project_config.extra_bots)
 
     # Normalize URL
     base_url = url.rstrip("/")
@@ -377,7 +398,8 @@ def run_full_audit(url: str, use_cache: bool = False) -> AuditResult:
     soup = BeautifulSoup(r.text, "html.parser")
 
     # Run all sub-audits
-    robots = audit_robots_txt(base_url)
+    # Fix #120: passa effective_bots che include eventuali extra_bots dal project_config
+    robots = audit_robots_txt(base_url, bots=effective_bots)
     llms = audit_llms_txt(base_url)
     schema = audit_schema(soup, base_url)
     meta = audit_meta_tags(soup, base_url)

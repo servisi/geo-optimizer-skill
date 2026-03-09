@@ -53,10 +53,14 @@ dev = [
     "pytest-cov>=4.0,<8.0",
     "ruff>=0.8.0",
 ]
+# Gruppo convenienza: installa tutte le dipendenze opzionali utente (#136)
+all = [
+    "geo-optimizer-skill[async,web]",
+]
 
 [project.urls]
 Homepage = "https://github.com/auriti-labs/geo-optimizer-skill"
-Documentation = "https://auritidesign.it/docs"
+Documentation = "https://github.com/Auriti-Labs/geo-optimizer-skill#readme"
 Repository = "https://github.com/auriti-labs/geo-optimizer-skill"
 Issues = "https://github.com/auriti-labs/geo-optimizer-skill/issues"
 
@@ -68,7 +72,8 @@ geo-web = "geo_optimizer.web.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"geo_optimizer" = ["py.typed", "i18n/locales/*/LC_MESSAGES/*.mo", "i18n/locales/*/LC_MESSAGES/*.po"]
+# Solo i file compilati .mo — i sorgenti .po non appartengono al pacchetto distribuito (#135)
+"geo_optimizer" = ["py.typed", "i18n/locales/*/LC_MESSAGES/*.mo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

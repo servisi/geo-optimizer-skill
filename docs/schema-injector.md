@@ -1,6 +1,6 @@
 # Schema Injector
 
-`schema_injector.py` generates and injects JSON-LD structured data into HTML pages. It supports multiple schema types, framework-specific output, and in-place file injection.
+`geo schema` generates and injects JSON-LD structured data into HTML pages. It supports multiple schema types, framework-specific output, and in-place file injection.
 
 ---
 
@@ -33,19 +33,19 @@ FAQPage has the highest GEO impact because AI engines directly extract Q&A pairs
 
 ```bash
 # Analyze an HTML file — see what schema is present and what's missing
-./geo scripts/schema_injector.py --file index.html --analyze
+geo schema --file index.html --analyze
 
 # Generate WebSite schema (print to stdout)
-./geo scripts/schema_injector.py --type website --name "MySite" --url https://yoursite.com
+geo schema --type website --name "MySite" --url https://yoursite.com
 
 # Generate FAQPage schema from a JSON file
-./geo scripts/schema_injector.py --type faq --faq-file faqs.json
+geo schema --type faq --faq-file faqs.json
 
 # Inject schema directly into an HTML file (creates .bak backup first)
-./geo scripts/schema_injector.py --file page.html --type website --name "MySite" --url https://yoursite.com --inject
+geo schema --file page.html --type website --name "MySite" --url https://yoursite.com --inject
 
 # Generate Astro BaseLayout snippet
-./geo scripts/schema_injector.py --type website --name "MySite" --url https://yoursite.com --astro
+geo schema --type website --name "MySite" --url https://yoursite.com --astro
 ```
 
 ---
@@ -71,7 +71,7 @@ FAQPage has the highest GEO impact because AI engines directly extract Q&A pairs
 Analyzes an existing HTML file and reports which schema types are present and which are missing.
 
 ```bash
-./geo scripts/schema_injector.py --file index.html --analyze
+geo schema --file index.html --analyze
 ```
 
 Example output:
@@ -85,7 +85,7 @@ Analyzing: index.html
 ❌ Article schema missing
 
 Suggestion: Add FAQPage schema — highest impact for AI citation visibility.
-Run: ./geo scripts/schema_injector.py --file index.html --type faq --faq-file faqs.json --inject
+Run: geo schema --file index.html --type faq --faq-file faqs.json --inject
 ```
 
 ---
@@ -96,22 +96,22 @@ Generates a specific schema type. Prints JSON-LD to stdout by default; combine w
 
 ```bash
 # WebSite
-./geo scripts/schema_injector.py --type website --name "MySite" --url https://yoursite.com --description "Free calculators"
+geo schema --type website --name "MySite" --url https://yoursite.com --description "Free calculators"
 
 # WebApplication
-./geo scripts/schema_injector.py --type webapp --name "Mortgage Calculator" --url https://yoursite.com/mortgage --description "Calculate monthly payments"
+geo schema --type webapp --name "Mortgage Calculator" --url https://yoursite.com/mortgage --description "Calculate monthly payments"
 
 # FAQPage (from --faq-file)
-./geo scripts/schema_injector.py --type faq --faq-file faqs.json
+geo schema --type faq --faq-file faqs.json
 
 # Organization
-./geo scripts/schema_injector.py --type organization --name "MySite" --url https://yoursite.com
+geo schema --type organization --name "MySite" --url https://yoursite.com
 
 # Article
-./geo scripts/schema_injector.py --type article --name "What is GEO?" --url https://yoursite.com/blog/geo --description "Introduction to GEO"
+geo schema --type article --name "What is GEO?" --url https://yoursite.com/blog/geo --description "Introduction to GEO"
 
 # BreadcrumbList
-./geo scripts/schema_injector.py --type breadcrumb --url https://yoursite.com/finance/mortgage
+geo schema --type breadcrumb --url https://yoursite.com/finance/mortgage
 ```
 
 ---
@@ -121,7 +121,7 @@ Generates a specific schema type. Prints JSON-LD to stdout by default; combine w
 Generates a ready-to-paste snippet for Astro `BaseLayout.astro`. Supports conditional rendering based on props.
 
 ```bash
-./geo scripts/schema_injector.py --type website --name "MySite" --url https://yoursite.com --astro
+geo schema --type website --name "MySite" --url https://yoursite.com --astro
 ```
 
 Output — complete Astro layout snippet:
@@ -231,7 +231,7 @@ const faqItems = [
 Injects the generated schema directly into the HTML file, inserting it before `</head>`. A backup (`.bak`) is created automatically.
 
 ```bash
-./geo scripts/schema_injector.py \
+geo schema \
   --file index.html \
   --type faq \
   --faq-file faqs.json \
@@ -273,7 +273,7 @@ Format of `faqs.json`:
 ```
 
 ```bash
-./geo scripts/schema_injector.py --type faq --faq-file faqs.json
+geo schema --type faq --faq-file faqs.json
 ```
 
 ---

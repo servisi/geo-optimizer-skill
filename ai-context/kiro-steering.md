@@ -35,7 +35,7 @@ Never omit the H1 + blockquote pair — they are required by the llms.txt spec.
 Always place `llms.txt` at the site root (`/llms.txt`).
 Keep llms.txt under 200 lines.
 
-Generate: `./geo scripts/generate_llms_txt.py --base-url URL --site-name NAME --description DESC --output ./public/llms.txt`
+Generate: `geo llms --base-url URL --site-name NAME --description DESC --output ./public/llms.txt`
 
 ## JSON-LD Schema
 
@@ -50,7 +50,7 @@ Schema type guide:
 - `FAQPage` → FAQ sections, question-based content
 - `Article` → blog posts, guides, tutorials
 
-Inject: `./geo scripts/schema_injector.py --type TYPE --url URL`
+Inject: `geo schema --type TYPE --url URL`
 Types: `website`, `webapp`, `faq`, `article`, `organization`, `breadcrumb`
 
 ## Content (Princeton GEO Methods)
@@ -73,24 +73,24 @@ Priority:
 Always run audit before recommending optimizations.
 GEO Score: 0–40 = critical | 41–70 = foundation | 71–90 = good | 91–100 = excellent
 
-Run: `./geo scripts/geo_audit.py --url https://yoursite.com`
+Run: `geo audit --url https://yoursite.com`
 
 ## Quick Reference
 
 ```bash
 # Audit
-./geo scripts/geo_audit.py --url https://yoursite.com
+geo audit --url https://yoursite.com
 
 # Generate llms.txt
-./geo scripts/generate_llms_txt.py \
+geo llms \
   --base-url https://yoursite.com \
   --site-name "Site Name" \
   --description "One-sentence description." \
   --output ./public/llms.txt
 
 # Inject schema
-./geo scripts/schema_injector.py --type webapp --url https://yoursite.com/tool
-./geo scripts/schema_injector.py --type faq   --url https://yoursite.com/page
+geo schema --type webapp --url https://yoursite.com/tool
+geo schema --type faq   --url https://yoursite.com/page
 ```
 
 Always use `./geo` — never call scripts with `python3` directly.
