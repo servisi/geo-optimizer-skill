@@ -13,12 +13,15 @@ Endpoint principali:
 import asyncio
 import hashlib
 import logging
+import os
+import secrets
 import time
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from geo_optimizer import __version__
@@ -34,55 +37,140 @@ app = FastAPI(
 )
 
 
+# ─── Middleware: Limite dimensione body POST ───────────────────────────────────
+_MAX_BODY_BYTES = 4 * 1024  # 4 KB — previene DoS con body POST illimitati
+
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Rifiuta richieste POST con body superiore a _MAX_BODY_BYTES (fix #102)."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "POST":
+            content_length = request.headers.get("content-length")
+            if content_length is not None:
+                # Rifiuta subito se Content-Length supera il limite
+                if int(content_length) > _MAX_BODY_BYTES:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": f"Body troppo grande. Limite: {_MAX_BODY_BYTES} byte."},
+                    )
+        return await call_next(request)
+
+
 # ─── Middleware: Security Headers ─────────────────────────────────────────────
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Aggiunge header di sicurezza HTTP a tutte le risposte."""
+    """Aggiunge header di sicurezza HTTP a tutte le risposte.
 
-    async def dispatch(self, request, call_next):
+    Fix #75: usa nonce per script inline invece di 'unsafe-inline'.
+    Il nonce viene generato per ogni risposta e inserito nella CSP
+    e nella pagina HTML tramite request.state.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        # Genera nonce crittograficamente sicuro per ogni richiesta
+        nonce = secrets.token_urlsafe(16)
+        # Rende il nonce accessibile agli endpoint (es. homepage)
+        request.state.csp_nonce = nonce
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Usa 'nonce-{value}' invece di 'unsafe-inline' per la protezione XSS (fix #75)
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
             "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
             "frame-ancestors 'none'"
         )
         return response
 
 
+app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS: permetti richieste cross-origin per l'API pubblica
+# CORS: wildcard "*" va bene per una demo pubblica read-only senza cookie/auth.
+# NOTA per produzione: sostituire allow_origins=["*"] con la lista dei domini
+# autorizzati (es. ["https://yourdomain.com"]) e valutare allow_credentials.
+# Con allow_origins=["*"] NON si può usare allow_credentials=True (violazione CORS spec).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],  # Metodi espliciti, no wildcard
+    allow_headers=["Content-Type"],            # Header minimi necessari
     max_age=3600,
 )
 
 # ─── Rate Limiter in-memory ───────────────────────────────────────────────────
 _rate_limit_store: dict = {}  # {ip: [timestamp, ...]}
-_RATE_LIMIT_WINDOW = 60  # secondi
+_RATE_LIMIT_WINDOW = 60       # secondi
 _RATE_LIMIT_MAX_REQUESTS = 30  # richieste per finestra per IP
+_RATE_LIMIT_MAX_IPS = 10000   # numero massimo di IP tracciati
+
+# ─── Proxy trust: lista CIDR/IP di proxy fidati ───────────────────────────────
+# Configurabile tramite variabile d'ambiente TRUSTED_PROXIES (CSV di IP/CIDR).
+# Solo se il proxy è trusted si legge X-Forwarded-For (fix #68).
+_TRUSTED_PROXIES: set[str] = set(
+    filter(None, os.environ.get("TRUSTED_PROXIES", "").split(","))
+)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Estrae l'IP reale del client dalla richiesta.
+
+    - Se request.client è None (ambienti proxy/test), ritorna "unknown" (fix #95).
+    - Se il proxy è trusted, legge X-Forwarded-For (fix #68).
+    - Altrimenti usa request.client.host direttamente.
+    """
+    # Fix #95: request.client può essere None in ambienti proxy/test
+    proxy_ip = request.client.host if request.client else None
+
+    if proxy_ip is None:
+        return "unknown"
+
+    # Fix #68: leggi X-Forwarded-For solo se il proxy è nella lista trusted
+    if proxy_ip in _TRUSTED_PROXIES:
+        forwarded_for = request.headers.get("X-Forwarded-For", "")
+        if forwarded_for:
+            # Prendi il primo IP della catena (IP originale del client)
+            real_ip = forwarded_for.split(",")[0].strip()
+            if real_ip:
+                return real_ip
+
+    return proxy_ip
+
+
+def _evict_oldest_rate_limit_entries(count: int = 1) -> None:
+    """Rimuove le `count` entry più vecchie dal rate limit store (LRU eviction).
+
+    Fix #70/#99: invece di _rate_limit_store.clear() che azzera tutti,
+    rimuoviamo solo le entry con l'ultima richiesta più datata.
+    """
+    if not _rate_limit_store:
+        return
+    # Ordina per timestamp dell'ultima richiesta (il più recente nell'array)
+    sorted_keys = sorted(
+        _rate_limit_store,
+        key=lambda ip: _rate_limit_store[ip][-1] if _rate_limit_store[ip] else 0,
+    )
+    for key in sorted_keys[:count]:
+        _rate_limit_store.pop(key, None)
 
 
 def _check_rate_limit(client_ip: str) -> bool:
     """Verifica rate limit per IP. Ritorna True se consentito."""
     now = time.time()
     timestamps = _rate_limit_store.get(client_ip, [])
-    # Rimuovi timestamp fuori finestra
+    # Rimuovi timestamp fuori finestra temporale
     timestamps = [t for t in timestamps if (now - t) < _RATE_LIMIT_WINDOW]
     if len(timestamps) >= _RATE_LIMIT_MAX_REQUESTS:
         _rate_limit_store[client_ip] = timestamps
         return False
     timestamps.append(now)
     _rate_limit_store[client_ip] = timestamps
-    # Pulizia periodica: limita store a 10000 IP
-    if len(_rate_limit_store) > 10000:
-        _rate_limit_store.clear()
+    # Fix #70/#99: LRU eviction — rimuovi solo le entry più vecchie, non tutto
+    if len(_rate_limit_store) > _RATE_LIMIT_MAX_IPS:
+        entries_to_remove = len(_rate_limit_store) - _RATE_LIMIT_MAX_IPS
+        _evict_oldest_rate_limit_entries(entries_to_remove)
     return True
 
 
@@ -93,8 +181,12 @@ _MAX_CACHE_SIZE = 500
 
 
 def _cache_key(url: str) -> str:
-    """Genera chiave cache da URL."""
-    return hashlib.sha256(url.lower().strip().encode()).hexdigest()[:16]
+    """Genera chiave cache da URL.
+
+    Fix #103: usa i primi 32 caratteri hex (128 bit) invece di 16 (64 bit)
+    per ridurre drasticamente il rischio di collisione.
+    """
+    return hashlib.sha256(url.lower().strip().encode()).hexdigest()[:32]
 
 
 def _get_cached(url: str) -> Optional[dict]:
@@ -131,9 +223,11 @@ def _set_cached(url: str, data: dict) -> str:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def homepage():
+async def homepage(request: Request):
     """Homepage con form per audit GEO."""
-    return _render_homepage()
+    # Fix #75: recupera il nonce CSP impostato dal SecurityHeadersMiddleware
+    nonce = getattr(request.state, "csp_nonce", "")
+    return _render_homepage(nonce=nonce)
 
 
 @app.get("/health")
@@ -142,27 +236,40 @@ async def health():
     return {"status": "ok", "version": __version__}
 
 
+# ─── Modello Pydantic per validazione body POST ───────────────────────────────
+
+class AuditRequest(BaseModel):
+    """Schema per il body della richiesta POST /api/audit.
+
+    Fix #149: validazione Pydantic previene crash 500 con input non-stringa
+    (es. {"url": 123} ora ritorna 422 Unprocessable Entity invece di 500).
+    """
+
+    url: str
+
+
 @app.get("/api/audit")
 async def audit_get(
     request: Request,
     url: str = Query(..., description="URL del sito da analizzare"),
 ):
     """Esegui audit GEO via GET."""
-    if not _check_rate_limit(request.client.host):
+    # Fix #95: usa _get_client_ip per gestire request.client None e proxy trusted
+    if not _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Troppe richieste. Riprova tra poco.")
     return await _run_audit(url)
 
 
 @app.post("/api/audit")
-async def audit_post(request: Request):
-    """Esegui audit GEO via POST (body JSON con campo 'url')."""
-    if not _check_rate_limit(request.client.host):
+async def audit_post(request: Request, body: AuditRequest):
+    """Esegui audit GEO via POST (body JSON con campo 'url').
+
+    Fix #149: Pydantic valida il body — url deve essere stringa.
+    Fix #95: usa _get_client_ip per gestire request.client None e proxy trusted.
+    """
+    if not _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Troppe richieste. Riprova tra poco.")
-    body = await request.json()
-    url = body.get("url")
-    if not url:
-        raise HTTPException(status_code=400, detail="Campo 'url' obbligatorio")
-    return await _run_audit(url)
+    return await _run_audit(body.url)
 
 
 @app.get("/report/{report_id}", response_class=HTMLResponse)
@@ -198,7 +305,8 @@ async def badge(
 
     from geo_optimizer.utils.validators import validate_public_url
 
-    if not _check_rate_limit(request.client.host):
+    # Fix #95: usa _get_client_ip per gestire request.client None e proxy trusted
+    if not _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Troppe richieste. Riprova tra poco.")
 
     # Normalizza URL
@@ -402,14 +510,18 @@ def _dict_to_audit_result(data: dict):
     )
 
 
-def _render_homepage() -> str:
+def _render_homepage(nonce: str = "") -> str:
     """Genera HTML homepage con form di audit.
 
+    Fix #75: accetta il nonce CSP per il tag <script> inline.
     Nota: il frontend usa textContent per i dati dell'audit
     per prevenire XSS. Solo struttura HTML statica viene costruita
     con metodi DOM sicuri.
     """
-    return """<!DOCTYPE html>
+    # Usa "__NONCE_ATTR__" come placeholder nell'HTML — sostituito a fine funzione.
+    # Evita f-string sull'intero HTML perché { } in CSS/JS causerebbero conflitti.
+    nonce_attr = f' nonce="{nonce}"' if nonce else ""
+    html = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -481,7 +593,7 @@ border-bottom:1px solid #334155}
     </div>
 </div>
 
-<script>
+<script__NONCE_ATTR__>
 async function runAudit() {
     const url = document.getElementById('url-input').value;
     if (!url) return;
@@ -577,3 +689,5 @@ document.getElementById('url-input').addEventListener('keypress', function(e) {
 </script>
 </body>
 </html>"""
+    # Fix #75: sostituisce il placeholder con l'attributo nonce reale
+    return html.replace("__NONCE_ATTR__", nonce_attr)

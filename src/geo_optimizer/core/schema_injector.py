@@ -82,9 +82,11 @@ const faqSchema = faqItems.length > 0 ? {
   <meta property="og:type" content="website" />
 
   <!-- GEO: Schema JSON-LD -->
-  <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
-  {webAppSchema && <script type="application/ld+json" set:html={JSON.stringify(webAppSchema)} />}
-  {faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
+  <!-- Sicurezza: replace('</', '<\\/') previene XSS da chiusura prematura del tag <script>.
+       JSON.stringify() da solo non escapa '</script>' — il replace è obbligatorio. -->
+  <script type="application/ld+json" set:html={JSON.stringify(websiteSchema).replace(/<\//g, '<\\/')} />
+  {webAppSchema && <script type="application/ld+json" set:html={JSON.stringify(webAppSchema).replace(/<\//g, '<\\/')} />}
+  {faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema).replace(/<\//g, '<\\/')} />}
 </head>
 """
 

@@ -18,7 +18,15 @@ BAND_COLORS = {
     "critical": "#ef4444",  # Rosso
 }
 
-# Lunghezza massima label per prevenire abusi
+# Whitelist esplicita delle label di testo per ogni band — nessun valore esterno ammesso
+BAND_LABELS = {
+    "excellent": "Excellent",
+    "good": "Good",
+    "foundation": "Foundation",
+    "critical": "Critical",
+}
+
+# Lunghezza massima label (in caratteri di testo già escapato) per prevenire abusi
 _MAX_LABEL_LENGTH = 50
 
 
@@ -50,12 +58,14 @@ def generate_badge_svg(score: int, band: str, label: str = "GEO Score") -> str:
     score = max(0, min(100, score))
     score_text = f"{score}/100"
 
-    # Tronca e sanitizza label contro XSS
-    label = label[:_MAX_LABEL_LENGTH]
+    # Sanitizza PRIMA di troncare: così l'escape non viene mai spezzato a metà.
+    # Esempio: "&amp;" è sicura come unità; troncare dopo garantisce che
+    # il testo finale contenga solo entità XML complete.
     safe_label = _svg_escape(label)
+    safe_label = safe_label[:_MAX_LABEL_LENGTH]
 
-    # Calcola larghezze basate sul testo originale (non escapato)
-    label_width = len(label) * 6.5 + 12
+    # Calcola larghezze basate sul testo originale (non escapato), con truncation coerente
+    label_width = len(label[:_MAX_LABEL_LENGTH]) * 6.5 + 12
     score_width = len(score_text) * 7 + 12
     total_width = label_width + score_width
 
