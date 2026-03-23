@@ -16,6 +16,7 @@ Implementa protezioni anti-SSRF:
 from __future__ import annotations
 
 import socket
+import threading
 from urllib.parse import urlparse
 
 import requests
@@ -88,7 +89,12 @@ class _PinnedIPAdapter(HTTPAdapter):
 
     Previene attacchi DNS rebinding TOCTOU: dopo la validazione dell'URL,
     l'IP viene fissato e usato direttamente senza una seconda risoluzione DNS.
+
+    Thread-safe: usa un Lock globale per proteggere il monkeypatching
+    temporaneo di socket.getaddrinfo (fix #178).
     """
+
+    _lock = threading.Lock()
 
     def __init__(self, pinned_ips: list[str], *args, **kwargs):
         """
@@ -96,36 +102,34 @@ class _PinnedIPAdapter(HTTPAdapter):
             pinned_ips: Lista di IP validati a cui forzare la connessione.
                         Viene usato il primo IP disponibile.
         """
-        # Usa il primo IP validato (tutti sono già stati verificati come pubblici)
         self._pinned_ip = pinned_ips[0] if pinned_ips else None
         super().__init__(*args, **kwargs)
 
     def send(self, request, *args, **kwargs):
-        """Override send: sostituisce l'hostname con l'IP pinnato nel socket."""
-        if self._pinned_ip:
-            # Inietta l'IP risolto sovrascrivendo la risoluzione DNS
-            # tramite monkeypatching temporaneo di getaddrinfo
-            original_getaddrinfo = socket.getaddrinfo
-            pinned_ip = self._pinned_ip
+        """Override send: sostituisce l'hostname con l'IP pinnato nel socket.
 
+        Thread-safe: il Lock serializza l'accesso a socket.getaddrinfo
+        per prevenire race condition tra audit concorrenti (fix #178).
+        """
+        if self._pinned_ip:
+            pinned_ip = self._pinned_ip
             parsed = urlparse(request.url)
             target_host = parsed.hostname
             target_port = parsed.port or (443 if parsed.scheme == "https" else 80)
 
             def _patched_getaddrinfo(host, port, *a, **kw):
-                # Intercetta solo la risoluzione dell'host target
                 if host == target_host:
-                    # Restituisce l'IP pinnato senza chiamare il DNS
                     family = socket.AF_INET6 if ":" in pinned_ip else socket.AF_INET
                     return [(family, socket.SOCK_STREAM, 6, "", (pinned_ip, port or target_port))]
-                return original_getaddrinfo(host, port, *a, **kw)
+                return _original_getaddrinfo(host, port, *a, **kw)
 
-            socket.getaddrinfo = _patched_getaddrinfo
-            try:
-                return super().send(request, *args, **kwargs)
-            finally:
-                # Ripristina sempre getaddrinfo, anche in caso di eccezione
-                socket.getaddrinfo = original_getaddrinfo
+            with _PinnedIPAdapter._lock:
+                _original_getaddrinfo = socket.getaddrinfo
+                socket.getaddrinfo = _patched_getaddrinfo
+                try:
+                    return super().send(request, *args, **kwargs)
+                finally:
+                    socket.getaddrinfo = _original_getaddrinfo
         else:
             return super().send(request, *args, **kwargs)
 

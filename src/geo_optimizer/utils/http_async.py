@@ -4,6 +4,9 @@ Client HTTP asincrono con httpx per fetch parallelo.
 Velocizza l'audit eseguendo robots.txt, llms.txt e homepage in parallelo
 (speedup 2-3x rispetto al fetch sequenziale con requests).
 
+Implementa protezione anti-SSRF con redirect manuale: ogni redirect
+viene rivalidato con validate_public_url() prima di seguirlo (fix #179).
+
 Richiede httpx come dipendenza opzionale:
     pip install geo-optimizer-skill[async]
 """
@@ -14,6 +17,9 @@ import asyncio
 
 from geo_optimizer.models.config import HEADERS
 from geo_optimizer.utils.http import MAX_RESPONSE_SIZE
+
+# Numero massimo di redirect da seguire manualmente
+_MAX_REDIRECTS = 10
 
 
 def is_httpx_available() -> bool:
@@ -34,9 +40,10 @@ async def fetch_url_async(
 ) -> tuple[object | None, str | None]:
     """Fetch asincrono di un URL con httpx.
 
-    Implementa validazione anti-SSRF: ogni URL viene verificato con
-    validate_public_url() prima del fetch per bloccare reti private,
-    loopback, cloud metadata e schema non consentiti.
+    Implementa validazione anti-SSRF completa:
+    - Ogni URL viene verificato con validate_public_url() prima del fetch
+    - I redirect vengono seguiti manualmente con rivalidazione SSRF su ogni hop
+    - Dimensione risposta verificata contro max_size
 
     Args:
         url: URL da scaricare.
@@ -52,7 +59,7 @@ async def fetch_url_async(
     # Validazione anti-SSRF prima di qualsiasi fetch
     safe, reason = validate_public_url(url)
     if not safe:
-        return None, f"URL non sicuro: {reason}"
+        return None, f"Unsafe URL: {reason}"
 
     import httpx
 
@@ -62,22 +69,48 @@ async def fetch_url_async(
         if own_client:
             client = httpx.AsyncClient(
                 headers=HEADERS,
-                follow_redirects=True,
+                follow_redirects=False,  # Redirect manuale con rivalidazione SSRF (fix #179)
                 timeout=httpx.Timeout(timeout),
             )
 
-        r = await client.get(url)
+        # Redirect manuale con rivalidazione anti-SSRF su ogni hop
+        current_url = url
+        for _ in range(_MAX_REDIRECTS):
+            r = await client.get(current_url)
 
-        # Verifica Content-Length se disponibile
-        content_length = r.headers.get("content-length")
-        if content_length and int(content_length) > max_size:
-            return None, f"Response too large: {int(content_length)} bytes (max: {max_size})"
+            # Risposta non-redirect: verifica dimensione e ritorna
+            if r.status_code not in (301, 302, 303, 307, 308):
+                content_length = r.headers.get("content-length")
+                if content_length:
+                    try:
+                        if int(content_length) > max_size:
+                            return None, f"Response too large: {int(content_length)} bytes (max: {max_size})"
+                    except (ValueError, TypeError):
+                        pass
 
-        # Verifica dimensione effettiva
-        if len(r.content) > max_size:
-            return None, f"Response too large: {len(r.content)} bytes (max: {max_size})"
+                if len(r.content) > max_size:
+                    return None, f"Response too large: {len(r.content)} bytes (max: {max_size})"
 
-        return r, None
+                return r, None
+
+            # Redirect: rivalida il target URL prima di seguirlo
+            location = r.headers.get("location", "").strip()
+            if not location:
+                return None, "Redirect without Location header"
+
+            # Risolvi URL relativo
+            if not location.startswith(("http://", "https://")):
+                from urllib.parse import urljoin
+
+                location = urljoin(current_url, location)
+
+            safe, reason = validate_public_url(location)
+            if not safe:
+                return None, f"Redirect to unsafe URL: {reason}"
+
+            current_url = location
+
+        return None, f"Too many redirects (max: {_MAX_REDIRECTS})"
 
     except httpx.TimeoutException:
         return None, f"Timeout ({timeout}s)"
@@ -111,7 +144,7 @@ async def fetch_urls_async(
 
     async with httpx.AsyncClient(
         headers=HEADERS,
-        follow_redirects=True,
+        follow_redirects=False,  # Redirect gestito in fetch_url_async (fix #179)
         timeout=httpx.Timeout(timeout),
     ) as client:
         tasks = {url: fetch_url_async(url, client=client, timeout=timeout, max_size=max_size) for url in urls}

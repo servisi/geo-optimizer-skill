@@ -225,6 +225,10 @@ def geo_schema_validate(json_string: str, schema_type: str = "") -> str:
         json_string: JSON-LD string to validate
         schema_type: Schema type (e.g. "website", "faqpage"). If empty, auto-detected.
     """
+    # Size limit: previeni DoS da JSON-LD enormi (fix #182)
+    if len(json_string) > 512 * 1024:
+        return json.dumps({"valid": False, "error": "JSON-LD too large (max 512 KB)"})
+
     try:
         from geo_optimizer.core.schema_validator import validate_jsonld_string
 

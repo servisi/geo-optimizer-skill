@@ -82,30 +82,24 @@ class TestStatusCodeValidation:
 class TestFetchPageTitleStatusCheck:
     """fetch_page_title ritorna None per pagine di errore."""
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_404_ritorna_none(self, mock_create):
-        mock_session = MagicMock()
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_404_ritorna_none(self, mock_fetch):
         mock_resp = Mock(status_code=404, text="<html><title>Page Not Found</title></html>")
-        mock_session.get.return_value = mock_resp
-        mock_create.return_value = mock_session
+        mock_fetch.return_value = (mock_resp, None)
 
         assert fetch_page_title("https://example.com/missing") is None
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_500_ritorna_none(self, mock_create):
-        mock_session = MagicMock()
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_500_ritorna_none(self, mock_fetch):
         mock_resp = Mock(status_code=500, text="<html><title>Internal Server Error</title></html>")
-        mock_session.get.return_value = mock_resp
-        mock_create.return_value = mock_session
+        mock_fetch.return_value = (mock_resp, None)
 
         assert fetch_page_title("https://example.com/broken") is None
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_200_ritorna_titolo(self, mock_create):
-        mock_session = MagicMock()
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_200_ritorna_titolo(self, mock_fetch):
         mock_resp = Mock(status_code=200, text="<html><title>Real Title</title></html>")
-        mock_session.get.return_value = mock_resp
-        mock_create.return_value = mock_session
+        mock_fetch.return_value = (mock_resp, None)
 
         assert fetch_page_title("https://example.com/page") == "Real Title"
 

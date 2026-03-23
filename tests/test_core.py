@@ -1524,41 +1524,33 @@ class TestUrlToLabel:
 class TestFetchPageTitle:
     """Tests for fetch_page_title()."""
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_fetch_title(self, mock_create):
-        mock_session = MagicMock()
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_fetch_title(self, mock_fetch):
         mock_resp = Mock(status_code=200, text="<html><head><title>My Page Title</title></head></html>")
-        mock_session.get.return_value = mock_resp
-        mock_create.return_value = mock_session
+        mock_fetch.return_value = (mock_resp, None)
 
         title = fetch_page_title("https://example.com/page")
         assert title == "My Page Title"
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_fetch_title_from_h1(self, mock_create):
-        mock_session = MagicMock()
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_fetch_title_from_h1(self, mock_fetch):
         mock_resp = Mock(status_code=200, text="<html><body><h1>Heading Title</h1></body></html>")
-        mock_session.get.return_value = mock_resp
-        mock_create.return_value = mock_session
+        mock_fetch.return_value = (mock_resp, None)
 
         title = fetch_page_title("https://example.com/page")
         assert title == "Heading Title"
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_fetch_title_error(self, mock_create):
-        mock_session = MagicMock()
-        mock_session.get.side_effect = Exception("Timeout")
-        mock_create.return_value = mock_session
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_fetch_title_error(self, mock_fetch):
+        mock_fetch.return_value = (None, "Connection failed")
 
         title = fetch_page_title("https://example.com/page")
         assert title is None
 
-    @patch("geo_optimizer.core.llms_generator.create_session_with_retry")
-    def test_fetch_title_no_title_no_h1(self, mock_create):
-        mock_session = MagicMock()
-        mock_resp = Mock(text="<html><body><p>No title here</p></body></html>")
-        mock_session.get.return_value = mock_resp
-        mock_create.return_value = mock_session
+    @patch("geo_optimizer.utils.http.fetch_url")
+    def test_fetch_title_no_title_no_h1(self, mock_fetch):
+        mock_resp = Mock(status_code=200, text="<html><body><p>No title here</p></body></html>")
+        mock_fetch.return_value = (mock_resp, None)
 
         title = fetch_page_title("https://example.com/page")
         assert title is None

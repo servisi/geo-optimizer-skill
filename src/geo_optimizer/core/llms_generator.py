@@ -27,7 +27,7 @@ from geo_optimizer.models.config import (
     SKIP_PATTERNS,
 )
 from geo_optimizer.models.results import SitemapUrl
-from geo_optimizer.utils.http import create_session_with_retry
+from geo_optimizer.utils.http import MAX_RESPONSE_SIZE, create_session_with_retry
 from geo_optimizer.utils.validators import url_belongs_to_domain, validate_public_url
 
 logger = logging.getLogger(__name__)
@@ -101,6 +101,12 @@ def fetch_sitemap(
         on_status(f"Fetching sitemap: {sitemap_url}")
     logger.info("Fetching sitemap: %s", sitemap_url)
 
+    # Validazione anti-SSRF sull'URL del sitemap (fix #181)
+    safe, reason = validate_public_url(sitemap_url)
+    if not safe:
+        logger.warning("Sitemap URL blocked (SSRF): %s — %s", sitemap_url, reason)
+        return urls
+
     # Fix #122: usa la session passata o creane una nuova solo al primo livello
     if session is None:
         session = create_session_with_retry()
@@ -108,6 +114,11 @@ def fetch_sitemap(
     try:
         r = session.get(sitemap_url, headers=HEADERS, timeout=15)
         r.raise_for_status()
+
+        # Size check: previene DoS da sitemap enormi (fix #181)
+        if len(r.content) > MAX_RESPONSE_SIZE:
+            logger.warning("Sitemap too large (%d bytes): %s", len(r.content), sitemap_url)
+            return urls
     except requests.exceptions.Timeout:
         logger.warning("Sitemap timeout: %s", sitemap_url)
         if on_status:
@@ -264,10 +275,11 @@ def fetch_page_title(url: str) -> str | None:
         The page title string, or ``None`` on failure.
     """
     try:
-        session = create_session_with_retry(total_retries=2, backoff_factor=0.5)
-        r = session.get(url, headers=HEADERS, timeout=5)
-        # Non usare titoli da pagine di errore (404, 500, ecc.)
-        if r.status_code != 200:
+        # Usa fetch_url() per anti-SSRF (validazione IP + DNS pinning) — fix #181
+        from geo_optimizer.utils.http import fetch_url
+
+        r, err = fetch_url(url, timeout=5)
+        if err or not r or r.status_code != 200:
             return None
         soup = BeautifulSoup(r.text, "html.parser")
         title = soup.find("title")

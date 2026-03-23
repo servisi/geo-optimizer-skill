@@ -161,6 +161,10 @@ def audit_schema(soup, url: str) -> SchemaResult:
                 raw = script.get_text()
             if not raw or not raw.strip():
                 continue
+            # Size limit: previeni DoS da JSON-LD enormi (fix #182)
+            if len(raw) > 512 * 1024:
+                logging.debug("JSON-LD too large (%d bytes), skipping", len(raw))
+                continue
             data = json.loads(raw)
             schemas = data if isinstance(data, list) else [data]
 

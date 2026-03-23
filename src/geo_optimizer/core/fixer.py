@@ -13,6 +13,7 @@ Tutte le funzioni ritornano dataclass (FixItem/FixPlan), MAI stampano.
 from __future__ import annotations
 
 import copy
+import html as html_lib
 import json
 import logging
 from urllib.parse import urlparse
@@ -205,25 +206,30 @@ def generate_meta_fix(result: AuditResult, base_url: str) -> FixItem | None:
     site_name = parsed.netloc.replace("www.", "")
     tags = []
 
+    # Escape di tutti i valori derivati dal sito target per prevenire
+    # HTML injection quando l'utente inserisce lo snippet nel proprio <head> (fix #180)
+    safe_site = html_lib.escape(site_name, quote=True)
+    safe_url = html_lib.escape(base_url, quote=True)
+
     if not result.meta.has_title:
-        tags.append(f"<title>{site_name}</title>")
+        tags.append(f"<title>{safe_site}</title>")
 
     if not result.meta.has_description:
-        tags.append(f'<meta name="description" content="Website {site_name}">')
+        tags.append(f'<meta name="description" content="Website {safe_site}">')
 
     if not result.meta.has_canonical:
-        tags.append(f'<link rel="canonical" href="{base_url}/">')
+        tags.append(f'<link rel="canonical" href="{safe_url}/">')
 
     if not result.meta.has_og_title:
-        title = result.meta.title_text or site_name
+        title = html_lib.escape(result.meta.title_text or site_name, quote=True)
         tags.append(f'<meta property="og:title" content="{title}">')
 
     if not result.meta.has_og_description:
-        desc = result.meta.description_text or f"Website {site_name}"
+        desc = html_lib.escape(result.meta.description_text or f"Website {site_name}", quote=True)
         tags.append(f'<meta property="og:description" content="{desc}">')
 
     if not result.meta.has_og_image:
-        tags.append(f'<meta property="og:image" content="{base_url}/og-image.png">')
+        tags.append(f'<meta property="og:image" content="{safe_url}/og-image.png">')
 
     if not tags:
         return None

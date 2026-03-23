@@ -96,15 +96,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS: wildcard "*" va bene per una demo pubblica read-only senza cookie/auth.
-# NOTA per produzione: sostituire allow_origins=["*"] con la lista dei domini
-# autorizzati (es. ["https://yourdomain.com"]) e valutare allow_credentials.
-# Con allow_origins=["*"] NON si può usare allow_credentials=True (violazione CORS spec).
+# CORS: configurable via ALLOWED_ORIGINS env var (fix #183)
+# Default "*" for public demo. In production set ALLOWED_ORIGINS=https://yourdomain.com
+_ALLOWED_ORIGINS = list(filter(None, os.environ.get("ALLOWED_ORIGINS", "*").split(",")))
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST", "OPTIONS"],  # Metodi espliciti, no wildcard
-    allow_headers=["Content-Type"],  # Header minimi necessari
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
     max_age=3600,
 )
 
