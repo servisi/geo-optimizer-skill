@@ -55,6 +55,7 @@ class LlmsTxtResult:
     has_sections: bool = False
     has_links: bool = False
     word_count: int = 0
+    has_full: bool = False  # /llms-full.txt presente
 
 
 # ─── Schema JSON-LD ──────────────────────────────────────────────────────────
@@ -68,6 +69,9 @@ class SchemaResult:
     has_faq: bool = False
     has_article: bool = False
     has_organization: bool = False
+    has_howto: bool = False
+    has_person: bool = False
+    has_product: bool = False
     raw_schemas: list[dict] = field(default_factory=list)
 
 

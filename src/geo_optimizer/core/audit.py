@@ -136,6 +136,12 @@ def audit_llms_txt(base_url: str) -> LlmsTxtResult:
     if links:
         result.has_links = True
 
+    # Check /llms-full.txt (spec llmstxt.org — versione estesa opzionale)
+    full_url = urljoin(base_url, "/llms-full.txt")
+    r_full, err_full = fetch_url(full_url)
+    if r_full and r_full.status_code == 200 and len(r_full.text.strip()) > 0:
+        result.has_full = True
+
     return result
 
 
@@ -181,6 +187,12 @@ def audit_schema(soup, url: str) -> SchemaResult:
                         result.has_article = True
                     elif t == "Organization":
                         result.has_organization = True
+                    elif t == "HowTo":
+                        result.has_howto = True
+                    elif t in ("Person",):
+                        result.has_person = True
+                    elif t == "Product":
+                        result.has_product = True
 
         except json.JSONDecodeError as exc:
             # Parsing fallito: logga a debug (non critico, script di terze parti) — fix #81

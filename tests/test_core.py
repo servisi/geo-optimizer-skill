@@ -1391,6 +1391,7 @@ class TestRunFullAudit:
             (mock_homepage, None),  # homepage
             (mock_robots, None),    # robots.txt
             (mock_llms, None),      # llms.txt
+            (None, "Not found"),    # llms-full.txt (optional, 404)
         ]
 
         result = run_full_audit("https://example.com")
