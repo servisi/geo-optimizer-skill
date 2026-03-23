@@ -173,6 +173,20 @@ def _build_content_content(result: AuditResult, bar: Text):
     return _stack(detail, Text(""), bar)
 
 
+# ── ASCII art header ───────────────────────────────────────────────────────────
+
+_GEO_ASCII = [
+    " ██████  ███████  ██████  ",
+    "██       ██      ██    ██ ",
+    "██   ███ █████   ██    ██ ",
+    "██    ██ ██      ██    ██ ",
+    " ██████  ███████  ██████  ",
+]
+
+# Gradient: bright_blue → cyan → bright_blue (top-to-bottom)
+_GEO_COLORS = ["bright_blue", "blue", "cyan", "blue", "bright_blue"]
+
+
 # ── Main formatter ─────────────────────────────────────────────────────────────
 
 
@@ -193,25 +207,29 @@ def format_audit_rich(result: AuditResult) -> str:
     buf = io.StringIO()
     console = Console(file=buf, width=80, force_terminal=True, no_color=_no_color)
 
-    # ── Header panel ──────────────────────────────────────────────
-    header = Text()
-    header.append("\n  🔍  ", style="bold")
-    header.append("G E O   O P T I M I Z E R", style="bold bright_white")
-    header.append("\n\n  Target    ", style="dim")
-    header.append(result.url, style="bold cyan underline")
-    header.append("\n  Response  ", style="dim")
-    header.append(str(result.http_status), style="bold")
-    header.append(f"  •  {result.page_size:,} bytes", style="dim")
-    header.append("\n")
-
+    # ── ASCII art header ──────────────────────────────────────────
     console.print()
+    for line, color in zip(_GEO_ASCII, _GEO_COLORS):
+        console.print(Align.center(Text(line, style=f"bold {color}")))
+    console.print(Align.center(Text("O P T I M I Z E R", style="bold dim")))
+    console.print()
+
+    # ── Info panel ────────────────────────────────────────────────
+    info = Text()
+    info.append("  Target    ", style="dim")
+    info.append(result.url, style="bold cyan underline")
+    info.append("\n  Response  ", style="dim")
+    info.append(str(result.http_status), style="bold")
+    info.append(f"  •  {result.page_size:,} bytes", style="dim")
+
     console.print(
         Panel(
-            header,
+            info,
             box=box.ROUNDED,
             border_style="bright_blue",
             subtitle=f"[dim]v{__version__}[/dim]",
             subtitle_align="right",
+            padding=(0, 1),
         )
     )
 
