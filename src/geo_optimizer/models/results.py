@@ -102,6 +102,32 @@ class ContentResult:
     external_links_count: int = 0
 
 
+# ─── Citability (Princeton GEO Methods) ─────────────────────────────────────
+
+
+@dataclass
+class MethodScore:
+    """Score per un singolo metodo Princeton GEO."""
+
+    name: str  # "cite_sources"
+    label: str  # "Cite Sources"
+    detected: bool = False
+    score: int = 0
+    max_score: int = 10
+    impact: str = ""  # "+27%"
+    details: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class CitabilityResult:
+    """Risultato analisi citabilità con i 9 metodi Princeton KDD 2024."""
+
+    methods: list[MethodScore] = field(default_factory=list)
+    total_score: int = 0  # 0-100 (somma normalizzata)
+    grade: str = "low"  # low/medium/high/excellent
+    top_improvements: list[str] = field(default_factory=list)
+
+
 # ─── Full audit ──────────────────────────────────────────────────────────────
 
 
@@ -119,6 +145,8 @@ class AuditResult:
     recommendations: list[str] = field(default_factory=list)
     http_status: int = 0
     page_size: int = 0
+    # Citabilità: score 0-100 basato sui 9 metodi Princeton KDD 2024
+    citability: CitabilityResult = field(default_factory=CitabilityResult)
     # Fix #104: risultati dei plugin CheckRegistry (non influenzano lo score base)
     extra_checks: dict[str, Any] = field(default_factory=dict)
 

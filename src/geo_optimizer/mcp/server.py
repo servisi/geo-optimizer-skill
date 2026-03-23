@@ -169,7 +169,49 @@ def geo_llms_generate(url: str) -> str:
         return f"Errore: {e}"
 
 
-# ─── Tool 4: geo_schema_validate ─────────────────────────────────────────────
+# ─── Tool 4: geo_citability ───────────────────────────────────────────────────
+
+
+@mcp.tool()
+def geo_citability(url: str) -> str:
+    """Analizza la citabilità del contenuto con i 9 metodi Princeton GEO.
+
+    Valuta il contenuto della pagina secondo i 9 metodi del paper
+    Princeton KDD 2024 (Quotation +41%, Statistics +33%, Fluency +29%,
+    Cite Sources +27%, Technical Terms +18%, Authoritative +16%,
+    Easy-to-Understand +14%, Unique Words +7%, Keyword Stuffing -9%).
+
+    Ritorna score 0-100 con dettaglio per metodo e suggerimenti.
+
+    Args:
+        url: URL della pagina da analizzare (es. https://example.com)
+    """
+    from geo_optimizer.utils.validators import validate_public_url
+
+    url = _normalize_url(url)
+
+    safe, reason = validate_public_url(url)
+    if not safe:
+        return json.dumps({"error": f"URL non sicuro: {reason}"})
+
+    try:
+        from bs4 import BeautifulSoup
+
+        from geo_optimizer.core.citability import audit_citability
+        from geo_optimizer.utils.http import fetch_url
+
+        r, err = fetch_url(url)
+        if err or not r:
+            return json.dumps({"error": f"Impossibile raggiungere {url}: {err}"})
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        result = audit_citability(soup, url)
+        return _to_json(result)
+    except Exception as e:
+        return json.dumps({"error": str(e), "url": url})
+
+
+# ─── Tool 5: geo_schema_validate ─────────────────────────────────────────────
 
 
 @mcp.tool()

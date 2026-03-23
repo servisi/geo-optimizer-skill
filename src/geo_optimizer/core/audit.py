@@ -22,6 +22,7 @@ from geo_optimizer.models.config import (  # noqa: F401 (VALUABLE_SCHEMAS re-exp
 from geo_optimizer.models.results import (
     AuditResult,
     CachedResponse,
+    CitabilityResult,
     ContentResult,
     LlmsTxtResult,
     MetaResult,
@@ -414,6 +415,11 @@ def _build_audit_result(
             for r in check_results
         }
 
+    # Citability Score: analisi contenuto con i 9 metodi Princeton GEO
+    from geo_optimizer.core.citability import audit_citability
+
+    citability = audit_citability(soup, base_url) if soup else CitabilityResult()
+
     return AuditResult(
         url=base_url,
         score=score,
@@ -423,6 +429,7 @@ def _build_audit_result(
         schema=schema,
         meta=meta,
         content=content,
+        citability=citability,
         recommendations=recommendations,
         http_status=http_status,
         page_size=page_size,
