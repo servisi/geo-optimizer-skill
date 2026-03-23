@@ -65,14 +65,16 @@ def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
             action="create",
         )
 
-    # robots.txt exists but some bots are missing
-    missing = result.robots.bots_missing
+    # robots.txt exists but some bots are missing or blocked
+    # Fix #211: include anche bots_blocked — un bot bloccato con Disallow
+    # necessita ugualmente di una regola Allow per essere accessibile
+    bots_to_fix = result.robots.bots_missing + result.robots.bots_blocked
     lines = [
         "",
         "# ─── Missing AI bots (added by GEO Optimizer) ───",
         "",
     ]
-    for bot in missing:
+    for bot in bots_to_fix:
         description = AI_BOTS.get(bot, "AI bot")
         lines.append(f"# {description}")
         lines.append(f"User-agent: {bot}")
@@ -81,7 +83,7 @@ def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
 
     return FixItem(
         category="robots",
-        description=f"Add {len(missing)} missing AI bots to robots.txt",
+        description=f"Add {len(bots_to_fix)} missing/blocked AI bots to robots.txt",
         content="\n".join(lines),
         file_name="robots.txt",
         action="append",

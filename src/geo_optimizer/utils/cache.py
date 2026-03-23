@@ -97,10 +97,14 @@ class FileCache:
         while total_size > MAX_CACHE_SIZE_BYTES and files:
             oldest = files.pop(0)
             try:
-                total_size -= oldest.stat().st_size
+                # Fix TOCTOU #212: legge la dimensione prima di unlink;
+                # se il file sparisce tra stat() e unlink() l'eccezione viene
+                # gestita senza sottrarre una dimensione errata da total_size
+                file_size = oldest.stat().st_size
                 oldest.unlink(missing_ok=True)
-            except FileNotFoundError:
-                pass  # Already removed by another thread (fix #195)
+                total_size -= file_size
+            except (FileNotFoundError, OSError):
+                pass  # File già rimosso da un altro processo, skip
 
     def clear(self) -> int:
         """Clear the entire cache. Returns the number of files removed."""

@@ -11,6 +11,7 @@ Copre:
 - #63 Event loop — audit wrappato in asyncio.to_thread
 """
 
+import asyncio
 import time
 from unittest.mock import MagicMock, patch
 
@@ -103,7 +104,7 @@ class TestCacheLimits:
     def test_cache_non_supera_max_size(self):
         """La cache non cresce oltre _MAX_CACHE_SIZE."""
         for i in range(_MAX_CACHE_SIZE + 10):
-            _set_cached(f"https://example-{i}.com", {"score": i, "band": "good"})
+            asyncio.run(_set_cached(f"https://example-{i}.com", {"score": i, "band": "good"}))
         assert len(_audit_cache) <= _MAX_CACHE_SIZE
 
     def test_evict_rimuove_scadute(self):
@@ -123,7 +124,7 @@ class TestCacheLimits:
                 "cached_at": time.time() + i * 0.001,
             }
         # Aggiungi una nuova
-        _set_cached("https://new-entry.com", {"score": 99, "band": "excellent"})
+        asyncio.run(_set_cached("https://new-entry.com", {"score": 99, "band": "excellent"}))
         assert len(_audit_cache) <= _MAX_CACHE_SIZE
 
 
@@ -144,20 +145,20 @@ class TestRateLimiting:
     def test_richieste_sotto_limite_passano(self):
         """Richieste sotto il limite vengono accettate."""
         for _ in range(10):
-            assert _check_rate_limit("192.0.2.1") is True
+            assert asyncio.run(_check_rate_limit("192.0.2.1")) is True
 
     def test_richieste_sopra_limite_bloccate(self):
         """Richieste oltre il limite vengono bloccate."""
         for _ in range(30):
-            _check_rate_limit("192.0.2.2")
-        assert _check_rate_limit("192.0.2.2") is False
+            asyncio.run(_check_rate_limit("192.0.2.2"))
+        assert asyncio.run(_check_rate_limit("192.0.2.2")) is False
 
     def test_ip_diversi_indipendenti(self):
         """Ogni IP ha il proprio contatore."""
         for _ in range(30):
-            _check_rate_limit("192.0.2.3")
+            asyncio.run(_check_rate_limit("192.0.2.3"))
         # IP diverso non è limitato
-        assert _check_rate_limit("192.0.2.4") is True
+        assert asyncio.run(_check_rate_limit("192.0.2.4")) is True
 
 
 # ============================================================================

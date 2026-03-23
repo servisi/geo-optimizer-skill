@@ -5,6 +5,7 @@ Coverage fix #154: il modulo era a 0% di coverage.
 Tutti i test mockano run_full_audit per evitare chiamate di rete.
 """
 
+import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -292,15 +293,16 @@ def test_check_rate_limit_blocca_dopo_limite():
     # Imposta già al massimo
     _rate_limit_store[test_ip] = [now] * _RATE_LIMIT_MAX_REQUESTS
 
-    # La prossima richiesta deve essere bloccata
-    result = _check_rate_limit(test_ip)
+    # La prossima richiesta deve essere bloccata — _check_rate_limit è async (fix #209)
+    result = asyncio.run(_check_rate_limit(test_ip))
     assert result is False
 
 
 def test_check_rate_limit_consente_entro_limite():
     """_check_rate_limit() ritorna True finché siamo sotto il limite."""
     test_ip = "10.0.0.88_test_rate_ok"
-    result = _check_rate_limit(test_ip)
+    # _check_rate_limit è async (fix #209)
+    result = asyncio.run(_check_rate_limit(test_ip))
     assert result is True
 
 

@@ -15,6 +15,7 @@ import dataclasses
 import hashlib
 import logging
 import os
+import re
 import secrets
 import time
 from pathlib import Path
@@ -29,6 +30,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from geo_optimizer import __version__
 
 logger = logging.getLogger(__name__)
+
+# Regex per validare report_id: esattamente 32 caratteri esadecimali minuscoli
+# corrispondente all'output di sha256().hexdigest()[:32] (fix #210)
+_HEX_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 app = FastAPI(
     title="GEO Optimizer",
@@ -140,6 +145,7 @@ _rate_limit_store: dict = {}  # {ip: [timestamp, ...]}
 _RATE_LIMIT_WINDOW = 60  # seconds
 _RATE_LIMIT_MAX_REQUESTS = 30  # requests per window per IP
 _RATE_LIMIT_MAX_IPS = 10000  # maximum number of tracked IPs
+_rate_limit_lock = asyncio.Lock()  # protezione race condition su _rate_limit_store
 
 # ─── Proxy trust: list of trusted proxy CIDRs/IPs ─────────────────────────────
 # Configurable via TRUSTED_PROXIES environment variable (CSV of IPs/CIDRs).
@@ -189,28 +195,34 @@ def _evict_oldest_rate_limit_entries(count: int = 1) -> None:
         _rate_limit_store.pop(key, None)
 
 
-def _check_rate_limit(client_ip: str) -> bool:
-    """Check rate limit for IP. Returns True if allowed."""
-    now = time.time()
-    timestamps = _rate_limit_store.get(client_ip, [])
-    # Remove timestamps outside the time window
-    timestamps = [t for t in timestamps if (now - t) < _RATE_LIMIT_WINDOW]
-    if len(timestamps) >= _RATE_LIMIT_MAX_REQUESTS:
+async def _check_rate_limit(client_ip: str) -> bool:
+    """Check rate limit for IP. Returns True if allowed.
+
+    Fix race condition: usa asyncio.Lock per rendere atomica l'operazione
+    read-modify-write sul dizionario condiviso _rate_limit_store (fix #209).
+    """
+    async with _rate_limit_lock:
+        now = time.time()
+        timestamps = _rate_limit_store.get(client_ip, [])
+        # Remove timestamps outside the time window
+        timestamps = [t for t in timestamps if (now - t) < _RATE_LIMIT_WINDOW]
+        if len(timestamps) >= _RATE_LIMIT_MAX_REQUESTS:
+            _rate_limit_store[client_ip] = timestamps
+            return False
+        timestamps.append(now)
         _rate_limit_store[client_ip] = timestamps
-        return False
-    timestamps.append(now)
-    _rate_limit_store[client_ip] = timestamps
-    # Fix #70/#99: LRU eviction — remove only the oldest entries, not everything
-    if len(_rate_limit_store) > _RATE_LIMIT_MAX_IPS:
-        entries_to_remove = len(_rate_limit_store) - _RATE_LIMIT_MAX_IPS
-        _evict_oldest_rate_limit_entries(entries_to_remove)
-    return True
+        # Fix #70/#99: LRU eviction — remove only the oldest entries, not everything
+        if len(_rate_limit_store) > _RATE_LIMIT_MAX_IPS:
+            entries_to_remove = len(_rate_limit_store) - _RATE_LIMIT_MAX_IPS
+            _evict_oldest_rate_limit_entries(entries_to_remove)
+        return True
 
 
 # In-memory cache for audit results (TTL 1 hour, max 500 entries)
 _audit_cache: dict = {}
 _CACHE_TTL = 3600
 _MAX_CACHE_SIZE = 500
+_audit_cache_lock = asyncio.Lock()  # protezione race condition su _audit_cache (fix #209)
 
 
 def _cache_key(url: str) -> str:
@@ -222,37 +234,47 @@ def _cache_key(url: str) -> str:
     return hashlib.sha256(url.lower().strip().encode()).hexdigest()[:32]
 
 
-def _get_cached(url: str) -> Optional[dict]:
-    """Retrieve result from cache if valid."""
-    key = _cache_key(url)
-    entry = _audit_cache.get(key)
-    if entry and (time.time() - entry["cached_at"]) < _CACHE_TTL:
-        return entry["data"]
-    # Remove expired entry
-    if entry:
-        _audit_cache.pop(key, None)
-    return None
+async def _get_cached(url: str) -> Optional[dict]:
+    """Retrieve result from cache if valid.
+
+    Fix race condition: usa asyncio.Lock per proteggere lettura/rimozione
+    atomica su _audit_cache (fix #209).
+    """
+    async with _audit_cache_lock:
+        key = _cache_key(url)
+        entry = _audit_cache.get(key)
+        if entry and (time.time() - entry["cached_at"]) < _CACHE_TTL:
+            return entry["data"]
+        # Remove expired entry
+        if entry:
+            _audit_cache.pop(key, None)
+        return None
 
 
 def _evict_expired() -> None:
-    """Remove expired entries from cache."""
+    """Remove expired entries from cache. Caller must hold _audit_cache_lock."""
     now = time.time()
     expired = [k for k, v in _audit_cache.items() if (now - v["cached_at"]) >= _CACHE_TTL]
     for k in expired:
         _audit_cache.pop(k, None)
 
 
-def _set_cached(url: str, data: dict) -> str:
-    """Save result in cache with size limit. Returns the report ID."""
-    key = _cache_key(url)
-    # Avoid unbounded growth: evict expired entries, then remove oldest
-    if len(_audit_cache) >= _MAX_CACHE_SIZE:
-        _evict_expired()
-    if len(_audit_cache) >= _MAX_CACHE_SIZE:
-        oldest_key = min(_audit_cache, key=lambda k: _audit_cache[k]["cached_at"])
-        _audit_cache.pop(oldest_key, None)
-    _audit_cache[key] = {"data": data, "cached_at": time.time()}
-    return key
+async def _set_cached(url: str, data: dict) -> str:
+    """Save result in cache with size limit. Returns the report ID.
+
+    Fix race condition: usa asyncio.Lock per proteggere il blocco
+    check-size / evict / insert su _audit_cache (fix #209).
+    """
+    async with _audit_cache_lock:
+        key = _cache_key(url)
+        # Avoid unbounded growth: evict expired entries, then remove oldest
+        if len(_audit_cache) >= _MAX_CACHE_SIZE:
+            _evict_expired()
+        if len(_audit_cache) >= _MAX_CACHE_SIZE:
+            oldest_key = min(_audit_cache, key=lambda k: _audit_cache[k]["cached_at"])
+            _audit_cache.pop(oldest_key, None)
+        _audit_cache[key] = {"data": data, "cached_at": time.time()}
+        return key
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -289,7 +311,7 @@ async def audit_get(
 ):
     """Run GEO audit via GET."""
     # Fix #95: use _get_client_ip to handle request.client None and trusted proxy
-    if not _check_rate_limit(_get_client_ip(request)):
+    if not await _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
     return await _run_audit(url)
 
@@ -309,7 +331,7 @@ async def audit_post(request: Request, body: AuditRequest):
             detail="Missing or invalid authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if not _check_rate_limit(_get_client_ip(request)):
+    if not await _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
     return await _run_audit(body.url)
 
@@ -317,9 +339,11 @@ async def audit_post(request: Request, body: AuditRequest):
 @app.get("/report/{report_id}", response_class=HTMLResponse)
 async def report(report_id: str):
     """Temporary report valid for 1 hour, kept in memory. Restarting the server clears all reports."""
-    # Validate that report_id is a valid hexadecimal hash
-    if not report_id.isalnum() or len(report_id) > 64:
-        raise HTTPException(status_code=400, detail="Invalid report ID")
+    # Valida che report_id sia esattamente 32 caratteri esadecimali minuscoli
+    # corrispondente all'output di _cache_key() — fix #210: isalnum() era
+    # troppo permissivo (accettava maiuscole e altri charset non validi)
+    if not _HEX_ID_RE.match(report_id):
+        raise HTTPException(status_code=400, detail="Invalid report ID format")
 
     entry = _audit_cache.get(report_id)
     if not entry:
@@ -348,7 +372,7 @@ async def badge(
     from geo_optimizer.utils.validators import validate_public_url
 
     # Fix #95: use _get_client_ip to handle request.client None and trusted proxy
-    if not _check_rate_limit(_get_client_ip(request)):
+    if not await _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
 
     # Normalize URL
@@ -361,7 +385,7 @@ async def badge(
         raise HTTPException(status_code=400, detail=f"Unsafe URL: {reason}")
 
     # Check cache or run audit
-    cached = _get_cached(url)
+    cached = await _get_cached(url)
     if cached:
         score = cached.get("score", 0)
         band = cached.get("band", "critical")
@@ -376,7 +400,7 @@ async def badge(
                 timeout=60.0,
             )
             data = _audit_result_to_dict(result)
-            _set_cached(url, data)
+            await _set_cached(url, data)
             score = data["score"]
             band = data["band"]
         except asyncio.TimeoutError:
@@ -428,7 +452,7 @@ async def _run_audit(url: str) -> JSONResponse:
         raise HTTPException(status_code=400, detail=f"Unsafe URL: {reason}")
 
     # Check cache
-    cached = _get_cached(url)
+    cached = await _get_cached(url)
     if cached:
         report_id = _cache_key(url)
         response_data = dict(cached)
@@ -461,7 +485,7 @@ async def _run_audit(url: str) -> JSONResponse:
     data = _audit_result_to_dict(result)
 
     # Save to cache
-    report_id = _set_cached(url, data)
+    report_id = await _set_cached(url, data)
     data["report_url"] = f"/report/{report_id}"
 
     return JSONResponse(content=data)
