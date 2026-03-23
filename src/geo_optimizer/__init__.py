@@ -22,9 +22,13 @@ from geo_optimizer.core.audit import run_full_audit_async as audit_async
 from geo_optimizer.core.registry import AuditCheck, CheckRegistry, CheckResult
 from geo_optimizer.models.results import (
     AuditResult,
+    CitabilityResult,
     ContentResult,
+    FixItem,
+    FixPlan,
     LlmsTxtResult,
     MetaResult,
+    MethodScore,
     RobotsResult,
     SchemaAnalysis,
     SchemaResult,
@@ -48,6 +52,10 @@ __all__ = [
     "SchemaResult",
     "MetaResult",
     "ContentResult",
+    "CitabilityResult",
+    "MethodScore",
+    "FixPlan",
+    "FixItem",
     "SchemaAnalysis",
     "SitemapUrl",
 ]

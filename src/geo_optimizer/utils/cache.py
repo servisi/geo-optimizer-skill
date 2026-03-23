@@ -22,6 +22,9 @@ CACHE_DIR = Path.home() / ".geo-cache"
 # TTL di default: 1 ora
 DEFAULT_TTL = 3600
 
+# Limite dimensione cache su disco: 500 MB (fix #192)
+MAX_CACHE_SIZE_BYTES = 500 * 1024 * 1024
+
 
 class FileCache:
     """Cache HTTP su filesystem con TTL."""
@@ -66,8 +69,11 @@ class FileCache:
         )
 
     def put(self, url: str, status_code: int, text: str, headers: dict) -> None:
-        """Salva risposta nella cache."""
+        """Salva risposta nella cache. Evicts oldest if over disk limit (fix #192)."""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Evict oldest entries if cache exceeds disk limit
+        self._evict_if_needed()
 
         data = {
             "url": url,
@@ -79,6 +85,19 @@ class FileCache:
 
         path = self._path(url)
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+    def _evict_if_needed(self) -> None:
+        """Remove oldest cache entries if total size exceeds MAX_CACHE_SIZE_BYTES."""
+        if not self.cache_dir.exists():
+            return
+
+        files = sorted(self.cache_dir.glob("*.json"), key=lambda f: f.stat().st_mtime)
+        total_size = sum(f.stat().st_size for f in files)
+
+        while total_size > MAX_CACHE_SIZE_BYTES and files:
+            oldest = files.pop(0)
+            total_size -= oldest.stat().st_size
+            oldest.unlink(missing_ok=True)
 
     def clear(self) -> int:
         """Svuota tutta la cache. Ritorna il numero di file rimossi."""

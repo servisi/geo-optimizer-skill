@@ -175,8 +175,9 @@ def audit_schema(soup, url: str) -> SchemaResult:
                 else:
                     schema_types = [schema_type]
 
-                # Aggiungi lo schema raw una sola volta (non per ogni tipo)
-                result.raw_schemas.append(schema)
+                # Aggiungi lo schema raw (cap a 50 per prevenire memory bloat — fix #191)
+                if len(result.raw_schemas) < 50:
+                    result.raw_schemas.append(schema)
 
                 for t in schema_types:
                     result.found_types.append(t)

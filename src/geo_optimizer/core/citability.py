@@ -249,9 +249,9 @@ def detect_quotations(soup) -> MethodScore:
 # ─── 3. Statistics Addition (+33%) ───────────────────────────────────────────
 
 
-def detect_statistics(soup) -> MethodScore:
+def detect_statistics(soup, clean_text: str | None = None) -> MethodScore:
     """Rileva dati statistici e quantitativi nel contenuto."""
-    body_text = _get_clean_text(soup)
+    body_text = clean_text or _get_clean_text(soup)
     matches = _STAT_RE.findall(body_text)
 
     # Tabelle con dati numerici (separator=" " per evitare concatenazione senza spazi)
@@ -331,9 +331,9 @@ def detect_fluency(soup) -> MethodScore:
 # ─── 5. Technical Terms (+18%) ───────────────────────────────────────────────
 
 
-def detect_technical_terms(soup) -> MethodScore:
+def detect_technical_terms(soup, clean_text: str | None = None) -> MethodScore:
     """Rileva densità di terminologia tecnica nel contenuto."""
-    body_text = _get_clean_text(soup)
+    body_text = clean_text or _get_clean_text(soup)
     tech_matches = _TECH_RE.findall(body_text)
 
     code_blocks = len(soup.find_all(["code", "pre", "kbd", "samp"]))
@@ -470,9 +470,9 @@ def detect_easy_to_understand(soup) -> MethodScore:
 # ─── 8. Unique Words (+7%) ───────────────────────────────────────────────────
 
 
-def detect_unique_words(soup) -> MethodScore:
+def detect_unique_words(soup, clean_text: str | None = None) -> MethodScore:
     """Calcola Type-Token Ratio per stimare ricchezza del vocabolario."""
-    body_text = _get_clean_text(soup).lower()
+    body_text = (clean_text or _get_clean_text(soup)).lower()
     words = [w for w in re.findall(r"\b[a-zA-Zà-ú]{4,}\b", body_text) if w not in _STOP_WORDS]
 
     if len(words) < 50:
@@ -508,9 +508,9 @@ def detect_unique_words(soup) -> MethodScore:
 # ─── 9. Keyword Stuffing (-9%) ───────────────────────────────────────────────
 
 
-def detect_keyword_stuffing(soup) -> MethodScore:
+def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
     """Rileva keyword stuffing che penalizza la visibilità AI."""
-    body_text = _get_clean_text(soup).lower()
+    body_text = (clean_text or _get_clean_text(soup)).lower()
     words = re.findall(r"\b[a-zA-Zà-ú]{3,}\b", body_text)
 
     if len(words) < 50:
@@ -602,16 +602,19 @@ def audit_citability(soup, base_url: str) -> CitabilityResult:
     Returns:
         CitabilityResult con score 0-100 e dettaglio per metodo.
     """
+    # Pre-compute clean text once to avoid 3 redundant DOM re-parses (fix #190)
+    clean_text = _get_clean_text(soup)
+
     methods = [
         detect_quotations(soup),
-        detect_statistics(soup),
+        detect_statistics(soup, clean_text=clean_text),
         detect_fluency(soup),
         detect_cite_sources(soup, base_url),
-        detect_technical_terms(soup),
+        detect_technical_terms(soup, clean_text=clean_text),
         detect_authoritative_tone(soup),
         detect_easy_to_understand(soup),
-        detect_unique_words(soup),
-        detect_keyword_stuffing(soup),
+        detect_unique_words(soup, clean_text=clean_text),
+        detect_keyword_stuffing(soup, clean_text=clean_text),
     ]
 
     # Somma punteggi (max possibile = 100)
