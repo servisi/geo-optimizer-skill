@@ -22,9 +22,9 @@ from geo_optimizer.utils.validators import validate_public_url
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["text", "json", "rich", "html", "github"]),
+    type=click.Choice(["text", "json", "rich", "html", "github", "sarif", "junit"]),
     default=None,
-    help="Output format: text (default), json, rich, html, or github",
+    help="Output format: text (default), json, rich, html, github, sarif, or junit",
 )
 @click.option("--output", "output_file", default=None, help="Output file path (optional)")
 @click.option("--verbose", is_flag=True, help="Show detailed check output")
@@ -145,6 +145,14 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
         from geo_optimizer.cli.github_formatter import format_audit_github
 
         output = format_audit_github(result)
+    elif output_format == "sarif":
+        from geo_optimizer.cli.ci_formatter import format_audit_sarif
+
+        output = format_audit_sarif(result)
+    elif output_format == "junit":
+        from geo_optimizer.cli.ci_formatter import format_audit_junit
+
+        output = format_audit_junit(result)
     else:
         output = format_audit_text(result)
 

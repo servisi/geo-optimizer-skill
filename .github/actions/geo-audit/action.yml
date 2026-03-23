@@ -20,6 +20,10 @@ inputs:
     description: 'Python version to use'
     required: false
     default: '3.12'
+  format:
+    description: 'Additional output format: sarif, junit (generates extra report file alongside JSON)'
+    required: false
+    default: ''
   version:
     description: 'geo-optimizer-skill version to install (e.g. "2.1.0b1"). Default: latest.'
     required: false
@@ -160,6 +164,28 @@ runs:
         with open(summary_path, 'a') as out:
             out.write('\n'.join(lines))
         "
+
+    - name: Generate CI report (SARIF/JUnit)
+      if: inputs.format != ''
+      shell: bash
+      env:
+        GEO_URL: ${{ inputs.url }}
+        GEO_FORMAT: ${{ inputs.format }}
+      run: |
+        if [ "$GEO_FORMAT" = "sarif" ]; then
+          geo audit --url "$GEO_URL" --format sarif --output geo-audit.sarif.json
+          echo "Generated SARIF report: geo-audit.sarif.json"
+        elif [ "$GEO_FORMAT" = "junit" ]; then
+          geo audit --url "$GEO_URL" --format junit --output geo-audit-junit.xml
+          echo "Generated JUnit report: geo-audit-junit.xml"
+        fi
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: inputs.format == 'sarif'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: geo-audit.sarif.json
+      continue-on-error: true
 
     - name: Check minimum score
       shell: bash
