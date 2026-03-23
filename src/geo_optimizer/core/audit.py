@@ -491,17 +491,26 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
     )
 
 
-async def run_full_audit_async(url: str) -> AuditResult:
+async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
     """Variante asincrona dell'audit completo con fetch parallelo (httpx).
 
     Esegue homepage, robots.txt e llms.txt in parallelo per uno
     speedup 2-3x rispetto alla versione sincrona.
+
+    Args:
+        url: URL del sito da analizzare.
+        project_config: ProjectConfig opzionale — se ha extra_bots, li merge con AI_BOTS.
 
     Richiede: pip install geo-optimizer-skill[async]
     """
     from bs4 import BeautifulSoup
 
     from geo_optimizer.utils.http_async import fetch_urls_async
+
+    # Merge extra_bots da config, come nella versione sincrona
+    effective_bots = dict(AI_BOTS)
+    if project_config is not None and project_config.extra_bots:
+        effective_bots.update(project_config.extra_bots)
 
     # Normalizza URL
     base_url = url.rstrip("/")
@@ -526,8 +535,8 @@ async def run_full_audit_async(url: str) -> AuditResult:
 
     soup = BeautifulSoup(r_home.text, "html.parser")
 
-    # Sub-audit robots.txt (usa risposta pre-fetched)
-    robots = _audit_robots_from_response(r_robots)
+    # Sub-audit robots.txt (usa risposta pre-fetched con extra_bots)
+    robots = _audit_robots_from_response(r_robots, bots=effective_bots)
 
     # Sub-audit llms.txt (usa risposta pre-fetched)
     llms = _audit_llms_from_response(r_llms)
@@ -551,18 +560,26 @@ async def run_full_audit_async(url: str) -> AuditResult:
     )
 
 
-def _audit_robots_from_response(r) -> RobotsResult:
-    """Analizza robots.txt da una risposta HTTP già scaricata."""
+def _audit_robots_from_response(r, bots: dict = None) -> RobotsResult:
+    """Analizza robots.txt da una risposta HTTP già scaricata.
+
+    Args:
+        r: Risposta HTTP (o None se fetch fallito).
+        bots: Dizionario bot da verificare. Default: AI_BOTS da config.
+              Permette di passare bot aggiuntivi da project_config.extra_bots.
+    """
     result = RobotsResult()
 
     if not r or r.status_code != 200:
         return result
 
+    effective_bots = bots if bots is not None else AI_BOTS
+
     result.found = True
     content = r.text
     agent_rules = parse_robots_txt(content)
 
-    for bot, description in AI_BOTS.items():
+    for bot, description in effective_bots.items():
         bot_status = classify_bot(bot, description, agent_rules)
 
         if bot_status.status == "missing":

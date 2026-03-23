@@ -49,7 +49,15 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method == "POST":
             content_length = request.headers.get("content-length")
-            if content_length is not None and int(content_length) > _MAX_BODY_BYTES:
+            if content_length is not None:
+                try:
+                    length_bytes = int(content_length)
+                except (ValueError, TypeError):
+                    return JSONResponse(
+                        status_code=400,
+                        content={"detail": "Header Content-Length non valido."},
+                    )
+                if length_bytes > _MAX_BODY_BYTES:
                     return JSONResponse(
                         status_code=413,
                         content={"detail": f"Body troppo grande. Limite: {_MAX_BODY_BYTES} byte."},
@@ -548,13 +556,16 @@ def _dict_to_audit_result(data: dict):
         robots=RobotsResult(
             found=r.get("found", False),
             citation_bots_ok=r.get("citation_bots_ok", False),
+            citation_bots_explicit=r.get("citation_bots_explicit", False),
             bots_allowed=r.get("bots_allowed", []),
             bots_blocked=r.get("bots_blocked", []),
             bots_missing=r.get("bots_missing", []),
+            bots_partial=r.get("bots_partial", []),
         ),
         llms=LlmsTxtResult(
             found=ll.get("found", False),
             has_h1=ll.get("has_h1", False),
+            has_description=ll.get("has_description", False),
             has_sections=ll.get("has_sections", False),
             has_links=ll.get("has_links", False),
             word_count=ll.get("word_count", 0),
@@ -564,6 +575,7 @@ def _dict_to_audit_result(data: dict):
             has_website=s.get("has_website", False),
             has_faq=s.get("has_faq", False),
             has_webapp=s.get("has_webapp", False),
+            raw_schemas=s.get("raw_schemas", []),
         ),
         meta=MetaResult(
             has_title=m.get("has_title", False),
@@ -571,8 +583,12 @@ def _dict_to_audit_result(data: dict):
             has_canonical=m.get("has_canonical", False),
             has_og_title=m.get("has_og_title", False),
             has_og_description=m.get("has_og_description", False),
+            has_og_image=m.get("has_og_image", False),
             title_text=m.get("title_text", ""),
+            description_text=m.get("description_text", ""),
             description_length=m.get("description_length", 0),
+            title_length=m.get("title_length", 0),
+            canonical_url=m.get("canonical_url", ""),
         ),
         content=ContentResult(
             has_h1=c.get("has_h1", False),
@@ -580,6 +596,9 @@ def _dict_to_audit_result(data: dict):
             has_numbers=c.get("has_numbers", False),
             has_links=c.get("has_links", False),
             word_count=c.get("word_count", 0),
+            h1_text=c.get("h1_text", ""),
+            numbers_count=c.get("numbers_count", 0),
+            external_links_count=c.get("external_links_count", 0),
         ),
         recommendations=data.get("recommendations", []),
         http_status=data.get("http_status", 0),

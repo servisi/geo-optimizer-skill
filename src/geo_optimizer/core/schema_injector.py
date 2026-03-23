@@ -257,9 +257,23 @@ def inject_schema_into_html(
     """
     Inject a schema tag into an HTML file (before </head>).
 
+    Valida il percorso del file contro path traversal e limita
+    le estensioni a .html/.htm per prevenire injection in file arbitrari.
+
     Returns:
         tuple: (success, message) where message is an error/status string
     """
+    from geo_optimizer.utils.validators import validate_safe_path
+
+    # Validazione anti-path-traversal: solo file HTML esistenti
+    safe, path_err = validate_safe_path(
+        file_path,
+        allowed_extensions={".html", ".htm"},
+        must_exist=True,
+    )
+    if not safe:
+        return False, f"Percorso non valido: {path_err}"
+
     if validate:
         schema_type_field = schema_dict.get("@type")
         if isinstance(schema_type_field, list):

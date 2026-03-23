@@ -34,6 +34,10 @@ async def fetch_url_async(
 ) -> tuple[object | None, str | None]:
     """Fetch asincrono di un URL con httpx.
 
+    Implementa validazione anti-SSRF: ogni URL viene verificato con
+    validate_public_url() prima del fetch per bloccare reti private,
+    loopback, cloud metadata e schema non consentiti.
+
     Args:
         url: URL da scaricare.
         client: httpx.AsyncClient opzionale (riutilizza connessioni).
@@ -43,6 +47,13 @@ async def fetch_url_async(
     Returns:
         Tupla (response, error_msg) — response è None in caso di errore.
     """
+    from geo_optimizer.utils.validators import validate_public_url
+
+    # Validazione anti-SSRF prima di qualsiasi fetch
+    safe, reason = validate_public_url(url)
+    if not safe:
+        return None, f"URL non sicuro: {reason}"
+
     import httpx
 
     own_client = client is None

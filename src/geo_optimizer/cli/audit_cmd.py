@@ -111,7 +111,7 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
         # run_full_audit è sincrono e non ha callback di progresso
         if output_format != "json":
             click.echo("⏳ Analisi llms.txt...", err=True)
-        result = run_full_audit(url, use_cache=cache)
+        result = run_full_audit(url, use_cache=cache, project_config=project_config)
         if output_format != "json":
             click.echo("⏳ Analisi schema JSON-LD, meta tag e contenuto...", err=True)
             click.echo("✅ Analisi completata.\n", err=True)

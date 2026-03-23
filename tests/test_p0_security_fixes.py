@@ -285,6 +285,7 @@ class TestScoringConsistency:
         r = self._make_result(**{
             "robots.found": True,
             "robots.citation_bots_ok": True,
+            "robots.citation_bots_explicit": True,
         })
         expected = SCORING["robots_found"] + SCORING["robots_citation_ok"]
         assert _robots_score(r) == expected
@@ -367,6 +368,7 @@ class TestScoringConsistency:
         r = self._make_result(**{
             "robots.found": True,
             "robots.citation_bots_ok": True,
+            "robots.citation_bots_explicit": True,
             "llms.found": True,
             "llms.has_h1": True,
             "llms.has_sections": True,

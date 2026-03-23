@@ -209,7 +209,12 @@ class TestAuditCommand:
         assert "META TAG" in result.output
         assert "CONTENUTI" in result.output
         assert "75/100" in result.output
-        mock_audit.assert_called_once_with("https://example.com", use_cache=False)
+        # Verifica che run_full_audit riceva url, cache e project_config
+        mock_audit.assert_called_once()
+        call_args = mock_audit.call_args
+        assert call_args[0][0] == "https://example.com"
+        assert call_args[1]["use_cache"] is False
+        assert call_args[1]["project_config"] is not None
 
     @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
     def test_audit_json_output(self, mock_audit, runner, sample_audit_result):

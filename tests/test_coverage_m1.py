@@ -255,12 +255,13 @@ class TestHtmlFormatter:
         assert _escape("a > b") == "a &gt; b"
 
     def test_robots_score_citation_ok(self):
-        """Punteggio robots massimo con citation bots ok."""
+        """Punteggio robots massimo con citation bots espliciti."""
         from geo_optimizer.cli.html_formatter import _robots_score
         from geo_optimizer.models.config import SCORING
 
         r = AuditResult(url="https://example.com")
         r.robots.citation_bots_ok = True
+        r.robots.citation_bots_explicit = True
         r.robots.found = True
 
         expected = SCORING["robots_found"] + SCORING["robots_citation_ok"]
@@ -838,12 +839,13 @@ class TestGithubFormatter:
             assert expected_label in output
 
     def test_robots_score_github_citation_ok(self):
-        """_robots_score() del github formatter calcola correttamente con citation ok."""
+        """_robots_score() del github formatter calcola correttamente con citation espliciti."""
         from geo_optimizer.cli.github_formatter import _robots_score
         from geo_optimizer.models.config import SCORING
 
         r = AuditResult(url="https://example.com")
         r.robots.citation_bots_ok = True
+        r.robots.citation_bots_explicit = True
         r.robots.found = True
 
         expected = SCORING["robots_found"] + SCORING["robots_citation_ok"]

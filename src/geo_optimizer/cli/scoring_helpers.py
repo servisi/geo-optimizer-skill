@@ -11,14 +11,22 @@ from geo_optimizer.models.results import AuditResult
 
 
 def robots_score(r: AuditResult) -> int:
-    """Punteggio robots.txt allineato a SCORING (config.py)."""
+    """Punteggio robots.txt allineato a compute_geo_score() in audit.py.
+
+    Distingue citation bot espliciti (regola dedicata) da quelli consentiti
+    solo tramite wildcard User-agent: * — fix divergenza scoring_helpers vs audit.
+    """
+    if not r.robots.found:
+        return 0
+    s = SCORING["robots_found"]
     if r.robots.citation_bots_ok:
-        return SCORING["robots_found"] + SCORING["robots_citation_ok"]
-    if r.robots.bots_allowed:
-        return SCORING["robots_found"] + SCORING["robots_some_allowed"]
-    if r.robots.found:
-        return SCORING["robots_found"]
-    return 0
+        if r.robots.citation_bots_explicit:
+            s += SCORING["robots_citation_ok"]
+        else:
+            s += SCORING["robots_some_allowed"]
+    elif r.robots.bots_allowed:
+        s += SCORING["robots_some_allowed"]
+    return s
 
 
 def llms_score(r: AuditResult) -> int:
