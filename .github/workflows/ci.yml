@@ -75,8 +75,8 @@ jobs:
 
       - name: Run ruff
         run: |
-          ruff check src/geo_optimizer/ scripts/
-          ruff format --check src/geo_optimizer/ scripts/
+          ruff check src/geo_optimizer/
+          ruff format --check src/geo_optimizer/
 
       - name: Audit dependencies
         run: |

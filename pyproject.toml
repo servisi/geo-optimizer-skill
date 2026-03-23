@@ -81,18 +81,13 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "scripts"]
+pythonpath = ["src"]
 markers = [
-    "legacy: test che importano da scripts/ legacy (deprecati, verranno rimossi in v3.0)",
     "network: test che richiedono accesso rete (skip in CI con -m 'not network')",
-]
-filterwarnings = [
-    "ignore::DeprecationWarning:scripts",
 ]
 
 [tool.coverage.run]
 source = ["geo_optimizer"]
-omit = ["scripts/*"]
 
 [tool.coverage.report]
 show_missing = true
@@ -118,10 +113,4 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*.py" = ["E741", "E402", "UP006", "UP015", "UP035", "SIM102"]
-"tests/test_audit.py" = ["E402"]
-"tests/test_generate_llms_txt.py" = ["E402"]
-"tests/test_schema_injector.py" = ["E402"]
-"tests/test_schema_validator.py" = ["E402"]
-"tests/test_http_utils.py" = ["E402", "F841"]
 "tests/test_integration.py" = ["E402"]
