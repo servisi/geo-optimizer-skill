@@ -145,3 +145,28 @@ class SitemapUrl:
     lastmod: str | None = None
     priority: float = 0.5
     title: str | None = None
+
+
+# ─── Fix plan ───────────────────────────────────────────────────────────────
+
+
+@dataclass
+class FixItem:
+    """Singolo fix generato da geo fix."""
+
+    category: str       # "robots", "llms", "schema", "meta"
+    description: str    # "Aggiunge 5 bot AI mancanti a robots.txt"
+    content: str        # Contenuto generato (testo del file o tag HTML)
+    file_name: str      # "robots.txt", "llms.txt", "schema-website.json"
+    action: str         # "create", "append", "snippet"
+
+
+@dataclass
+class FixPlan:
+    """Piano completo di fix generato da geo fix."""
+
+    url: str
+    score_before: int = 0
+    score_estimated_after: int = 0
+    fixes: list[FixItem] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)

@@ -1,0 +1,351 @@
+"""
+Generatore di fix GEO automatici.
+
+Analizza un AuditResult e genera artefatti correttivi:
+- robots.txt con bot AI mancanti
+- llms.txt completo via sitemap
+- Schema JSON-LD mancanti (WebSite, FAQPage, Organization)
+- Meta tag HTML mancanti
+
+Tutte le funzioni ritornano dataclass (FixItem/FixPlan), MAI stampano.
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import logging
+from urllib.parse import urlparse
+
+from geo_optimizer.models.config import AI_BOTS, SCHEMA_TEMPLATES
+from geo_optimizer.models.results import AuditResult, FixItem, FixPlan
+
+logger = logging.getLogger(__name__)
+
+
+def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
+    """Genera patch robots.txt con bot AI mancanti.
+
+    Se robots.txt non trovato: genera file completo con tutti i 14 bot.
+    Se trovato ma con bot mancanti: genera righe da appendere.
+
+    Returns:
+        FixItem o None se nessun fix necessario.
+    """
+    if result.robots.found and not result.robots.bots_missing:
+        return None
+
+    if not result.robots.found:
+        # Genera robots.txt completo
+        lines = [
+            "# Robots.txt — ottimizzato per AI search engines",
+            "# Generato da GEO Optimizer (https://github.com/auriti-labs/geo-optimizer-skill)",
+            "",
+            "User-agent: *",
+            "Allow: /",
+            "",
+        ]
+        for bot, description in AI_BOTS.items():
+            lines.append(f"# {description}")
+            lines.append(f"User-agent: {bot}")
+            lines.append("Allow: /")
+            lines.append("")
+
+        # Sitemap placeholder
+        parsed = urlparse(base_url)
+        lines.append(f"Sitemap: {parsed.scheme}://{parsed.netloc}/sitemap.xml")
+        lines.append("")
+
+        return FixItem(
+            category="robots",
+            description=f"Crea robots.txt con accesso per tutti i {len(AI_BOTS)} bot AI",
+            content="\n".join(lines),
+            file_name="robots.txt",
+            action="create",
+        )
+
+    # robots.txt esiste ma mancano alcuni bot
+    missing = result.robots.bots_missing
+    lines = [
+        "",
+        "# ─── Bot AI mancanti (aggiunti da GEO Optimizer) ───",
+        "",
+    ]
+    for bot in missing:
+        description = AI_BOTS.get(bot, "AI bot")
+        lines.append(f"# {description}")
+        lines.append(f"User-agent: {bot}")
+        lines.append("Allow: /")
+        lines.append("")
+
+    return FixItem(
+        category="robots",
+        description=f"Aggiunge {len(missing)} bot AI mancanti a robots.txt",
+        content="\n".join(lines),
+        file_name="robots.txt",
+        action="append",
+    )
+
+
+def generate_llms_fix(result: AuditResult, base_url: str) -> FixItem | None:
+    """Genera llms.txt usando il sitemap del sito.
+
+    Se llms.txt non trovato o incompleto: genera versione completa.
+
+    Returns:
+        FixItem o None se llms.txt è già completo.
+    """
+    if result.llms.found and result.llms.has_h1 and result.llms.has_sections and result.llms.has_links:
+        return None
+
+    from geo_optimizer.core.llms_generator import discover_sitemap, fetch_sitemap, generate_llms_txt
+
+    # Prova a scoprire il sitemap
+    sitemap_url = discover_sitemap(base_url)
+    urls = []
+    if sitemap_url:
+        urls = fetch_sitemap(sitemap_url)
+
+    # Genera il contenuto llms.txt
+    parsed = urlparse(base_url)
+    site_name = parsed.netloc.replace("www.", "")
+    content = generate_llms_txt(
+        base_url=base_url,
+        urls=urls,
+        site_name=site_name,
+        description=f"Informazioni su {site_name} per motori di ricerca AI",
+        fetch_titles=False,
+        max_urls_per_section=20,
+    )
+
+    action = "create" if not result.llms.found else "create"
+    desc = "Crea llms.txt" if not result.llms.found else "Rigenera llms.txt con struttura completa"
+
+    if urls:
+        desc += f" ({len(urls)} URL dal sitemap)"
+
+    return FixItem(
+        category="llms",
+        description=desc,
+        content=content,
+        file_name="llms.txt",
+        action=action,
+    )
+
+
+def generate_schema_fix(result: AuditResult, base_url: str) -> list[FixItem]:
+    """Genera schema JSON-LD mancanti.
+
+    Controlla WebSite, FAQPage e Organization. Per ogni tipo mancante,
+    genera il template compilato con i dati disponibili.
+
+    Returns:
+        Lista di FixItem (può essere vuota).
+    """
+    fixes = []
+    parsed = urlparse(base_url)
+    site_name = parsed.netloc.replace("www.", "")
+
+    # WebSite schema
+    if not result.schema.has_website:
+        template = copy.deepcopy(SCHEMA_TEMPLATES["website"])
+        from geo_optimizer.core.schema_injector import fill_template
+
+        values = {
+            "name": result.meta.title_text or site_name,
+            "url": base_url,
+            "description": result.meta.description_text or f"Sito web {site_name}",
+        }
+        schema = fill_template(template, values)
+        fixes.append(FixItem(
+            category="schema",
+            description="Genera schema WebSite JSON-LD",
+            content=json.dumps(schema, indent=2, ensure_ascii=False),
+            file_name="schema-website.jsonld",
+            action="snippet",
+        ))
+
+    # Organization schema
+    if "Organization" not in result.schema.found_types:
+        template = copy.deepcopy(SCHEMA_TEMPLATES["organization"])
+        from geo_optimizer.core.schema_injector import fill_template
+
+        values = {
+            "name": result.meta.title_text or site_name,
+            "url": base_url,
+            "description": result.meta.description_text or "",
+            "logo_url": f"{base_url}/logo.png",
+        }
+        schema = fill_template(template, values)
+        fixes.append(FixItem(
+            category="schema",
+            description="Genera schema Organization JSON-LD",
+            content=json.dumps(schema, indent=2, ensure_ascii=False),
+            file_name="schema-organization.jsonld",
+            action="snippet",
+        ))
+
+    return fixes
+
+
+def generate_meta_fix(result: AuditResult, base_url: str) -> FixItem | None:
+    """Genera meta tag HTML mancanti.
+
+    Controlla title, description, canonical, Open Graph e genera
+    i tag mancanti come snippet HTML da inserire nel <head>.
+
+    Returns:
+        FixItem o None se tutti i meta tag sono presenti.
+    """
+    parsed = urlparse(base_url)
+    site_name = parsed.netloc.replace("www.", "")
+    tags = []
+
+    if not result.meta.has_title:
+        tags.append(f'<title>{site_name}</title>')
+
+    if not result.meta.has_description:
+        tags.append(f'<meta name="description" content="Sito web {site_name}">')
+
+    if not result.meta.has_canonical:
+        tags.append(f'<link rel="canonical" href="{base_url}/">')
+
+    if not result.meta.has_og_title:
+        title = result.meta.title_text or site_name
+        tags.append(f'<meta property="og:title" content="{title}">')
+
+    if not result.meta.has_og_description:
+        desc = result.meta.description_text or f"Sito web {site_name}"
+        tags.append(f'<meta property="og:description" content="{desc}">')
+
+    if not result.meta.has_og_image:
+        tags.append(f'<meta property="og:image" content="{base_url}/og-image.png">')
+
+    if not tags:
+        return None
+
+    return FixItem(
+        category="meta",
+        description=f"Genera {len(tags)} meta tag mancanti",
+        content="\n".join(tags),
+        file_name="meta-tags.html",
+        action="snippet",
+    )
+
+
+def _estimate_score_after(result: AuditResult, fixes: list[FixItem]) -> int:
+    """Stima lo score dopo l'applicazione dei fix.
+
+    Calcolo semplificato: prende lo score attuale e aggiunge i punti
+    potenziali per ogni categoria fixata.
+    """
+    from geo_optimizer.models.config import SCORING
+
+    bonus = 0
+    categories_fixed = {f.category for f in fixes}
+
+    if "robots" in categories_fixed:
+        # Se creiamo robots.txt da zero: punteggio pieno robots
+        has_robot_create = any(f.category == "robots" and f.action == "create" for f in fixes)
+        if has_robot_create:
+            bonus += SCORING["robots_found"] + SCORING["robots_citation_ok"]
+        else:
+            # Appendiamo bot mancanti — stimiamo che i citation bot saranno ok
+            if not result.robots.citation_bots_ok:
+                bonus += SCORING["robots_citation_ok"] - SCORING.get("robots_some_allowed", 0)
+
+    if "llms" in categories_fixed and not result.llms.found:
+        bonus += SCORING["llms_found"] + SCORING["llms_h1"] + SCORING["llms_sections"] + SCORING["llms_links"]
+
+    if "schema" in categories_fixed and not result.schema.has_website:
+        bonus += SCORING["schema_website"]
+
+    if "meta" in categories_fixed:
+        if not result.meta.has_title:
+            bonus += SCORING["meta_title"]
+        if not result.meta.has_description:
+            bonus += SCORING["meta_description"]
+        if not result.meta.has_canonical:
+            bonus += SCORING["meta_canonical"]
+        if not result.meta.has_og_title and not result.meta.has_og_description:
+            bonus += SCORING["meta_og"]
+
+    return min(100, result.score + bonus)
+
+
+def run_all_fixes(
+    url: str,
+    audit_result: AuditResult | None = None,
+    only: set[str] | None = None,
+) -> FixPlan:
+    """Orchestratore: esegue audit se necessario, genera tutti i fix.
+
+    Args:
+        url: URL del sito.
+        audit_result: AuditResult pre-calcolato (evita doppio audit).
+        only: Set di categorie da generare (es. {"robots", "llms"}).
+              Se None, genera tutti i fix applicabili.
+
+    Returns:
+        FixPlan con tutti i fix generati e lo score stimato.
+    """
+    if audit_result is None:
+        from geo_optimizer.core.audit import run_full_audit
+        audit_result = run_full_audit(url)
+
+    # Normalizza URL
+    base_url = audit_result.url
+
+    fixes: list[FixItem] = []
+    skipped: list[str] = []
+    all_categories = {"robots", "llms", "schema", "meta"}
+    active = only if only else all_categories
+
+    # Robots fix
+    if "robots" in active:
+        fix = generate_robots_fix(audit_result, base_url)
+        if fix:
+            fixes.append(fix)
+        else:
+            skipped.append("robots: tutti i bot AI sono già consentiti")
+    else:
+        skipped.append("robots: escluso dal filtro --only")
+
+    # LLMS fix
+    if "llms" in active:
+        fix = generate_llms_fix(audit_result, base_url)
+        if fix:
+            fixes.append(fix)
+        else:
+            skipped.append("llms: llms.txt è già completo")
+    else:
+        skipped.append("llms: escluso dal filtro --only")
+
+    # Schema fix
+    if "schema" in active:
+        schema_fixes = generate_schema_fix(audit_result, base_url)
+        fixes.extend(schema_fixes)
+        if not schema_fixes:
+            skipped.append("schema: tutti gli schema rilevanti sono presenti")
+    else:
+        skipped.append("schema: escluso dal filtro --only")
+
+    # Meta fix
+    if "meta" in active:
+        fix = generate_meta_fix(audit_result, base_url)
+        if fix:
+            fixes.append(fix)
+        else:
+            skipped.append("meta: tutti i meta tag sono presenti")
+    else:
+        skipped.append("meta: escluso dal filtro --only")
+
+    score_after = _estimate_score_after(audit_result, fixes)
+
+    return FixPlan(
+        url=base_url,
+        score_before=audit_result.score,
+        score_estimated_after=score_after,
+        fixes=fixes,
+        skipped=skipped,
+    )
