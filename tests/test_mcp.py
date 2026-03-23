@@ -242,6 +242,10 @@ class TestMcpResources:
         assert "ai_bots" in data
         assert "GPTBot" in data["ai_bots"]
         assert data["total"] == 16
+        assert "tiers" in data
+        assert "search" in data["tiers"]
+        assert "training" in data["tiers"]
+        assert "user" in data["tiers"]
 
     def test_score_bands_resource(self):
         """Resource score-bands ritorna fasce punteggio."""

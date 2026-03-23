@@ -247,13 +247,14 @@ def geo_schema_validate(json_string: str, schema_type: str = "") -> str:
 
 @mcp.resource("geo://ai-bots")
 def get_ai_bots() -> str:
-    """Lista dei 14 bot AI tracciati da GEO Optimizer con descrizioni."""
-    from geo_optimizer.models.config import AI_BOTS, CITATION_BOTS
+    """List of 16 AI bots tracked by GEO Optimizer with 3-tier classification."""
+    from geo_optimizer.models.config import AI_BOTS, BOT_TIERS, CITATION_BOTS
 
     return json.dumps(
         {
             "ai_bots": AI_BOTS,
-            "citation_bots": list(CITATION_BOTS),
+            "tiers": {k: sorted(v) for k, v in BOT_TIERS.items()},
+            "citation_bots": sorted(CITATION_BOTS),
             "total": len(AI_BOTS),
         },
         indent=2,

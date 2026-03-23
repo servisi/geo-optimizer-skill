@@ -21,7 +21,11 @@ MAX_SUB_SITEMAPS: int = 10
 MAX_TOTAL_URLS: int = 10_000
 
 
-# ─── AI bots that should be listed in robots.txt ─────────────────────────────
+# ─── AI bots — 3-tier classification (training/search/user) ──────────────────
+#
+# Training: crawl per addestrare modelli (meno critico per visibilità diretta)
+# Search:   citano il sito nelle risposte AI (massima priorità per GEO)
+# User:     fetch on-demand quando un utente chiede di un URL specifico
 
 AI_BOTS = {
     # ── OpenAI ──────────────────────────────────────────────────────────────
@@ -49,7 +53,22 @@ AI_BOTS = {
     "meta-externalagent": "Meta AI (Facebook/Instagram AI)",
 }
 
-# Critical citation bots (search-oriented, not just training)
+# 3-tier classification — bot raggruppati per funzione
+BOT_TIERS = {
+    "training": {
+        "GPTBot", "anthropic-ai", "claude-web", "Google-Extended",
+        "Applebot-Extended", "cohere-ai", "Bytespider", "meta-externalagent",
+    },
+    "search": {
+        "OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "PerplexityBot",
+        "Bingbot", "DuckAssistBot",
+    },
+    "user": {
+        "ChatGPT-User", "Perplexity-User",
+    },
+}
+
+# Critical citation bots (search-tier, directly cite sources in AI responses)
 CITATION_BOTS = {"OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "PerplexityBot"}
 
 # ─── Schema types ────────────────────────────────────────────────────────────
