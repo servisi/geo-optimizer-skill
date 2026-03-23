@@ -4,6 +4,8 @@ Schema Injector — Adds JSON-LD schema to HTML pages and generates Astro snippe
 All functions return data; no printing.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import re
