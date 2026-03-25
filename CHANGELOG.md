@@ -14,6 +14,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.14.2] — 2026-03-25
+
+### Added
+
+- **CDN AI Crawler Check** (#225) — verifica se CDN blocca AI bot con user-agent diversi
+- **JS Rendering Check** (#226) — rileva pagine SPA/JS-only inaccessibili ai crawler AI
+- **Web demo: 3 nuove pagine** (#280) — `/roadmap`, `/research`, `/compare` con side-by-side audit
+- **Documentazione online** (#291) — 13 pagine docs navigabili su `/docs/` con sidebar e Markdown→HTML
+- **2 nuove pagine docs**: `mcp-server.md` (8 tool + 5 resource) e `geo-fix.md` (comando fix)
+
+### Fixed
+
+- **PERF: CLI usa path async** (#284) — `run_full_audit_async()` invocato se httpx disponibile
+- **PERF: Eliminato re-parse HTML multiplo** (#285) — `soup_clean` calcolato una volta e passato ai sub-audit
+- **SEC: Cache race condition** (#286) — `asyncio.Lock()` su `_audit_cache` e `/report/`
+- **SEC: CSP style-src** (#287) — documentato come accettabile (stili hardcodati non user-controllabili)
+- **Docs Docker** (#293) — file markdown inclusi nel pacchetto per funzionare nel Docker container
+
+### Changed
+
+- Documentazione `scoring-rubric.md` aggiornata a 7 categorie (v3.14 pesi)
+- Documentazione `geo-methods.md` aggiornata a 11 metodi (era 9)
+- `index.md` con link a tutte le pagine incluse MCP, geo fix, CI/CD
+
+---
+
 ## [3.14.1] — 2026-03-25
 
 ### Fixed
