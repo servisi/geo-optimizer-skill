@@ -14,6 +14,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.14.1] — 2026-03-25
+
+### Fixed
+
+- **Score GEO sottostimato di 8 punti** (#281) — `SignalsResult` non veniva mai calcolato. Implementata `audit_signals()` che verifica `<html lang>`, RSS feed, e `dateModified` nello schema. Integrata in sync e async audit path.
+- **Doppia registrazione `geo://methods` nel MCP server** (#282) — due funzioni registravano lo stesso URI con `max_score` incoerenti. Rimossa la registrazione duplicata.
+- **SSRF bypass in `audit_cdn_ai_crawler()`** (#283) — le richieste HTTP del CDN check bypassavano `validate_public_url()`. Aggiunta validazione SSRF prima delle richieste.
+
+### Changed
+
+- Test CDN aggiornati per nuova validazione SSRF (13/13 pass, 710 totali)
+
+---
+
 ## [3.14.0] — 2026-03-25
 
 ### Added
