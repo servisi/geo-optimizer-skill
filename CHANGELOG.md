@@ -14,6 +14,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.14.0] — 2026-03-25
+
+### Added
+
+- **GitHub Action for CI/CD** (#205) — composite action `Auriti-Labs/geo-optimizer-skill@v3.14.0` with threshold, SARIF/JUnit output
+- **Dynamic GEO Badge** (#206) — `/badge` SVG endpoint + shields.io compatible `/badge/endpoint`
+- **AI Discovery endpoints** (#207) — audit `/.well-known/ai.txt`, `/ai/summary.json`, `/ai/faq.json`, `/ai/service.json` (geo-checklist.dev standard)
+- **MCP Server potenziato** (#209) — 3 nuovi tool (`geo_compare`, `geo_ai_discovery`, `geo_check_bots`) + 3 nuove resource (`geo://methods`, `geo://changelog`, `geo://ai-discovery-spec`). Totale: 8 tool + 5 resource
+- **Scoring update ricerca 2025-2026** (#36, #38) — 2 nuovi metodi citability (answer-first, passage density), schema richness check, over-optimization warning. Basato su AutoGEO ICLR 2026, C-SEO Bench 2025, Growth Marshal 2026
+- **Social proof stats** nella homepage web demo (GitHub stars, PyPI downloads reali, audit counter)
+- **Issue templates** (bug report, feature request, new audit check) + PR template
+- Sezione "Research Foundation" e "How It Compares" nel README
+
+### Changed
+
+- Hosting migrato da Railway a Render (free tier)
+- Citability: 11 metodi (era 9), pesi ricalibrati, totale = 100
+- Scoring: nuova categoria `ai_discovery` (6 punti), `meta_description` ridotta da 8 a 6
+- Download stats: ora mostra solo download reali (senza mirror/bot)
+- MCP docstring del modulo aggiornato
+
+### Fixed
+
+- Homepage 500: template HTML non incluso nel package-data (#213)
+- CSP: `onclick` inline sostituito con `addEventListener` (#222)
+- `/api/stats` 500: `httpx` sostituito con `urllib` (standard library)
+- CI lint: `ruff format` su 6 file + `pip-audit --ignore-vuln CVE-2026-4539`
+
+---
+
 ## [3.0.0] — 2026-02-27
 
 First stable release. All 11 security and quality issues from M1 milestone resolved.
