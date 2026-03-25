@@ -8,6 +8,7 @@
 [![codecov](https://codecov.io/gh/auriti-labs/geo-optimizer-skill/branch/main/graph/badge.svg)](https://codecov.io/gh/auriti-labs/geo-optimizer-skill)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
 [![Based on Princeton KDD 2024](https://img.shields.io/badge/Based_on-Princeton_KDD_2024-f97316?style=flat-square)](https://arxiv.org/abs/2311.09735)
+[![AutoGEO ICLR 2026](https://img.shields.io/badge/Informed_by-AutoGEO_ICLR_2026-6366f1?style=flat-square)](https://arxiv.org/abs/2510.11438)
 [![GitHub Stars](https://img.shields.io/github/stars/auriti-labs/geo-optimizer-skill?style=flat-square&color=facc15&logo=github)](https://github.com/auriti-labs/geo-optimizer-skill/stargazers)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-8b5cf6?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiByeD0iMyIgZmlsbD0iIzhiNWNmNiIvPjx0ZXh0IHg9IjgiIHk9IjEyIiBmb250LXNpemU9IjEwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TTwvdGV4dD48L3N2Zz4=)](https://modelcontextprotocol.io)
 [![Docs](https://img.shields.io/badge/docs-auritidesign.it-00b4d8?style=flat-square)](https://auritidesign.it/docs/geo-optimizer/)
@@ -600,6 +601,47 @@ Security issues should be reported via [SECURITY.md](SECURITY.md). The package i
 
 ---
 
+## 🔬 Research Foundation
+
+GEO Optimizer's scoring and recommendations are grounded in peer-reviewed academic research — not marketing claims.
+
+### Core Research
+
+| Paper | Venue | Key Finding | How We Use It |
+|-------|-------|-------------|---------------|
+| [GEO: Generative Engine Optimization](https://arxiv.org/abs/2311.09735) | **KDD 2024** (Princeton, Georgia Tech, AI2, IIT Delhi) | 9 optimization methods tested on 10,000 queries. Cite Sources: +115%, Statistics: +40%, Fluency: +30% | Our citability score implements all 9 methods with measured weights |
+| [AutoGEO](https://arxiv.org/abs/2510.11438) | **ICLR 2026** (Carnegie Mellon) | Automatic rule extraction from generative engines. +50.99% over best Princeton baseline. Introduces GEU (utility) metric | Informs our scoring weight updates and content analysis |
+| [C-SEO Bench](https://arxiv.org/abs/2506.11097) | **2025** (Puerto et al.) | Most conversational SEO methods are ineffective; gains decrease as adoption increases | Validates our focus on technical infrastructure over content manipulation |
+
+### What This Means
+
+We intentionally focus on **infrastructure optimization** (robots.txt, llms.txt, schema, meta tags, content structure) rather than content rewriting. The research shows that technical discoverability is a prerequisite — if AI crawlers can't find and parse your content, no amount of prose optimization matters.
+
+The adversarial research (ETH Zurich ICLR 2025, Harvard, UC Berkeley EMNLP 2024) demonstrates that manipulative text injection degrades the ecosystem. We build tools for white-hat GEO.
+
+---
+
+## 📊 How It Compares
+
+GEO Optimizer sits in a specific niche: **open-source CLI tool for technical GEO audit and fix generation**.
+
+| | GEO Optimizer | SaaS Tools (Profound, Texta, Otterly) | geo-lint | geo-team-red/geo-optimizer |
+|---|---|---|---|---|
+| **What it does** | Audit infrastructure + generate fixes | Monitor brand mentions in AI answers | Lint content against GEO rules | Framework for content rewriting via LLM |
+| **Approach** | Technical audit (robots.txt, llms.txt, schema, meta) | Brand tracking dashboard | Content quality rules (97 rules) | Pluggable LLM-powered optimization |
+| **Requires API key** | ❌ No | ✅ Yes (paid subscription) | ❌ No | ✅ Yes (LLM API) |
+| **Install** | `pip install geo-optimizer-skill` | Sign up + pay | `npm install @ijonis/geo-lint` | `go get` |
+| **Time to first result** | 30 seconds | 5-10 minutes | 30 seconds | 5+ minutes |
+| **Generates fix files** | ✅ Yes (`geo fix --apply`) | ❌ No (reporting only) | ❌ No (suggestions only) | ⚠️ Via LLM rewrite |
+| **MCP Server** | ✅ Native | ❌ No | ❌ No | ❌ No |
+| **CI/CD integration** | ✅ SARIF + JUnit | ❌ No | ⚠️ JSON output | ❌ No |
+| **Research-backed scoring** | ✅ Princeton KDD 2024 | Proprietary | Partial | Partial |
+| **Price** | Free (MIT) | $49-$999/month | Free (MIT) | Free (MIT) |
+
+**Our position:** We don't compete with SaaS monitoring tools — they track *if* you're cited, we optimize *why* you'd be cited. We complement them.
+
+---
+
 ## 📚 Resources
 
 | | |
@@ -632,8 +674,20 @@ Web Developer · GEO Researcher
 
 ## 🤝 Contributing
 
-Issues, PRs, and shared audit results are all welcome.
-Keep contributions focused and documented.
+We welcome contributions of all sizes. Here's how to get started:
+
+- **🐛 Found a bug?** [Open a bug report](https://github.com/Auriti-Labs/geo-optimizer-skill/issues/new?template=bug_report.yml)
+- **✨ Have an idea?** [Request a feature](https://github.com/Auriti-Labs/geo-optimizer-skill/issues/new?template=feature_request.yml)
+- **🔍 New audit check?** [Propose a check](https://github.com/Auriti-Labs/geo-optimizer-skill/issues/new?template=new_audit_check.yml)
+- **🛠️ Want to code?** Check [good first issues](https://github.com/Auriti-Labs/geo-optimizer-skill/labels/good%20first%20issue) or read [CONTRIBUTING.md](CONTRIBUTING.md)
+
+```bash
+# Set up dev environment in 60 seconds
+git clone https://github.com/YOUR_USERNAME/geo-optimizer-skill.git
+cd geo-optimizer-skill
+pip install -e ".[dev]"
+pytest tests/ -v  # 800+ tests, all mocked — no network needed
+```
 
 ---
 
