@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.16.0] — 2026-03-26
+
+### Added (v3.16.0 — Batch A: Signals & Trust)
+
+- **Voice/Conversational Search** (#246) — question headings, concise answers, speakable
+- **Multi-Platform Presence** (#231) — platform count from sameAs (GitHub, LinkedIn, Reddit, etc.)
+- **Entity Disambiguation** (#256) — consistent brand naming across title, OG, schema
+- **First-Party Data** (#259) — original research patterns ("we analyzed", "our study")
+- **Stale Data Detection** (#261) — outdated copyright, old year references
+- **Social Proof** (#264) — testimonials, trust badges, review aggregates
+- **Accessibility Signals** (#252) — semantic HTML, ARIA landmarks, skip links
+- **AI Conversion Funnel** (#279) — CTA visibility, pricing link, contact info
+
+### Added (v3.16.0 — Batch B: Technical Signals)
+
+- **Temporal Signal Coherence** (#269) — date alignment across schema, meta, content
+- **Anchor Text Quality** (#268) — descriptive vs generic internal link text
+- **International GEO** (#262) — hreflang, multi-language, inLanguage schema
+- **AI Crawl Budget** (#271) — meta robots noindex/nofollow detection, sitemap link
+
+### Changed
+
+- Citability engine: **42 methods** total (12 new)
+- 812 tests passing
+
+---
+
 ## [3.15.1] — 2026-03-25
 
 ### Added (Batch 2 — Quality Signals)
