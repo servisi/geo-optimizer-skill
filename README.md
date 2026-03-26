@@ -128,7 +128,7 @@ geo schema --type website --name "MySite" --url https://yoursite.com
 
 **MCP Server** — use all audit capabilities directly from Claude, Cursor, or any MCP-compatible client. Five tools and two resources, no API keys required. See [MCP Server](#mcp-server) below.
 
-**Citability Score** — a separate 0–100 score based on 18 research-backed methods (Princeton KDD 2024 + AutoGEO ICLR 2026 + SE Ranking 2025), measuring how citable your content is (not just whether you have the right technical setup). Returned as `result.citability.total_score` in the library API.
+**Citability Score** — a separate 0–100 score based on 42 research-backed methods covering content quality, trust signals, technical SEO, and AI-specific optimization, measuring how citable your content is (not just whether you have the right technical setup). Returned as `result.citability.total_score` in the library API.
 
 **16 AI bots with 3-tier classification** — training, search, and user tiers. Bingbot (Microsoft Copilot) and Claude-SearchBot added in v3.4–3.5.
 
@@ -496,7 +496,7 @@ Once connected, you can ask your AI assistant things like: *"audit my site and f
 
 Separate from the main GEO audit score, the citability score measures how well your **content** is written to be cited by AI — not just whether the technical plumbing is in place.
 
-It's based on 18 research-backed methods (Princeton KDD 2024 + AutoGEO ICLR 2026 + SE Ranking 2025), each with a measured impact:
+It's based on 42 research-backed methods covering content quality, trust signals, technical SEO, and AI-specific optimization, each with a measured impact:
 
 | Method | Impact |
 |--------|--------|
@@ -562,7 +562,7 @@ result = await audit_async("https://example.com")
 
 ---
 
-## 🔬 The 18 GEO Methods
+## 🔬 The 42 GEO Methods
 
 Apply in this order:
 
@@ -648,7 +648,7 @@ pytest tests/test_core.py -v
 pytest tests/test_core.py::TestAudit::test_name -v
 ```
 
-800+ tests covering core audit, CLI, security, citability, MCP, and edge cases. All use `unittest.mock` — no real network calls.
+812+ tests covering core audit, CLI, security, citability, MCP, and edge cases. All use `unittest.mock` — no real network calls.
 
 See [Codecov](https://codecov.io/gh/auriti-labs/geo-optimizer-skill) for live coverage analysis.
 
@@ -745,7 +745,7 @@ We welcome contributions of all sizes. Here's how to get started:
 git clone https://github.com/YOUR_USERNAME/geo-optimizer-skill.git
 cd geo-optimizer-skill
 pip install -e ".[dev]"
-pytest tests/ -v  # 800+ tests, all mocked — no network needed
+pytest tests/ -v  # 812+ tests, all mocked — no network needed
 ```
 
 ---

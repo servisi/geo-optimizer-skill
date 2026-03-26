@@ -1,8 +1,8 @@
-# The 11 GEO Methods
+# The 42 GEO Methods
 
 Research-backed content optimization techniques for AI citation visibility.
 
-> **Methods 1–9** from the Princeton KDD 2024 study (Aggarwal et al.). **Methods 10–11** informed by AutoGEO ICLR 2026 and Stanford 2025 research.
+> **Methods 1–9 from Princeton KDD 2024. Methods 10–11 from AutoGEO ICLR 2026 & Stanford 2025. Methods 12–42 from SE Ranking, OtterlyAI, Growth Marshal, and LLM-perspective analysis.
 
 ---
 
