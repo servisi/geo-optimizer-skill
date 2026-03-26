@@ -167,7 +167,7 @@ async function runAudit() {
 
             // Bottone Download PDF
             const pdfLink = document.createElement('a');
-            pdfLink.href = '/api/audit/pdf?url=' + encodeURIComponent(urlInput.value.trim());
+            pdfLink.href = '/api/audit/pdf?url=' + encodeURIComponent(url);
             pdfLink.textContent = '📄 Download PDF';
             pdfLink.style.cssText = 'margin-left:1rem;color:#f59e0b;text-decoration:none;font-size:.9rem';
             reportLinkEl.appendChild(pdfLink);
