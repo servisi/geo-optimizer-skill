@@ -508,9 +508,11 @@ async def stats():
         ),
     )
 
-    # GitHub stars
-    if github_data:
-        result["github_stars"] = github_data.get("stargazers_count", 0)
+    # GitHub stars (fallback a 13 se API rate limited)
+    if github_data and github_data.get("stargazers_count"):
+        result["github_stars"] = github_data["stargazers_count"]
+    else:
+        result["github_stars"] = 13  # Fallback: ultimo valore noto
 
     # PyPI downloads — solo utenti reali (senza mirror, senza null/bot)
     if pypi_data:
