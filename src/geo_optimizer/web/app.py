@@ -177,6 +177,7 @@ def _get_client_ip(request: Request) -> str:
             real_ip = forwarded_for.split(",")[0].strip()
             # Fix #14: valida che sia un formato IP valido
             import ipaddress as _ipaddress
+
             try:
                 _ipaddress.ip_address(real_ip)
                 return real_ip
