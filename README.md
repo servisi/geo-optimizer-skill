@@ -13,7 +13,7 @@
 
 **Audit, fix, and optimize any website to be cited by ChatGPT, Perplexity, Claude, and Gemini.**
 
-[Quick Start](#quick-start) · [Live Demo](https://geo-optimizer-web.onrender.com) · [Documentation](docs/index.md) · [Changelog](CHANGELOG.md)
+[Quick Start](#quick-start) · [Live Demo](https://geo-optimizer-web.onrender.com) · [Documentation](https://auriti-labs.github.io/geo-optimizer-skill/) · [Changelog](CHANGELOG.md)
 
 </div>
 
