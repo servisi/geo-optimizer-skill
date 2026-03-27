@@ -233,7 +233,13 @@ def audit_schema(soup, url: str) -> SchemaResult:
                 logging.debug("JSON-LD too large (%d bytes), skipping", len(raw))
                 continue
             data = json.loads(raw)
-            schemas = data if isinstance(data, list) else [data]
+            # Fix: supporto formato @graph (usato da Yoast SEO, RankMath, ecc.)
+            if isinstance(data, dict) and "@graph" in data:
+                schemas = data["@graph"] if isinstance(data["@graph"], list) else [data["@graph"]]
+            elif isinstance(data, list):
+                schemas = data
+            else:
+                schemas = [data]
 
             for schema in schemas:
                 schema_type = schema.get("@type", "unknown")
