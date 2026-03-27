@@ -433,6 +433,7 @@ def get_score_bands() -> str:
 def get_citability_methods() -> str:
     """All 42 citability methods with measured impact (fix #1: generati dinamicamente dal motore)."""
     from bs4 import BeautifulSoup
+
     from geo_optimizer.core.citability import audit_citability
 
     # Genera i metodi da un soup vuoto per ottenere nomi, label, max_score e impact reali
