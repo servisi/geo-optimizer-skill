@@ -46,7 +46,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Health check per orchestratori (Docker Compose, K8s)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["geo", "--help"]
+    CMD ["python3", "-c", "from geo_optimizer import audit; print('ok')"]
 
 # Punto di ingresso: CLI geo
 ENTRYPOINT ["geo"]

@@ -43,4 +43,4 @@ EXPOSE 8000
 # Avvia il server FastAPI — usa $PORT da variabile d'ambiente
 # per compatibilità con Render, Railway e altri PaaS che iniettano la porta
 # Shell form necessaria per espansione variabile $PORT
-CMD uvicorn geo_optimizer.web.app:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD ["sh", "-c", "uvicorn geo_optimizer.web.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

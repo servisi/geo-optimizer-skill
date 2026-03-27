@@ -116,41 +116,43 @@ class CheckRegistry:
 
         Uses importlib.metadata to discover installed plugins.
         Returns the number of plugins successfully loaded.
+
+        Fix #18: caricamento dentro il lock per evitare race condition.
         """
         with cls._lock:
             if cls._loaded_entry_points:
                 return 0
             cls._loaded_entry_points = True
 
-        loaded = 0
+            loaded = 0
 
-        from importlib.metadata import entry_points
+            from importlib.metadata import entry_points
 
-        if sys.version_info >= (3, 10):
-            eps = entry_points(group="geo_optimizer.checks")
-        else:
-            # Python 3.9: entry_points() may return dict or SelectableGroups
-            all_eps = entry_points()
-            if isinstance(all_eps, dict):
-                eps = all_eps.get("geo_optimizer.checks", [])
-            elif hasattr(all_eps, "select"):
-                eps = all_eps.select(group="geo_optimizer.checks")
+            if sys.version_info >= (3, 10):
+                eps = entry_points(group="geo_optimizer.checks")
             else:
-                # Fallback: filter the list manually
-                eps = [ep for ep in all_eps if ep.group == "geo_optimizer.checks"]
+                # Python 3.9: entry_points() may return dict or SelectableGroups
+                all_eps = entry_points()
+                if isinstance(all_eps, dict):
+                    eps = all_eps.get("geo_optimizer.checks", [])
+                elif hasattr(all_eps, "select"):
+                    eps = all_eps.select(group="geo_optimizer.checks")
+                else:
+                    # Fallback: filter the list manually
+                    eps = [ep for ep in all_eps if ep.group == "geo_optimizer.checks"]
 
-        for ep in eps:
-            try:
-                check_class = ep.load()
-                # Instantiate if it is a class, otherwise use directly
-                check = check_class() if isinstance(check_class, type) else check_class
-                cls.register(check)
-                loaded += 1
-            except Exception as exc:
-                # Failed plugins do not block the audit, but log for debugging (fix #202)
-                logger.warning("Plugin '%s' failed to load: %s", ep.name, exc)
+            for ep in eps:
+                try:
+                    check_class = ep.load()
+                    # Instantiate if it is a class, otherwise use directly
+                    check = check_class() if isinstance(check_class, type) else check_class
+                    cls.register(check)
+                    loaded += 1
+                except Exception as exc:
+                    # Failed plugins do not block the audit, but log for debugging (fix #202)
+                    logger.warning("Plugin '%s' failed to load: %s", ep.name, exc)
 
-        return loaded
+            return loaded
 
     @classmethod
     def run_all(cls, url: str, soup: Any = None, **kwargs: Any) -> list[CheckResult]:
