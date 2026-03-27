@@ -1088,7 +1088,7 @@ class TestFormatters:
 
         data = json.loads(format_audit_json(sample_audit_result))
         robots = data["checks"]["robots_txt"]
-        assert robots["max"] == 20
+        assert robots["max"] == 18  # fix #10: max corretto
         assert "bots_allowed" in robots["details"]
         assert "GPTBot" in robots["details"]["bots_allowed"]
 

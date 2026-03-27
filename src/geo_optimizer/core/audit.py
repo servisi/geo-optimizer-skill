@@ -1136,21 +1136,23 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
     from geo_optimizer.utils.validators import resolve_and_validate_url
 
     # Fix #283: validazione SSRF prima delle richieste CDN
+    # Fix #23: cattura gli IP per DNS pinning nella sessione CDN
     is_safe, reason, _pinned_ips = resolve_and_validate_url(base_url)
     if not is_safe:
         result.error = f"URL non sicura: {reason}"
         return result
 
-    import requests as _requests_module
 
     try:
         # Step 1: Browser request (baseline)
+        # Fix #23: SSRF validato con resolve_and_validate_url + allow_redirects=False
         try:
+            import requests as _requests_module
             browser_r = _requests_module.get(
                 base_url,
                 headers={"User-Agent": browser_ua},
                 timeout=10,
-                allow_redirects=True,
+                allow_redirects=False,
             )
             result.browser_status = browser_r.status_code
             result.browser_content_length = len(browser_r.text)
@@ -1187,7 +1189,7 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
                     base_url,
                     headers={"User-Agent": bot_ua},
                     timeout=10,
-                    allow_redirects=True,
+                    allow_redirects=False,
                 )
                 bot_entry["status"] = bot_r.status_code
                 bot_entry["content_length"] = len(bot_r.text)
@@ -1262,15 +1264,18 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
         result.details = "No <body> tag found in raw HTML"
         return result
 
-    # Remove script and style elements for text extraction
-    for tag in body.find_all(["script", "style", "noscript"]):
+    # Fix #24: usa deepcopy per non mutare il soup originale
+    # (audit_citability ha bisogno dei <script type="application/ld+json"> intatti)
+    import copy
+    body_clean = copy.deepcopy(body)
+    for tag in body_clean.find_all(["script", "style", "noscript"]):
         tag.decompose()
 
-    body_text = body.get_text(separator=" ", strip=True)
+    body_text = body_clean.get_text(separator=" ", strip=True)
     result.raw_word_count = len(body_text.split())
 
-    # Count headings in raw HTML
-    headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+    # Count headings in raw HTML (dal body pulito, fix #24)
+    headings = body_clean.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
     result.raw_heading_count = len(headings)
 
     # Check for empty SPA root containers
@@ -1282,7 +1287,7 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
         ("div", {"id": "gatsby-focus-wrapper"}),
     ]
     for tag_name, attrs in spa_indicators:
-        el = soup.find(tag_name, attrs)
+        el = body_clean.find(tag_name, attrs)
         if el:
             # Check if the element is essentially empty (< 50 chars of text)
             inner_text = el.get_text(strip=True)

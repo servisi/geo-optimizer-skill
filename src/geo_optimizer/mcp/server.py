@@ -17,7 +17,7 @@ Available tools:
 Available resources:
     geo://ai-bots            — List of tracked AI bots
     geo://score-bands        — GEO score bands
-    geo://methods            — 11 citability methods with impact data
+    geo://methods            — 42 citability methods with impact data (dynamic)
     geo://changelog          — Latest changes
     geo://ai-discovery-spec  — AI discovery endpoint specification
 
@@ -187,12 +187,10 @@ def geo_llms_generate(url: str) -> str:
 
 @mcp.tool()
 def geo_citability(url: str) -> str:
-    """Analyze content citability using the 9 Princeton GEO methods.
+    """Analyze content citability using 42 methods (Princeton GEO + AutoGEO + content analysis).
 
-    Evaluates page content according to the 9 methods from the
-    Princeton KDD 2024 paper (Quotation +41%, Statistics +33%, Fluency +29%,
-    Cite Sources +27%, Technical Terms +18%, Authoritative +16%,
-    Easy-to-Understand +14%, Unique Words +7%, Keyword Stuffing -9%).
+    Evaluates page content with 42 methods from Princeton KDD 2024,
+    AutoGEO ICLR 2026, SE Ranking 2025, and Growth Marshal 2026.
 
     Returns score 0-100 with per-method detail and suggestions.
 
@@ -433,40 +431,33 @@ def get_score_bands() -> str:
 
 @mcp.resource("geo://methods")
 def get_citability_methods() -> str:
-    """The 11 citability methods with measured impact (Princeton KDD 2024 + AutoGEO ICLR 2026)."""
+    """All 42 citability methods with measured impact (fix #1: generati dinamicamente dal motore)."""
+    from bs4 import BeautifulSoup
+    from geo_optimizer.core.citability import audit_citability
+
+    # Genera i metodi da un soup vuoto per ottenere nomi, label, max_score e impact reali
+    empty_soup = BeautifulSoup("<html><body></body></html>", "html.parser")
+    result = audit_citability(empty_soup, "http://example.com")
+
     methods = [
-        {"name": "quotation_addition", "label": "Quotation Addition", "impact": "+41%", "max_score": 12},
-        {"name": "statistics_addition", "label": "Statistics Addition", "impact": "+33%", "max_score": 11},
-        {"name": "fluency_optimization", "label": "Fluency Optimization", "impact": "+29%", "max_score": 12},
-        {"name": "cite_sources", "label": "Cite Sources", "impact": "+27%", "max_score": 12},
         {
-            "name": "answer_first",
-            "label": "Answer-First Structure",
-            "impact": "+25%",
-            "max_score": 10,
-            "source": "AutoGEO ICLR 2026",
-        },
-        {
-            "name": "passage_density",
-            "label": "Passage Density",
-            "impact": "+23%",
-            "max_score": 10,
-            "source": "Stanford Nature Comm. 2025",
-        },
-        {"name": "technical_terms", "label": "Technical Terms", "impact": "+18%", "max_score": 10},
-        {"name": "authoritative_tone", "label": "Authoritative Tone", "impact": "+16%", "max_score": 10},
-        {"name": "easy_to_understand", "label": "Easy-to-Understand", "impact": "+14%", "max_score": 8},
-        {"name": "unique_words", "label": "Unique Words", "impact": "+7%", "max_score": 5},
-        {
-            "name": "keyword_stuffing",
-            "label": "No Keyword Stuffing",
-            "impact": "-9%",
-            "max_score": 12,
-            "note": "Penalty if detected",
-        },
+            "name": m.name,
+            "label": m.label,
+            "impact": m.impact,
+            "max_score": m.max_score,
+        }
+        for m in result.methods
     ]
+    total_max = sum(m.max_score for m in result.methods)
     return json.dumps(
-        {"methods": methods, "total_max_score": 100, "source": "Princeton KDD 2024 + AutoGEO ICLR 2026"}, indent=2
+        {
+            "methods": methods,
+            "total_methods": len(methods),
+            "total_max_score": total_max,
+            "note": "Score capped at 100",
+            "source": "Princeton KDD 2024 + AutoGEO ICLR 2026 + SE Ranking 2025 + Growth Marshal 2026",
+        },
+        indent=2,
     )
 
 

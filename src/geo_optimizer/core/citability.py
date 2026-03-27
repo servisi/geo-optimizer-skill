@@ -1,5 +1,5 @@
 """
-Citability Score — Content analysis with 18 methods (Princeton GEO + content analysis).
+Citability Score — Content analysis with 42 methods (Princeton GEO + AutoGEO + content analysis).
 
 Each detect_*() function analyzes one aspect of HTML content and returns
 a MethodScore. No ML dependencies — only regex, HTML tags and structural metrics.
@@ -2556,8 +2556,8 @@ def detect_accessibility_signals(soup) -> MethodScore:
 
 # ─── AI Conversion Funnel (+8%) — Batch A v3.16.0 ────────────────────────────
 
-# Pattern CTA comuni
-_CTA_RE = re.compile(
+# Pattern CTA positivi per conversion funnel (fix #25: rinominata per non sovrascrivere _CTA_RE aggressivi)
+_CTA_FUNNEL_RE = re.compile(
     r"\b(?:try\s+(?:it\s+)?(?:free|now)|start\s+(?:free|now|your)"
     r"|sign\s+up|get\s+started|request\s+(?:a\s+)?demo"
     r"|free\s+trial|book\s+(?:a\s+)?demo|inizia\s+(?:ora|gratis)"
@@ -2574,7 +2574,7 @@ def detect_conversion_funnel(soup) -> MethodScore:
     has_cta = False
     for tag in soup.find_all(["a", "button"]):
         text = tag.get_text(strip=True)
-        if _CTA_RE.search(text):
+        if _CTA_FUNNEL_RE.search(text):
             has_cta = True
             break
 
@@ -3109,7 +3109,7 @@ def _compute_grade(total: int) -> str:
 
 
 def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
-    """Analyze content citability with 18 methods (Princeton GEO + content analysis).
+    """Analyze content citability with 42 methods (Princeton GEO + AutoGEO + content analysis).
 
     Args:
         soup: BeautifulSoup of the HTML page.

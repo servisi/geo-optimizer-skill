@@ -220,11 +220,11 @@ def format_audit_junit(result: AuditResult) -> str:
     testsuites.set("tests", "5")
 
     categories = [
-        ("robots_txt", "Robots.txt AI Bot Access", robots_score(result), 20, _robots_findings(result)),
-        ("llms_txt", "llms.txt AI Index File", llms_score(result), 20, _llms_findings(result)),
-        ("schema_jsonld", "JSON-LD Schema Markup", schema_score(result), 25, _schema_findings(result)),
-        ("meta_tags", "SEO Meta Tags", meta_score(result), 20, _meta_findings(result)),
-        ("content_quality", "Content Quality", content_score(result), 15, _content_findings(result)),
+        ("robots_txt", "Robots.txt AI Bot Access", robots_score(result), 18, _robots_findings(result)),
+        ("llms_txt", "llms.txt AI Index File", llms_score(result), 18, _llms_findings(result)),
+        ("schema_jsonld", "JSON-LD Schema Markup", schema_score(result), 22, _schema_findings(result)),
+        ("meta_tags", "SEO Meta Tags", meta_score(result), 14, _meta_findings(result)),
+        ("content_quality", "Content Quality", content_score(result), 14, _content_findings(result)),
     ]
 
     total_failures = 0

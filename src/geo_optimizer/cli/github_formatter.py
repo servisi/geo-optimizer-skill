@@ -45,11 +45,11 @@ def format_audit_github(result: AuditResult) -> str:
 
     # Individual checks
     checks = [
-        ("Robots.txt", _robots_score(result), 20, result.robots.citation_bots_ok),
-        ("llms.txt", _llms_score(result), 20, result.llms.found and result.llms.has_h1),
-        ("Schema JSON-LD", _schema_score(result), 25, result.schema.has_website),
-        ("Meta Tags", _meta_score(result), 20, result.meta.has_title and result.meta.has_description),
-        ("Content Quality", _content_score(result), 15, result.content.has_h1),
+        ("Robots.txt", _robots_score(result), 18, result.robots.citation_bots_ok),
+        ("llms.txt", _llms_score(result), 18, result.llms.found and result.llms.has_h1),
+        ("Schema JSON-LD", _schema_score(result), 22, result.schema.has_website),
+        ("Meta Tags", _meta_score(result), 14, result.meta.has_title and result.meta.has_description),
+        ("Content Quality", _content_score(result), 14, result.content.has_h1),
     ]
 
     for name, score, max_score, passed in checks:

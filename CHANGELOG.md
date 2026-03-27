@@ -5,18 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
-## [3.16.1] — 2026-03-27
+## [3.17.0] — 2026-03-27
 
-### Fixed
+### Fixed (Critical — 12 bug risolti)
 
-- **MCP Server: categorie `geo_fix` incomplete** — aggiunta `ai_discovery` alle categorie valide del tool `geo_fix`. Prima, passare `--only ai_discovery` via MCP restituiva errore 'Invalid categories' nonostante `fixer.py` lo supportasse (#290)
-- **Async audit: event loop bloccato da CDN check** — `audit_cdn_ai_crawler()` (sincrono, usa `requests`) ora wrappata con `asyncio.to_thread()` nel path `run_full_audit_async()` per non bloccare l'event loop (#291)
+- **Citability score errati in produzione** (#24) — `audit_js_rendering` mutava il soup originale distruggendo i `<script type="application/ld+json">` prima che `audit_citability` li analizzasse. Ora usa `copy.deepcopy()`.
+- **`_CTA_RE` sovrascritta** (#25) — Due regex con lo stesso nome in `citability.py`: `detect_negative_signals` usava la regex sbagliata. Rinominata in `_CTA_FUNNEL_RE`.
+- **Max score hardcodati errati in tutti i formatter** (#10/#16) — `formatters.py`, `html_formatter.py`, `rich_formatter.py`, `github_formatter.py`, `ci_formatter.py` avevano max score vecchi (20/20/25/20/15 invece di 18/18/22/14/14).
+- **Score bands mostrate all'utente sbagliate** (#12) — Il testo mostrava "0-40/41-70/71-90/91-100" invece delle bande reali "0-35/36-67/68-85/86-100".
+- **GET `/api/audit` bypassava autenticazione Bearer** (#42) — Il POST verificava il token, il GET no. Ora entrambi verificano.
+- **`action.yml` step `fail-on-warning` crashava** (#33) — Iterava su dict keys come se fossero oggetti. Riscritto per contare recommendations.
+- **XSS via markdown fallback** (#35) — Il fallback regex in `_markdown_to_html` non escapava HTML. Aggiunto `html.escape()`.
+- **CLI `fix` mancava `ai_discovery`** (#13) — `fix_cmd.py` non includeva `ai_discovery` tra le categorie valide (stessa fix del MCP in v3.16.1).
+- **CDN check senza `allow_redirects=False`** (#23) — `audit_cdn_ai_crawler` seguiva redirect senza validazione SSRF. Aggiunto `allow_redirects=False`.
+- **`geo://methods` MCP resource obsoleta** (#1) — Dichiarava 11 metodi con max_score sbagliati. Ora generata dinamicamente dal motore (42 metodi reali).
+- **Docstring "9/11/18 methods" incoerenti** (#2) — Aggiornate tutte le docstring a "42 methods".
+- **`install.sh`/`update.sh` obsoleti** (#43/#44) — Riferivano a `requirements.txt` e `scripts/` inesistenti. Riscritti per PyPI.
 
 ### Changed
 
-- Commento SCORING meta tags corretto: 14 punti (non 20 come indicato)
+- Versione 3.17.0 (major bugfix release)
+- `_CTA_FUNNEL_RE` separata da `_CTA_RE` per detect_conversion_funnel vs detect_negative_signals
+- `audit_js_rendering` non muta piu il BeautifulSoup originale
 
 ---
+
+
 
 
 

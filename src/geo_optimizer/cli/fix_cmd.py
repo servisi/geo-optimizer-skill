@@ -46,7 +46,7 @@ def fix(url, output_dir, dry_run, do_apply, only, config_file):
     only_set = None
     if only:
         only_set = {c.strip().lower() for c in only.split(",")}
-        valid_categories = {"robots", "llms", "schema", "meta"}
+        valid_categories = {"robots", "llms", "schema", "meta", "ai_discovery"}
         invalid = only_set - valid_categories
         if invalid:
             click.echo(f"❌ Invalid categories: {', '.join(invalid)}", err=True)

@@ -265,9 +265,9 @@ def format_audit_rich(result: AuditResult) -> str:
 
     # ── Check cards ───────────────────────────────────────────────
     checks = [
-        ("Robots.txt", _robots_score(result), 20, result.robots.citation_bots_ok, _build_robots_content),
-        ("llms.txt", _llms_score(result), 20, result.llms.found and result.llms.has_h1, _build_llms_content),
-        ("Schema JSON-LD", _schema_score(result), 25, result.schema.has_website, _build_schema_content),
+        ("Robots.txt", _robots_score(result), 18, result.robots.citation_bots_ok, _build_robots_content),
+        ("llms.txt", _llms_score(result), 18, result.llms.found and result.llms.has_h1, _build_llms_content),
+        ("Schema JSON-LD", _schema_score(result), 22, result.schema.has_website, _build_schema_content),
         (
             "Meta Tags",
             _meta_score(result),
@@ -275,7 +275,7 @@ def format_audit_rich(result: AuditResult) -> str:
             result.meta.has_title and result.meta.has_description,
             _build_meta_content,
         ),
-        ("Content Quality", _content_score(result), 15, result.content.has_h1, _build_content_content),
+        ("Content Quality", _content_score(result), 14, result.content.has_h1, _build_content_content),
     ]
 
     for name, score, max_score, passed, builder in checks:

@@ -394,9 +394,11 @@ def _markdown_to_html(md: str) -> str:
         )
     except ImportError:
         # Fallback: conversione base con regex
+        import html as _html_mod
         import re
 
-        html = md
+        # Fix #35: escapa HTML prima della conversione per prevenire XSS
+        html = _html_mod.escape(md)
         # Headers
         html = re.sub(r"^### (.+)$", r"<h3>\1</h3>", html, flags=re.MULTILINE)
         html = re.sub(r"^## (.+)$", r"<h2>\1</h2>", html, flags=re.MULTILINE)
@@ -548,6 +550,13 @@ async def audit_get(
     url: str = Query(..., description="URL del sito da analizzare"),
 ):
     """Run GEO audit via GET."""
+    # Fix #42: verifica token anche su GET (stessa policy del POST)
+    if not _verify_bearer_token(request):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     # Fix #95: use _get_client_ip to handle request.client None and trusted proxy
     if not await _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")

@@ -39,19 +39,19 @@ def format_audit_json(result: AuditResult) -> str:
         "checks": {
             "robots_txt": {
                 "score": _robots_score(result),
-                "max": 20,
+                "max": 18,
                 "passed": result.robots.citation_bots_ok,
                 "details": asdict(result.robots),
             },
             "llms_txt": {
                 "score": _llms_score(result),
-                "max": 20,
+                "max": 18,
                 "passed": result.llms.found and result.llms.has_h1,
                 "details": asdict(result.llms),
             },
             "schema_jsonld": {
                 "score": _schema_score(result),
-                "max": 25,
+                "max": 22,
                 "passed": result.schema.has_website,
                 "details": {
                     "has_website": result.schema.has_website,
@@ -62,13 +62,13 @@ def format_audit_json(result: AuditResult) -> str:
             },
             "meta_tags": {
                 "score": _meta_score(result),
-                "max": 20,
+                "max": 14,
                 "passed": result.meta.has_title and result.meta.has_description,
                 "details": asdict(result.meta),
             },
             "content": {
                 "score": _content_score(result),
-                "max": 15,
+                "max": 14,
                 "passed": result.content.has_h1,
                 "details": asdict(result.content),
             },
@@ -189,7 +189,7 @@ def format_audit_text(result: AuditResult) -> str:
         "critical": "❌ CRITICAL — Site is not visible to AI search engines",
     }
     lines.append(f"\n  {band_labels.get(result.band, result.band)}")
-    lines.append("\n  Score bands: 0–40 = critical | 41–70 = foundation | 71–90 = good | 91–100 = excellent")
+    lines.append("\n  Score bands: 0–35 = critical | 36–67 = foundation | 68–85 = good | 86–100 = excellent")
 
     # Recommendations
     lines.append("\n  📋 PRIORITY NEXT STEPS:")
