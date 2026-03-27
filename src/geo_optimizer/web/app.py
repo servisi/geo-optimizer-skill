@@ -1067,6 +1067,118 @@ def _dict_to_audit_result(data: dict):
     return result
 
 
+# ─── GEO Optimization endpoints ──────────────────────────────────────────────
+
+
+@app.get("/robots.txt")
+async def robots_txt():
+    """Serve robots.txt ottimizzato per AI crawler."""
+    from fastapi.responses import PlainTextResponse
+
+    robots = (
+        "# GEO Optimizer — robots.txt\n"
+        "User-agent: *\nAllow: /\n\n"
+        "User-agent: GPTBot\nAllow: /\n"
+        "User-agent: OAI-SearchBot\nAllow: /\n"
+        "User-agent: ChatGPT-User\nAllow: /\n"
+        "User-agent: ClaudeBot\nAllow: /\n"
+        "User-agent: Claude-SearchBot\nAllow: /\n"
+        "User-agent: anthropic-ai\nAllow: /\n"
+        "User-agent: claude-web\nAllow: /\n"
+        "User-agent: PerplexityBot\nAllow: /\n"
+        "User-agent: Perplexity-User\nAllow: /\n"
+        "User-agent: Google-Extended\nAllow: /\n"
+        "User-agent: Bingbot\nAllow: /\n"
+        "User-agent: Applebot-Extended\nAllow: /\n"
+        "User-agent: DuckAssistBot\nAllow: /\n"
+        "User-agent: cohere-ai\nAllow: /\n"
+        "User-agent: Bytespider\nAllow: /\n"
+        "User-agent: meta-externalagent\nAllow: /\n"
+        "User-agent: Meta-ExternalFetcher\nAllow: /\n"
+        "User-agent: facebookexternalhit\nAllow: /\n"
+        "User-agent: Amazonbot\nAllow: /\n"
+        "User-agent: AI2Bot\nAllow: /\n"
+        "User-agent: YouBot\nAllow: /\n"
+        "User-agent: CCBot\nAllow: /\n"
+    )
+    return PlainTextResponse(content=robots, media_type="text/plain")
+
+
+@app.get("/llms.txt")
+async def llms_txt():
+    """Serve llms.txt per AI content discovery."""
+    from fastapi.responses import PlainTextResponse
+
+    llms = (
+        "# GEO Optimizer\n\n"
+        "> Open-source toolkit to audit, fix, and optimize websites for AI search engine visibility. "
+        "Based on Princeton KDD 2024 and AutoGEO ICLR 2026 research.\n\n"
+        "## Tools\n\n"
+        "- [GEO Audit](https://geo-optimizer-web.onrender.com/): Audit any website AI visibility — score 0-100\n"
+        "- [Compare](https://geo-optimizer-web.onrender.com/compare): Side-by-side GEO score comparison\n"
+        "- [Badge](https://geo-optimizer-web.onrender.com/badge?url=https://example.com): Dynamic SVG badge\n\n"
+        "## Documentation\n\n"
+        "- [Getting Started](https://auriti-labs.github.io/geo-optimizer-skill/getting-started/): Install and first audit\n"
+        "- [GEO Audit](https://auriti-labs.github.io/geo-optimizer-skill/geo-audit/): CLI reference with 7 formats\n"
+        "- [MCP Server](https://auriti-labs.github.io/geo-optimizer-skill/mcp-server/): Claude, Cursor, Windsurf\n"
+        "- [CI/CD](https://auriti-labs.github.io/geo-optimizer-skill/ci-cd/): GitHub Actions, SARIF, JUnit\n\n"
+        "## Reference\n\n"
+        "- [AI Bots](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 22 AI crawlers\n"
+        "- [42 Methods](https://auriti-labs.github.io/geo-optimizer-skill/geo-methods/): Research-backed methods\n"
+        "- [Research](https://geo-optimizer-web.onrender.com/research): Papers behind the scoring\n"
+    )
+    return PlainTextResponse(content=llms, media_type="text/plain")
+
+
+@app.get("/.well-known/ai.txt")
+async def well_known_ai():
+    """AI crawler permissions."""
+    from fastapi.responses import PlainTextResponse
+
+    return PlainTextResponse(
+        content="User-Agent: *\nAllow: /\n",
+        media_type="text/plain",
+    )
+
+
+@app.get("/ai/summary.json")
+async def ai_summary():
+    """Site summary for AI systems."""
+    return {
+        "name": "GEO Optimizer",
+        "description": "Open-source toolkit to audit and optimize websites for AI search engine visibility. Scores 0-100 based on 42 research-backed methods.",
+        "url": "https://geo-optimizer-web.onrender.com",
+        "lastModified": "2026-03-27",
+    }
+
+
+@app.get("/ai/faq.json")
+async def ai_faq():
+    """FAQ for AI systems."""
+    return {
+        "faqs": [
+            {
+                "question": "What is GEO Optimizer?",
+                "answer": "An open-source toolkit that audits websites for AI search visibility, scoring 0-100 based on 42 research-backed methods.",
+            },
+            {
+                "question": "How is the score calculated?",
+                "answer": "Across 7 categories: robots.txt (18pt), llms.txt (18pt), schema (22pt), meta (14pt), content (14pt), signals (8pt), AI discovery (6pt).",
+            },
+            {"question": "Is it free?", "answer": "Yes, MIT License. Install: pip install geo-optimizer-skill"},
+        ]
+    }
+
+
+@app.get("/ai/service.json")
+async def ai_service():
+    """Service capabilities for AI systems."""
+    return {
+        "name": "GEO Optimizer",
+        "capabilities": ["Audit GEO score", "Generate fixes", "Citability analysis", "MCP server", "CI/CD integration"],
+    }
+
+
 def _render_homepage(nonce: str = "") -> str:
     """Load and render the homepage HTML from the template file.
 
