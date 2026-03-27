@@ -971,7 +971,7 @@ def _dict_to_audit_result(data: dict):
     m = checks.get("meta_tags", {})
     c = checks.get("content", {})
 
-    return AuditResult(
+    result = AuditResult(
         url=data.get("url", ""),
         score=data.get("score", 0),
         band=data.get("band", "critical"),
@@ -1031,6 +1031,7 @@ def _dict_to_audit_result(data: dict):
     # Fix #34: ricostruisci campi aggiuntivi se presenti nella cache
     if "signals" in data and isinstance(data["signals"], dict):
         from geo_optimizer.models.results import SignalsResult
+
         s = data["signals"]
         result.signals = SignalsResult(
             has_lang=s.get("has_lang", False),
@@ -1042,6 +1043,7 @@ def _dict_to_audit_result(data: dict):
         )
     if "ai_discovery" in data and isinstance(data["ai_discovery"], dict):
         from geo_optimizer.models.results import AiDiscoveryResult
+
         ad = data["ai_discovery"]
         result.ai_discovery = AiDiscoveryResult(
             has_well_known_ai=ad.get("has_well_known_ai", False),

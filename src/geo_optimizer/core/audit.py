@@ -1142,12 +1142,12 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
         result.error = f"URL non sicura: {reason}"
         return result
 
-
     try:
         # Step 1: Browser request (baseline)
         # Fix #23: SSRF validato con resolve_and_validate_url + allow_redirects=False
         try:
             import requests as _requests_module
+
             browser_r = _requests_module.get(
                 base_url,
                 headers={"User-Agent": browser_ua},
@@ -1267,6 +1267,7 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
     # Fix #24: usa deepcopy per non mutare il soup originale
     # (audit_citability ha bisogno dei <script type="application/ld+json"> intatti)
     import copy
+
     body_clean = copy.deepcopy(body)
     for tag in body_clean.find_all(["script", "style", "noscript"]):
         tag.decompose()
