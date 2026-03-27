@@ -4,6 +4,8 @@ CLI command: geo schema
 Manages JSON-LD schema: analyze, generate, inject into HTML, generate Astro snippets.
 """
 
+from __future__ import annotations
+
 import json
 import sys
 

@@ -5,6 +5,8 @@ Generates a self-contained HTML file with embedded CSS, openable
 directly in the browser. Used with ``geo audit --format html``.
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 
 from geo_optimizer.cli.scoring_helpers import (

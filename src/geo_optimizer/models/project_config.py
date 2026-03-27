@@ -8,9 +8,10 @@ Requires PyYAML as an optional dependency:
     pip install geo-optimizer-skill[config]
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 # Name of the configuration file searched in the current directory
 CONFIG_FILENAME = ".geo-optimizer.yml"
@@ -21,9 +22,9 @@ CONFIG_FILENAME_ALT = ".geo-optimizer.yaml"
 class AuditConfig:
     """Default configuration for the audit command."""
 
-    url: Optional[str] = None
+    url: str | None = None
     format: str = "text"
-    output: Optional[str] = None
+    output: str | None = None
     min_score: int = 0
     cache: bool = False
     verbose: bool = False
@@ -33,9 +34,9 @@ class AuditConfig:
 class LlmsConfig:
     """Default configuration for the llms command."""
 
-    base_url: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
+    base_url: str | None = None
+    title: str | None = None
+    description: str | None = None
     max_urls: int = 50
 
 
@@ -66,7 +67,7 @@ def _is_yaml_available() -> bool:
         return False
 
 
-def find_config_file(start_dir: Optional[Path] = None) -> Optional[Path]:
+def find_config_file(start_dir: Path | None = None) -> Path | None:
     """Search for the configuration file in the current directory.
 
     Looks first for .geo-optimizer.yml, then .geo-optimizer.yaml.
@@ -81,7 +82,7 @@ def find_config_file(start_dir: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def load_config(config_path: Optional[Path] = None) -> ProjectConfig:
+def load_config(config_path: Path | None = None) -> ProjectConfig:
     """Load configuration from YAML file.
 
     If config_path is None, searches automatically in the current directory.

@@ -1,4 +1,4 @@
-# Princeton GEO Methods — The 9 Official Methods
+# Princeton GEO Methods — Foundation for 42 Citability Methods
 
 > Source: "GEO: Generative Engine Optimization" — Aggarwal et al., KDD 2024  
 > Paper: https://arxiv.org/abs/2311.09735  
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Princeton research identified and tested **9 GEO methods** on GEO-bench (10,000 queries from diverse domains: science, history, law, finance, health...).
+Princeton research identified and tested **9 foundational GEO methods** (now expanded to 42 in GEO Optimizer) on GEO-bench (10,000 queries from diverse domains: science, history, law, finance, health...).
 
 **Key result:** The best methods increase AI visibility by up to **+40%** (with peaks up to **+115%** for specific ranking positions).
 

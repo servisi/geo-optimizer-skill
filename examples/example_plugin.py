@@ -52,10 +52,13 @@ class WordCountCheck:
             )
 
         # Remove script/style tags before counting
-        for tag in soup(["script", "style", "nav", "footer"]):
+        # IMPORTANTE: usa deepcopy per non mutare il soup originale
+        import copy
+        clean = copy.deepcopy(soup)
+        for tag in clean(["script", "style", "nav", "footer"]):
             tag.decompose()
 
-        text = soup.get_text(separator=" ", strip=True)
+        text = clean.get_text(separator=" ", strip=True)
         word_count = len(text.split())
 
         if word_count >= 1000:

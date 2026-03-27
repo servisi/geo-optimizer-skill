@@ -13,7 +13,7 @@ Programmatic usage::
     print(result.score, result.band)
 """
 
-__version__ = "3.17.8"
+__version__ = "3.17.9"
 
 # ─── Public API ──────────────────────────────────────────────────────────────
 

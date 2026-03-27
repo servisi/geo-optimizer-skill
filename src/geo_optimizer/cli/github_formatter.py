@@ -5,6 +5,8 @@ Generates output with ``::notice`` and ``::warning`` annotations for
 native GitHub Actions integration. Used with ``geo audit --format github``.
 """
 
+from __future__ import annotations
+
 from geo_optimizer.cli.scoring_helpers import (
     content_score as _content_score,
 )

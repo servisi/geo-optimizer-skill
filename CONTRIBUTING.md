@@ -38,6 +38,7 @@ src/geo_optimizer/
 ├── cli/             # Click commands — handles display, I/O
 │   ├── main.py      # CLI group: geo audit, geo llms, geo schema
 │   ├── audit_cmd.py # Audit command with multiple output formats
+│   ├── fix_cmd.py   # Auto-fix command (robots, llms, schema, meta, ai_discovery)
 │   ├── formatters.py, rich_formatter.py, html_formatter.py
 │   └── github_formatter.py  # GitHub Actions annotations
 ├── core/            # Business logic — returns dataclasses, NEVER prints

@@ -5,6 +5,8 @@ Handles text and JSON output of audit results.
 Fix #127: _() imported for future use (full localization in v3.2.0).
 """
 
+from __future__ import annotations
+
 import json
 from dataclasses import asdict
 

@@ -7,6 +7,8 @@ Usage:
     geo-web --host 0.0.0.0     # Accessible from network
 """
 
+from __future__ import annotations
+
 import click
 
 

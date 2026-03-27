@@ -4,17 +4,18 @@ JSON-LD Schema Validator.
 Validates schema.org JSON-LD structures for common types.
 """
 
+from __future__ import annotations
+
 import json
-from typing import Optional
 
 from geo_optimizer.models.config import SCHEMA_ORG_REQUIRED
 
 
 def validate_jsonld(
     schema_dict: dict,
-    schema_type: Optional[str] = None,
+    schema_type: str | None = None,
     strict: bool = False,
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """
     Validate a JSON-LD schema structure.
 
@@ -88,9 +89,9 @@ def validate_jsonld(
 
 def validate_jsonld_string(
     json_string: str,
-    schema_type: Optional[str] = None,
+    schema_type: str | None = None,
     strict: bool = False,
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """Validate a JSON-LD schema from a string."""
     try:
         schema_dict = json.loads(json_string)

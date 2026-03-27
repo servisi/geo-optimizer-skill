@@ -4,6 +4,8 @@ CLI command: geo audit
 Runs the full GEO audit on a website and displays results.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys

@@ -7,6 +7,8 @@ Usage:
     geo schema --file index.html --analyze
 """
 
+from __future__ import annotations
+
 import click
 
 from geo_optimizer import __version__

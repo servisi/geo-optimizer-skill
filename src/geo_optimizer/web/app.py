@@ -10,6 +10,8 @@ Main endpoints:
     GET  /health        — Health check
 """
 
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import hashlib
@@ -19,7 +21,6 @@ import re
 import secrets
 import time
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -118,7 +119,7 @@ app.add_middleware(
 # ─── Optional Bearer token authentication (fix #93) ──────────────────────────
 # If GEO_API_TOKEN is set, POST /api/audit requests require
 # the "Authorization: Bearer <token>" header. If not set, no auth.
-_API_TOKEN: Optional[str] = os.environ.get("GEO_API_TOKEN") or None
+_API_TOKEN: str | None = os.environ.get("GEO_API_TOKEN") or None
 
 
 def _verify_bearer_token(request: Request) -> bool:
@@ -243,7 +244,7 @@ def _cache_key(url: str) -> str:
     return hashlib.sha256(url.lower().strip().encode()).hexdigest()[:32]
 
 
-async def _get_cached(url: str) -> Optional[dict]:
+async def _get_cached(url: str) -> dict | None:
     """Retrieve result from cache if valid.
 
     Fix race condition: usa asyncio.Lock per proteggere lettura/rimozione

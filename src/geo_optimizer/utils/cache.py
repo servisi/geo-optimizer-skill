@@ -9,12 +9,13 @@ Usage:
     geo audit --url https://example.com --clear-cache
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import shutil
 import time
 from pathlib import Path
-from typing import Optional
 
 # Cache directory in the user's home
 CACHE_DIR = Path.home() / ".geo-cache"
@@ -29,7 +30,7 @@ MAX_CACHE_SIZE_BYTES = 500 * 1024 * 1024
 class FileCache:
     """HTTP cache on filesystem with TTL."""
 
-    def __init__(self, cache_dir: Optional[Path] = None, ttl: int = DEFAULT_TTL):
+    def __init__(self, cache_dir: Path | None = None, ttl: int = DEFAULT_TTL):
         self.cache_dir = cache_dir or CACHE_DIR
         self.ttl = ttl
 
@@ -41,7 +42,7 @@ class FileCache:
         """Cache file path for a URL."""
         return self.cache_dir / f"{self._key(url)}.json"
 
-    def get(self, url: str) -> Optional[tuple[int, str, dict]]:
+    def get(self, url: str) -> tuple[int, str, dict] | None:
         """Retrieve response from cache if valid.
 
         Returns:

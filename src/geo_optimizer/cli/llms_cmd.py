@@ -4,6 +4,8 @@ CLI command: geo llms
 Generates llms.txt from an XML sitemap.
 """
 
+from __future__ import annotations
+
 import sys
 
 import click

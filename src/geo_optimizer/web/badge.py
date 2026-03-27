@@ -8,6 +8,8 @@ Usage in Markdown:
     [![GEO Score](https://geo.auritidesign.it/badge?url=https://yoursite.com)](https://geo.auritidesign.it/)
 """
 
+from __future__ import annotations
+
 import html as html_lib
 
 # Colors per score band

@@ -12,11 +12,13 @@ External plugin example (plugin's pyproject.toml)::
 The check must implement the ``AuditCheck`` Protocol.
 """
 
+from __future__ import annotations
+
 import logging
 import sys
 import threading
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +92,7 @@ class CheckRegistry:
         cls._checks.pop(name, None)
 
     @classmethod
-    def get(cls, name: str) -> Optional[AuditCheck]:
+    def get(cls, name: str) -> AuditCheck | None:
         """Retrieve a check by name."""
         return cls._checks.get(name)
 
@@ -158,6 +160,8 @@ class CheckRegistry:
     def run_all(cls, url: str, soup: Any = None, **kwargs: Any) -> list[CheckResult]:
         """Run all registered checks and return results.
 
+        Fix #55: passa deepcopy del soup a ogni plugin per prevenire mutazione.
+
         Args:
             url: URL of the site to check.
             soup: BeautifulSoup of the homepage (optional).
@@ -166,10 +170,14 @@ class CheckRegistry:
         Returns:
             List of CheckResult for each check executed.
         """
+        import copy
+
         results = []
         for check in cls._checks.values():
             try:
-                result = check.run(url=url, soup=soup, **kwargs)
+                # Fix #55: ogni plugin riceve una copia isolata del soup
+                plugin_soup = copy.deepcopy(soup) if soup is not None else None
+                result = check.run(url=url, soup=plugin_soup, **kwargs)
                 results.append(result)
             except Exception as e:
                 # Check failed: score 0, error message

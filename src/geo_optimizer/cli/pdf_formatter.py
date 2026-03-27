@@ -6,6 +6,8 @@ html_formatter, convertito tramite weasyprint (dipendenza opzionale).
 Installazione: ``pip install geo-optimizer-skill[pdf]``
 """
 
+from __future__ import annotations
+
 from geo_optimizer.models.results import AuditResult
 
 
