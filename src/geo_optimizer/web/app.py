@@ -175,8 +175,13 @@ def _get_client_ip(request: Request) -> str:
         if forwarded_for:
             # Take the first IP in the chain (original client IP)
             real_ip = forwarded_for.split(",")[0].strip()
-            if real_ip:
+            # Fix #14: valida che sia un formato IP valido
+            import ipaddress as _ipaddress
+            try:
+                _ipaddress.ip_address(real_ip)
                 return real_ip
+            except ValueError:
+                pass  # IP non valido, usa proxy_ip
 
     return proxy_ip
 
@@ -441,6 +446,9 @@ def _increment_remote_stat(key: str, amount: int = 1) -> None:
     import urllib.request
 
     if not _STATS_API_KEY:
+        return
+    # Fix #36: valida URL stats API (solo HTTPS)
+    if not _STATS_API_URL.startswith("https://"):
         return
     try:
         data = _json.dumps({"key": key, "amount": amount}).encode()

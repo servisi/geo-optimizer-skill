@@ -164,7 +164,23 @@ function renderComparison(a, b) {
             const pct = Math.min(sc / mx * 100, 100);
             const row = document.createElement('div');
             row.className = 'bar-row';
-            row.innerHTML = '<span class="bar-label">' + label + '</span>' +
+            // Fix #47: usa DOM API sicure
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'bar-label';
+            labelSpan.textContent = label;
+            const barBg = document.createElement('div');
+            barBg.className = 'bar-bg';
+            const barFill = document.createElement('div');
+            barFill.className = 'bar-fill';
+            barFill.style.width = pct + '%';
+            barFill.style.background = color;
+            barBg.appendChild(barFill);
+            const valSpan = document.createElement('span');
+            valSpan.className = 'bar-val';
+            valSpan.textContent = sc;
+            row.appendChild(labelSpan);
+            row.appendChild(barBg);
+            row.appendChild(valSpan);
                 '<div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' +
                 '<span class="bar-val">' + sc + '</span>';
             breakdown.appendChild(row);
