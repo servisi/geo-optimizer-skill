@@ -44,3 +44,4 @@ EXPOSE 8000
 # per compatibilità con Render, Railway e altri PaaS che iniettano la porta
 # Shell form necessaria per espansione variabile $PORT
 CMD ["sh", "-c", "uvicorn geo_optimizer.web.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Rebuild trigger: v3.17.14
