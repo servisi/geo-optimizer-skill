@@ -4,203 +4,390 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GEO Optimizer — AI Search Visibility Audit</title>
+<meta name="description" content="Audit your website's visibility to AI search engines. Score 0-100 with actionable fixes for ChatGPT, Perplexity, Claude, Gemini.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+:root{
+  --bg:#06080f;--bg-card:#0d1117;--bg-card-hover:#111820;
+  --border:#1b2332;--border-hover:#2d3a4f;
+  --text:#e2e8f0;--text-dim:#64748b;--text-muted:#475569;
+  --accent:#3b82f6;--accent2:#8b5cf6;
+  --green:#22c55e;--cyan:#06b6d4;--yellow:#eab308;--red:#ef4444;
+  --radius:12px;--radius-sm:8px;
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;
-align-items:center;justify-content:center;padding:2rem}
-.container{max-width:600px;width:100%;text-align:center}
-h1{font-size:2.5rem;margin-bottom:.5rem;background:linear-gradient(135deg,#60a5fa,#a78bfa);
--webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.subtitle{color:#94a3b8;margin-bottom:2rem;font-size:1.1rem}
-.form-group{display:flex;gap:.5rem;margin-bottom:1.5rem}
-input[type="url"]{flex:1;padding:.75rem 1rem;border:2px solid #334155;border-radius:8px;
-background:#1e293b;color:#e2e8f0;font-size:1rem;outline:none;transition:border-color .2s}
-input[type="url"]:focus{border-color:#60a5fa}
-button{padding:.75rem 1.5rem;border:none;border-radius:8px;background:#3b82f6;
-color:#fff;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s}
-button:hover{background:#2563eb}
-button:disabled{opacity:.5;cursor:not-allowed}
-.result{background:#1e293b;border-radius:12px;padding:1.5rem;margin-top:1rem;
-text-align:left;display:none}
-.score-display{text-align:center;margin:1rem 0}
-.score-number{font-size:3rem;font-weight:700}
-.score-band{font-size:1.2rem;font-weight:600;margin-top:.25rem}
-.checks{margin:1rem 0}
-.check-row{display:flex;justify-content:space-between;padding:.5rem 0;
-border-bottom:1px solid #334155}
-.recs{margin-top:1rem}
-.recs li{margin:.25rem 0;color:#94a3b8}
-.links{margin-top:2rem;color:#64748b;font-size:.85rem}
-.links a{color:#60a5fa;text-decoration:none}
-.spinner{display:none;margin:1rem auto}
+body{font-family:var(--font);background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:var(--accent2)}
+code{font-family:var(--mono);font-size:.85em;background:#1e293b;padding:.15em .4em;border-radius:4px}
+
+/* Grain overlay */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  opacity:.03;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* Glow orbs */
+.glow-orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.glow-orb.blue{width:400px;height:400px;background:rgba(59,130,246,.08);top:-100px;left:-100px}
+.glow-orb.purple{width:350px;height:350px;background:rgba(139,92,246,.06);bottom:-50px;right:-50px}
+
+.wrapper{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:2rem 1.5rem}
+
+/* ─── Nav ─── */
+nav{display:flex;align-items:center;justify-content:center;gap:1.5rem;
+  padding:.75rem 0;margin-bottom:2.5rem;border-bottom:1px solid var(--border)}
+nav a{color:var(--text-dim);font-size:.85rem;font-weight:500;letter-spacing:.02em;
+  transition:color .2s}
+nav a:hover,nav a.active{color:var(--text)}
+.version-badge{font-family:var(--mono);font-size:.7rem;color:var(--accent);
+  background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);
+  padding:.15rem .5rem;border-radius:20px;margin-left:.5rem}
+
+/* ─── Hero ─── */
+.hero{text-align:center;margin-bottom:2.5rem}
+.hero h1{font-size:2.8rem;font-weight:700;letter-spacing:-.03em;
+  background:linear-gradient(135deg,#60a5fa 0%,#a78bfa 50%,#60a5fa 100%);
+  background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimmer 4s ease infinite}
+@keyframes shimmer{0%,100%{background-position:0% center}50%{background-position:200% center}}
+.hero p{color:var(--text-dim);font-size:1.05rem;margin-top:.5rem;max-width:480px;margin-inline:auto}
+
+/* ─── Stats ─── */
+.stats-bar{display:flex;justify-content:center;gap:.75rem;margin-bottom:2rem;flex-wrap:wrap}
+.stat-chip{display:flex;align-items:center;gap:.35rem;
+  background:var(--bg-card);border:1px solid var(--border);
+  padding:.35rem .7rem;border-radius:20px;font-size:.78rem;color:var(--text-dim);
+  font-family:var(--mono);transition:border-color .2s}
+.stat-chip:hover{border-color:var(--border-hover)}
+.stat-chip .num{color:var(--text);font-weight:500}
+
+/* ─── Form ─── */
+.audit-form{display:flex;gap:.5rem;margin-bottom:1.5rem}
+.audit-form input{flex:1;padding:.8rem 1rem;border:1px solid var(--border);
+  border-radius:var(--radius-sm);background:var(--bg-card);color:var(--text);
+  font-family:var(--font);font-size:.95rem;outline:none;transition:border-color .25s,box-shadow .25s}
+.audit-form input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.audit-form input::placeholder{color:var(--text-muted)}
+.btn-primary{padding:.8rem 1.8rem;border:none;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-family:var(--font);font-size:.95rem;font-weight:600;
+  cursor:pointer;transition:opacity .2s,transform .1s;white-space:nowrap}
+.btn-primary:hover{opacity:.9}
+.btn-primary:active{transform:scale(.97)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ─── Spinner ─── */
+.spinner{display:none;text-align:center;padding:1.5rem 0}
 .spinner.active{display:block}
-.error{color:#ef4444;margin-top:1rem;display:none}
-.report-link{margin-top:1rem;text-align:center}
-.report-link a{color:#60a5fa;text-decoration:none;font-size:.9rem}
-.stats{display:flex;justify-content:center;gap:1.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
-.stat{background:#1e293b;padding:.4rem .8rem;border-radius:6px;font-size:.85rem;color:#94a3b8}
+.spinner-ring{width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .8s linear infinite;margin:0 auto .75rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-text{color:var(--text-dim);font-size:.85rem;transition:opacity .3s}
+
+/* ─── Error ─── */
+.error{display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  border-radius:var(--radius-sm);padding:.75rem 1rem;color:var(--red);font-size:.9rem;margin-bottom:1rem}
+
+/* ─── Result Card ─── */
+.result-card{display:none;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem;
+  animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Score Gauge */
+.gauge-wrap{text-align:center;padding:1.5rem 0}
+.gauge-svg{width:160px;height:160px}
+.gauge-bg{fill:none;stroke:var(--border);stroke-width:8}
+.gauge-fill{fill:none;stroke-width:8;stroke-linecap:round;
+  transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1),stroke 1s ease}
+.gauge-score{font-family:var(--mono);font-size:2.2rem;font-weight:700;fill:var(--text)}
+.gauge-label{font-size:.75rem;fill:var(--text-dim);text-transform:uppercase;letter-spacing:.1em}
+.band-tag{display:inline-block;font-size:.8rem;font-weight:600;letter-spacing:.05em;
+  padding:.25rem .75rem;border-radius:20px;margin-top:.5rem;text-transform:uppercase}
+
+/* Breakdown bars */
+.breakdown{margin-top:1.25rem}
+.bar-row{display:flex;align-items:center;gap:.5rem;padding:.4rem 0;font-size:.82rem}
+.bar-label{width:110px;color:var(--text-dim);text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.bar-val{width:32px;font-family:var(--mono);color:var(--text-dim);font-size:.78rem}
+
+/* Citability */
+.citability{display:flex;align-items:center;gap:1rem;margin-top:1.25rem;
+  padding-top:1rem;border-top:1px solid var(--border)}
+.cit-score{font-family:var(--mono);font-size:1.5rem;font-weight:700}
+.cit-label{font-size:.82rem;color:var(--text-dim)}
+
+/* Recommendations */
+.recs-section{margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)}
+.recs-toggle{background:none;border:none;color:var(--accent);cursor:pointer;
+  font-family:var(--font);font-size:.85rem;font-weight:500;padding:0;display:flex;align-items:center;gap:.35rem}
+.recs-toggle .arrow{transition:transform .2s;display:inline-block}
+.recs-toggle.open .arrow{transform:rotate(90deg)}
+.recs-list{list-style:none;margin-top:.75rem;display:none}
+.recs-list.open{display:block}
+.recs-list li{padding:.35rem 0;padding-left:1rem;position:relative;
+  color:var(--text-dim);font-size:.83rem;line-height:1.5}
+.recs-list li::before{content:'';position:absolute;left:0;top:.65rem;
+  width:5px;height:5px;border-radius:50%;background:var(--yellow)}
+
+/* Actions row */
+.actions{display:flex;gap:.75rem;justify-content:center;margin-top:1.25rem;flex-wrap:wrap}
+.action-link{font-size:.82rem;color:var(--text-dim);border:1px solid var(--border);
+  padding:.4rem .8rem;border-radius:20px;transition:all .2s}
+.action-link:hover{color:var(--text);border-color:var(--border-hover)}
+
+/* ─── Footer ─── */
+footer{text-align:center;padding:2rem 0 1rem;border-top:1px solid var(--border);
+  margin-top:2rem;color:var(--text-muted);font-size:.8rem}
+footer .install-row{display:flex;align-items:center;justify-content:center;gap:.5rem;
+  margin-bottom:1rem}
+footer .install-cmd{font-family:var(--mono);font-size:.8rem;background:var(--bg-card);
+  border:1px solid var(--border);padding:.4rem .8rem;border-radius:var(--radius-sm);color:var(--text-dim)}
+footer .copy-btn{background:none;border:1px solid var(--border);color:var(--text-dim);
+  padding:.3rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;transition:all .2s}
+footer .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+footer .links{display:flex;justify-content:center;gap:1.25rem;margin-bottom:.75rem}
+footer .links a{color:var(--text-muted);font-size:.8rem}
+footer .credit{font-size:.72rem;color:var(--text-muted)}
+
+/* ─── Responsive ─── */
+@media(max-width:600px){
+  .wrapper{padding:1.25rem 1rem}
+  .hero h1{font-size:2rem}
+  .audit-form{flex-direction:column}
+  .btn-primary{width:100%}
+  .bar-label{width:80px;font-size:.75rem}
+  nav{gap:.75rem;flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
-<div class="container">
-    <nav style="text-align:center;margin-bottom:1.5rem">
-        <a href="/" style="color:#60a5fa;text-decoration:none;margin:0 .75rem;font-size:.9rem">Audit</a>
-        <a href="/roadmap" style="color:#60a5fa;text-decoration:none;margin:0 .75rem;font-size:.9rem">Roadmap</a>
-        <a href="/research" style="color:#60a5fa;text-decoration:none;margin:0 .75rem;font-size:.9rem">Research</a>
-        <a href="/compare" style="color:#60a5fa;text-decoration:none;margin:0 .75rem;font-size:.9rem">Compare</a>
-        <a href="/docs/" style="color:#60a5fa;text-decoration:none;margin:0 .75rem;font-size:.9rem">Docs</a>
-    </nav>
+<div class="glow-orb blue"></div>
+<div class="glow-orb purple"></div>
+
+<div class="wrapper">
+  <nav>
+    <a href="/" class="active">Audit</a>
+    <a href="/compare">Compare</a>
+    <a href="/roadmap">Roadmap</a>
+    <a href="/research">Research</a>
+    <a href="/docs/">Docs</a>
+    <span class="version-badge" id="ver-badge">...</span>
+  </nav>
+
+  <div class="hero">
     <h1>GEO Optimizer</h1>
-    <p class="subtitle">Audit your website's visibility to AI search engines</p>
+    <p>Audit your website's visibility to ChatGPT, Perplexity, Claude &amp; Gemini</p>
+  </div>
 
-    <div class="form-group">
-        <input type="url" id="url-input" placeholder="https://example.com" required>
-        <button id="btn">Audit</button>
+  <div class="stats-bar" id="stats-bar">
+    <span class="stat-chip"><span id="ic-star">&#9733;</span> <span class="num" id="stars">—</span> stars</span>
+    <span class="stat-chip">&#128230; <span class="num" id="downloads">—</span>/mo</span>
+    <span class="stat-chip">&#128269; <span class="num" id="audits">—</span> audits</span>
+  </div>
+
+  <div class="audit-form">
+    <input type="url" id="url-input" placeholder="https://example.com" required autocomplete="url">
+    <button class="btn-primary" id="btn">Run Audit</button>
+  </div>
+
+  <div class="spinner" id="spinner">
+    <div class="spinner-ring"></div>
+    <div class="spinner-text" id="spin-text">Connecting...</div>
+  </div>
+  <div class="error" id="error"></div>
+
+  <div class="result-card" id="result">
+    <div class="gauge-wrap">
+      <svg class="gauge-svg" viewBox="0 0 120 120">
+        <circle class="gauge-bg" cx="60" cy="60" r="50"/>
+        <circle class="gauge-fill" id="gauge-fill" cx="60" cy="60" r="50"
+          stroke-dasharray="314.16" stroke-dashoffset="314.16"
+          transform="rotate(-90 60 60)"/>
+        <text class="gauge-score" id="gauge-score" x="60" y="58" text-anchor="middle" dominant-baseline="middle">0</text>
+        <text class="gauge-label" x="60" y="76" text-anchor="middle">/ 100</text>
+      </svg>
+      <div><span class="band-tag" id="band-tag">—</span></div>
     </div>
 
-    <div class="spinner" id="spinner">Analyzing...</div>
-    <div class="error" id="error"></div>
+    <div class="breakdown" id="breakdown"></div>
 
-    <div class="result" id="result">
-        <div class="score-display">
-            <div class="score-number" id="score"></div>
-            <div class="score-band" id="band"></div>
-        </div>
-        <div class="checks" id="checks"></div>
-        <div class="recs"><ol id="recs"></ol></div>
-        <div class="report-link" id="report-link"></div>
+    <div class="citability" id="cit-wrap" style="display:none">
+      <div>
+        <div class="cit-score" id="cit-score">—</div>
+        <div class="cit-label">Citability Score</div>
+      </div>
+      <div class="cit-label" id="cit-grade" style="margin-left:auto"></div>
     </div>
 
-    <div class="stats" id="stats-bar">
-        <span class="stat" id="stat-stars">⭐ <span id="stars-count">—</span> stars</span>
-        <span class="stat" id="stat-downloads">📦 <span id="downloads-count">—</span> downloads/mo</span>
-        <span class="stat" id="stat-audits">🔍 <span id="audits-count">—</span> audits run</span>
+    <div class="recs-section">
+      <button class="recs-toggle" id="recs-toggle">
+        <span class="arrow">&#9654;</span> Recommendations <span id="recs-count"></span>
+      </button>
+      <ol class="recs-list" id="recs-list"></ol>
     </div>
 
+    <div class="actions" id="actions"></div>
+  </div>
+
+  <footer>
+    <div class="install-row">
+      <span class="install-cmd">pip install geo-optimizer-skill</span>
+      <button class="copy-btn" id="copy-btn" title="Copy">&#128203;</button>
+    </div>
     <div class="links">
-        <p>CLI: <code>pip install geo-optimizer-skill</code></p>
-        <p><a href="https://github.com/auriti-labs/geo-optimizer-skill">GitHub</a> &middot;
-           <a href="/docs">API Docs</a> &middot;
-           <a href="https://github.com/auriti-labs/geo-optimizer-skill/issues">Issues</a></p>
+      <a href="https://github.com/auriti-labs/geo-optimizer-skill">GitHub</a>
+      <a href="https://pypi.org/project/geo-optimizer-skill/">PyPI</a>
+      <a href="/docs/">Docs</a>
+      <a href="https://github.com/auriti-labs/geo-optimizer-skill/issues">Issues</a>
     </div>
+    <div class="credit">Built by Auriti Labs &#183; Powered by Princeton KDD 2024 + AutoGEO ICLR 2026 research</div>
+  </footer>
 </div>
 
 <script__NONCE_ATTR__>
-async function runAudit() {
-    const url = document.getElementById('url-input').value;
-    if (!url) return;
+/* ─── Constants ─── */
+const BANDS = {excellent:'#22c55e',good:'#06b6d4',foundation:'#eab308',critical:'#ef4444'};
+const CATEGORIES = [
+  {key:'robots',label:'Robots.txt',max:18},
+  {key:'llms',label:'llms.txt',max:18},
+  {key:'schema',label:'Schema JSON-LD',max:22},
+  {key:'meta',label:'Meta Tags',max:14},
+  {key:'content',label:'Content',max:14},
+  {key:'signals',label:'Signals',max:8},
+  {key:'ai_discovery',label:'AI Discovery',max:6},
+];
+const SPIN_MSGS = ['Checking robots.txt...','Analyzing llms.txt...','Parsing schema...','Evaluating content...','Scoring citability...','Compiling results...'];
 
-    const btn = document.getElementById('btn');
-    const spinner = document.getElementById('spinner');
-    const errorEl = document.getElementById('error');
-    const resultEl = document.getElementById('result');
-
-    btn.disabled = true;
-    spinner.classList.add('active');
-    errorEl.style.display = 'none';
-    resultEl.style.display = 'none';
-
-    try {
-        const res = await fetch('/api/audit?url=' + encodeURIComponent(url));
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.detail || 'Errore audit');
-        }
-
-        const colors = {excellent:'#22c55e',good:'#06b6d4',foundation:'#eab308',critical:'#ef4444'};
-        const color = colors[data.band] || '#888';
-
-        // Usa textContent per prevenire XSS
-        const scoreEl = document.getElementById('score');
-        scoreEl.textContent = data.score + '/100';
-        scoreEl.style.color = color;
-
-        const bandEl = document.getElementById('band');
-        bandEl.textContent = data.band.toUpperCase();
-        bandEl.style.color = color;
-
-        // Costruisci check rows con metodi DOM sicuri
-        const checksEl = document.getElementById('checks');
-        checksEl.textContent = '';
-        const checkNames = {robots_txt:'Robots.txt',llms_txt:'llms.txt',
-            schema_jsonld:'Schema JSON-LD',meta_tags:'Meta Tags',content:'Content Quality'};
-        const checks = data.checks;
-        for (const [key, label] of Object.entries(checkNames)) {
-            const c = checks[key];
-            const ok = key === 'robots_txt' ? c.citation_bots_ok :
-                       key === 'llms_txt' ? c.found :
-                       key === 'schema_jsonld' ? c.has_website :
-                       key === 'meta_tags' ? (c.has_title && c.has_description) :
-                       c.has_h1;
-            const row = document.createElement('div');
-            row.className = 'check-row';
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = label;
-            const statusSpan = document.createElement('span');
-            statusSpan.textContent = ok ? '\u2705' : '\u274c';
-            row.appendChild(nameSpan);
-            row.appendChild(statusSpan);
-            checksEl.appendChild(row);
-        }
-
-        // Raccomandazioni con metodi DOM sicuri
-        const recsEl = document.getElementById('recs');
-        recsEl.textContent = '';
-        for (const rec of data.recommendations) {
-            const li = document.createElement('li');
-            li.textContent = rec;
-            recsEl.appendChild(li);
-        }
-
-        // Link report con metodi DOM sicuri
-        const reportLinkEl = document.getElementById('report-link');
-        reportLinkEl.textContent = '';
-        if (data.report_url) {
-            const a = document.createElement('a');
-            a.href = data.report_url;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.textContent = 'View full HTML report';
-            reportLinkEl.appendChild(a);
-
-            // Bottone Download PDF
-            const pdfLink = document.createElement('a');
-            pdfLink.href = '/api/audit/pdf?url=' + encodeURIComponent(url);
-            pdfLink.textContent = '📄 Download PDF';
-            pdfLink.style.cssText = 'margin-left:1rem;color:#f59e0b;text-decoration:none;font-size:.9rem';
-            reportLinkEl.appendChild(pdfLink);
-        }
-
-        resultEl.style.display = 'block';
-    } catch (e) {
-        errorEl.textContent = e.message;
-        errorEl.style.display = 'block';
-    } finally {
-        btn.disabled = false;
-        spinner.classList.remove('active');
+/* ─── Version + Stats ─── */
+(async function init(){
+  try{
+    const h = await fetch('/health');
+    if(h.ok){const d=await h.json();document.getElementById('ver-badge').textContent='v'+d.version}
+  }catch(e){}
+  try{
+    const s = await fetch('/api/stats');
+    if(s.ok){
+      const d=await s.json();
+      const fmt=n=>n>=1000?(n/1000).toFixed(1)+'k':String(n);
+      document.getElementById('stars').textContent=fmt(d.github_stars);
+      document.getElementById('downloads').textContent=fmt(d.pypi_downloads_month);
+      document.getElementById('audits').textContent=fmt(d.audits_run);
     }
+  }catch(e){}
+})();
+
+/* ─── Audit ─── */
+const $=id=>document.getElementById(id);
+let spinInterval;
+
+function startSpin(){
+  $('spinner').classList.add('active');
+  let i=0;
+  $('spin-text').textContent=SPIN_MSGS[0];
+  spinInterval=setInterval(()=>{i=(i+1)%SPIN_MSGS.length;$('spin-text').textContent=SPIN_MSGS[i]},2200);
+}
+function stopSpin(){$('spinner').classList.remove('active');clearInterval(spinInterval)}
+
+async function runAudit(){
+  const url=$('url-input').value;if(!url)return;
+  $('btn').disabled=true;$('error').style.display='none';$('result').style.display='none';
+  startSpin();
+  try{
+    const res=await fetch('/api/audit?url='+encodeURIComponent(url));
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.detail||'Audit failed');
+    renderResult(data,url);
+  }catch(e){
+    $('error').textContent=e.message;$('error').style.display='block';
+  }finally{stopSpin();$('btn').disabled=false}
 }
 
-// Event listener per il bottone Audit (al posto di onclick inline, bloccato dalla CSP)
-document.getElementById('btn').addEventListener('click', runAudit);
-document.getElementById('url-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') runAudit();
-});
+function renderResult(data,url){
+  const color=BANDS[data.band]||'#888';
+  const score=data.score||0;
 
-// Carica le statistiche all'avvio della pagina
-(async function loadStats() {
-    try {
-        const res = await fetch('/api/stats');
-        if (!res.ok) return;
-        const data = await res.json();
-        const fmt = (n) => n >= 1000 ? (n/1000).toFixed(1) + 'k' : String(n);
-        document.getElementById('stars-count').textContent = fmt(data.github_stars);
-        document.getElementById('downloads-count').textContent = fmt(data.pypi_downloads_month);
-        document.getElementById('audits-count').textContent = fmt(data.audits_run);
-    } catch (e) { /* silenzioso se le stats non sono disponibili */ }
-})();
+  /* Gauge */
+  const circ=314.16;
+  const offset=circ-(score/100*circ);
+  const fill=$('gauge-fill');
+  fill.style.stroke=color;
+  fill.style.strokeDashoffset=String(offset);
+  $('gauge-score').textContent=score;
+  $('gauge-score').style.fill=color;
+
+  const tag=$('band-tag');
+  tag.textContent=data.band?data.band.toUpperCase():'—';
+  tag.style.background=color+'1a';tag.style.color=color;
+
+  /* Breakdown */
+  const bd=$('breakdown');bd.textContent='';
+  const br=data.score_breakdown||{};
+  for(const cat of CATEGORIES){
+    const val=br[cat.key]||0;
+    const pct=Math.min(val/cat.max*100,100);
+    const row=document.createElement('div');row.className='bar-row';
+
+    const lbl=document.createElement('span');lbl.className='bar-label';lbl.textContent=cat.label;
+    const track=document.createElement('div');track.className='bar-track';
+    const barFill=document.createElement('div');barFill.className='bar-fill';
+    barFill.style.width='0%';barFill.style.background=color;
+    track.appendChild(barFill);
+    const valSpan=document.createElement('span');valSpan.className='bar-val';
+    valSpan.textContent=val+'/'+cat.max;
+
+    row.appendChild(lbl);row.appendChild(track);row.appendChild(valSpan);
+    bd.appendChild(row);
+    requestAnimationFrame(()=>{requestAnimationFrame(()=>{barFill.style.width=pct+'%'})});
+  }
+
+  /* Citability */
+  const cit=data.citability;
+  if(cit&&cit.total_score!==undefined){
+    $('cit-wrap').style.display='flex';
+    const cs=$('cit-score');cs.textContent=cit.total_score+'/100';
+    const cc=cit.total_score>=86?BANDS.excellent:cit.total_score>=68?BANDS.good:cit.total_score>=36?BANDS.foundation:BANDS.critical;
+    cs.style.color=cc;
+    $('cit-grade').textContent=cit.grade?cit.grade.toUpperCase():'';
+    $('cit-grade').style.color=cc;
+  }else{$('cit-wrap').style.display='none'}
+
+  /* Recommendations */
+  const recs=data.recommendations||[];
+  $('recs-count').textContent='('+recs.length+')';
+  const rl=$('recs-list');rl.textContent='';rl.classList.remove('open');
+  $('recs-toggle').classList.remove('open');
+  for(const r of recs){const li=document.createElement('li');li.textContent=r;rl.appendChild(li)}
+
+  /* Actions */
+  const acts=$('actions');acts.textContent='';
+  if(data.report_url){
+    const a=document.createElement('a');a.className='action-link';a.href=data.report_url;
+    a.target='_blank';a.rel='noopener';a.textContent='HTML Report';acts.appendChild(a);
+  }
+  const pdf=document.createElement('a');pdf.className='action-link';
+  pdf.href='/api/audit/pdf?url='+encodeURIComponent(url);
+  pdf.textContent='Download PDF';acts.appendChild(pdf);
+
+  $('result').style.display='block';
+}
+
+/* ─── Event listeners ─── */
+$('btn').addEventListener('click',runAudit);
+$('url-input').addEventListener('keypress',e=>{if(e.key==='Enter')runAudit()});
+$('recs-toggle').addEventListener('click',function(){
+  this.classList.toggle('open');$('recs-list').classList.toggle('open');
+});
+$('copy-btn').addEventListener('click',function(){
+  navigator.clipboard.writeText('pip install geo-optimizer-skill').then(()=>{this.textContent='Done!'});
+  setTimeout(()=>{this.textContent='\u{1F4CB}'},1500);
+});
 </script>
 </body>
 </html>
