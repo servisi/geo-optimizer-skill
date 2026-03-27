@@ -72,7 +72,20 @@ def format_audit_json(result: AuditResult) -> str:
                 "passed": result.content.has_h1,
                 "details": asdict(result.content),
             },
+            "signals": {
+                "score": result.score_breakdown.get("signals", 0),
+                "max": 8,
+                "passed": bool(result.signals and result.signals.has_lang),
+                "details": asdict(result.signals) if result.signals else {},
+            },
+            "ai_discovery": {
+                "score": result.score_breakdown.get("ai_discovery", 0),
+                "max": 6,
+                "passed": bool(result.ai_discovery and result.ai_discovery.endpoints_found >= 1),
+                "details": asdict(result.ai_discovery) if result.ai_discovery else {},
+            },
         },
+        "score_breakdown": result.score_breakdown,
         "recommendations": result.recommendations,
     }
     return json.dumps(data, indent=2)

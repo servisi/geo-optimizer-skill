@@ -1025,7 +1025,34 @@ def _dict_to_audit_result(data: dict):
         recommendations=data.get("recommendations", []),
         http_status=data.get("http_status", 0),
         page_size=data.get("page_size", 0),
+        score_breakdown=data.get("score_breakdown", {}),
     )
+
+    # Fix #34: ricostruisci campi aggiuntivi se presenti nella cache
+    if "signals" in data and isinstance(data["signals"], dict):
+        from geo_optimizer.models.results import SignalsResult
+        s = data["signals"]
+        result.signals = SignalsResult(
+            has_lang=s.get("has_lang", False),
+            lang_value=s.get("lang_value", ""),
+            has_rss=s.get("has_rss", False),
+            rss_url=s.get("rss_url", ""),
+            has_freshness=s.get("has_freshness", False),
+            freshness_date=s.get("freshness_date", ""),
+        )
+    if "ai_discovery" in data and isinstance(data["ai_discovery"], dict):
+        from geo_optimizer.models.results import AiDiscoveryResult
+        ad = data["ai_discovery"]
+        result.ai_discovery = AiDiscoveryResult(
+            has_well_known_ai=ad.get("has_well_known_ai", False),
+            has_summary=ad.get("has_summary", False),
+            has_faq=ad.get("has_faq", False),
+            has_service=ad.get("has_service", False),
+            summary_valid=ad.get("summary_valid", False),
+            faq_count=ad.get("faq_count", 0),
+            endpoints_found=ad.get("endpoints_found", 0),
+        )
+    return result
 
 
 def _render_homepage(nonce: str = "") -> str:

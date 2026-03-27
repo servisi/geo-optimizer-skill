@@ -3092,14 +3092,18 @@ _METHOD_ORDER = [
 
 
 def _compute_grade(total: int) -> str:
-    """Calculate the citability grade from the total score."""
-    if total >= 75:
+    """Calculate the citability grade from the total score.
+
+    Fix #26: usa le stesse bande di SCORE_BANDS in config.py
+    per coerenza con il GEO score.
+    """
+    if total >= 86:
         return "excellent"
-    if total >= 50:
-        return "high"
-    if total >= 25:
-        return "medium"
-    return "low"
+    if total >= 68:
+        return "good"
+    if total >= 36:
+        return "foundation"
+    return "critical"
 
 
 def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
