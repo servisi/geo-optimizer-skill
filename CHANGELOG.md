@@ -5,6 +5,202 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.18.3] — 2026-03-27
+
+### Added
+
+- **WebMCP Readiness Check** (#233) — 4-level indicator (none/basic/ready/advanced) measuring how well a site exposes machine-readable context for MCP-compatible AI agents. Surfaced in CLI output, HTML report, and JSON API. Does not contribute to the GEO score.
+- CLAUDE.md updated with v3.18.3 architecture notes
+
+### Changed
+
+- 912 tests passing (up from 897)
+
+---
+
+## [3.18.2] — 2026-03-27
+
+### Added
+
+- **Brand & Entity Signals category** (10 pts, 5 checks) — new scoring category rewarding machine-readable brand identity:
+  - `brand_entity_coherence` (3 pts) — brand name consistent across title, schema, OG
+  - `brand_kg_readiness` (3 pts) — `sameAs` links to authoritative KG domains
+  - `brand_about_contact` (2 pts) — `/about` and `/contact` discoverable
+  - `brand_geo_identity` (1 pt) — LocalBusiness schema or address present
+  - `brand_topic_authority` (1 pt) — consistent topical focus across page signals
+
+### Changed
+
+- `schema_sameas` migrated to `brand_kg_readiness` (retained with 0 pts for backwards compatibility)
+- Schema JSON-LD effective max: 22 → 16 pts (`schema_faq` 5→3, `schema_website` 3→2, `schema_sameas` 3→0)
+- Content Quality max corrected: 14 → 12 pts (rubric now matches `config.py` actual values)
+- Signals max reduced: 8 → 6 pts (`signals_rss` 3→2, `signals_freshness` 2→1)
+- 897 tests passing
+
+---
+
+## [3.18.1] — 2026-03-27
+
+### Fixed (14 bugs P0–P3)
+
+- **SSRF DNS pinning** — resolved DNS at connection time to prevent rebinding attacks after validation
+- **AttributeError CdnAiCrawlerResult** — missing attribute access on CDN check result object
+- **`has_front_loading` always True** — front-loading check was returning True regardless of content position
+- **XSS href** — unsanitized URL values in generated HTML anchor tags
+- **Rate limiting** — per-IP sliding window now applied consistently across all audit endpoints
+- **HSTS** — `Strict-Transport-Security` header added to all HTTPS responses
+- **CSP nonce** — Content Security Policy nonce now applied to all pages, not only the homepage
+
+### Changed
+
+- 897 tests passing
+
+---
+
+## [3.18.0] — 2026-03-27
+
+### Added
+
+- **Rich formatter v2** — redesigned CLI output with ASCII art score gauge and stacked dashboard layout
+- **Centralized URL validation** — `validate_public_url()` now enforced on all 4 URL-accepting endpoints (audit, llms, badge, web app)
+
+---
+
+## [3.17.16] — 2026-03-27
+
+### Fixed
+
+- Docs navigation link pointing to old path, now correctly links to GitHub Pages
+
+---
+
+## [3.17.15] — 2026-03-27
+
+### Fixed
+
+- `@graph` JSON-LD parser — now correctly unwraps graph arrays produced by Yoast SEO and RankMath plugins
+
+---
+
+## [3.17.14] — 2026-03-27
+
+### Added
+
+- GEO endpoint pages in the web demo: live status for `robots.txt`, `llms.txt`, `/.well-known/ai.txt`, `/ai/*.json`
+
+---
+
+## [3.17.13] — 2026-03-27
+
+### Changed
+
+- GEO score of the web app itself optimized to target 90+
+
+---
+
+## [3.17.12] — 2026-03-27
+
+### Changed
+
+- Full redesign of `/compare`, `/roadmap`, `/research`, and `/docs` pages
+
+---
+
+## [3.17.11] — 2026-03-27
+
+### Changed
+
+- README rewritten: 773 → 230 lines, focused on quick start and key features
+
+---
+
+## [3.17.10] — 2026-03-27
+
+### Changed
+
+- Homepage redesign: animated score gauge, category breakdown panel, glass-morphism UI
+
+---
+
+## [3.17.9] — 2026-03-27
+
+### Fixed
+
+- Python 3.9 compatibility restored (removed 3.10+ syntax)
+- Plugin registry `deepcopy` safety: prevents shared state mutation across parallel audits
+
+---
+
+## [3.17.8] — 2026-03-27
+
+### Changed
+
+- `ai-context/` docs updated to reflect v3.17 method list and scoring
+
+---
+
+## [3.17.7] — 2026-03-27
+
+### Fixed
+
+- CI pipeline running audit twice on the same commit
+- Cache directory bloat from unrotated intermediate audit files
+
+---
+
+## [3.17.6] — 2026-03-27
+
+### Fixed
+
+- `html.escape` replaced with stdlib version (removed third-party dependency)
+- Badge SVG output sanitized and validated
+- `format_audit_text()` now produces complete output for all 8 categories
+
+---
+
+## [3.17.5] — 2026-03-27
+
+### Changed
+
+- Date parsing refactored to handle ISO 8601, RFC 2822, and plain date strings uniformly
+- Async HTTP pooling optimized: connection reuse across parallel sub-audits
+
+---
+
+## [3.17.4] — 2026-03-27
+
+### Fixed
+
+- Race condition in plugin registry initialization under concurrent requests
+- Dockerfile: missing `COPY` step caused package to be absent in final image
+
+---
+
+## [3.17.3] — 2026-03-27
+
+### Security
+
+- Web app: private IP validation tightened, SSRF protection hardened
+- DOM output: all dynamic values escaped via safe DOM methods (no innerHTML)
+
+---
+
+## [3.17.2] — 2026-03-27
+
+### Fixed
+
+- Grade label and JSON `band` field now consistent (both use the same score band thresholds)
+
+---
+
+## [3.17.1] — 2026-03-27
+
+### Changed (Performance)
+
+- Citability engine: removed unnecessary `deepcopy` calls, reducing overhead on large pages
+
+---
+
 ## [3.17.0] — 2026-03-27
 
 ### Fixed (Critical — 12 bug risolti)
