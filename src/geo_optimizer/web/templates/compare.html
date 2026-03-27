@@ -159,7 +159,7 @@ function renderComparison(a, b) {
         const maxes = {robots_txt:18,llms_txt:18,schema_jsonld:22,meta_tags:14,content:14};
         for (const [key, label] of Object.entries(categories)) {
             const c = data.checks ? data.checks[key] : null;
-            const sc = c ? (c.score || 0) : 0;
+            const sc = breakdown[key] !== undefined ? breakdown[key] : (c ? (c.score || 0) : 0);
             const mx = maxes[key];
             const pct = Math.min(sc / mx * 100, 100);
             const row = document.createElement('div');

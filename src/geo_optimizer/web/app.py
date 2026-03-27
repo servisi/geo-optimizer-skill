@@ -932,7 +932,7 @@ def _audit_result_to_dict(result) -> dict:
             "has_website": result.schema.has_website,
             "has_faq": result.schema.has_faq,
             "has_webapp": result.schema.has_webapp,
-            "raw_schemas": result.schema.raw_schemas,
+            "raw_schemas": result.schema.raw_schemas[:5],  # fix #41: limita a 5 per evitare memory bloat
         },
         "meta_tags": {
             "has_title": result.meta.has_title,

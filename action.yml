@@ -83,14 +83,14 @@ runs:
         REPORT_PATH="${{ inputs.output-file }}.${{ steps.ext.outputs.ext }}"
         echo "report_path=${REPORT_PATH}" >> "$GITHUB_OUTPUT"
 
-        # Esegui sempre anche un JSON per estrarre score/band
-        geo audit --url "${{ inputs.url }}" --format "${{ inputs.format }}" --output "${REPORT_PATH}"
+        # Fix #38: genera sempre JSON prima (singolo audit), poi converti se serve
+        geo audit --url "${{ inputs.url }}" --format json --output geo-score-tmp.json
 
-        # Se il formato non è JSON, genera anche un JSON temporaneo per lo score
+        # Se il formato richiesto non e JSON, genera anche il report nel formato voluto
         if [ "${{ inputs.format }}" != "json" ]; then
-          geo audit --url "${{ inputs.url }}" --format json --output geo-score-tmp.json
+          geo audit --url "${{ inputs.url }}" --format "${{ inputs.format }}" --output "${REPORT_PATH}" --cache
         else
-          cp "${REPORT_PATH}" geo-score-tmp.json
+          cp geo-score-tmp.json "${REPORT_PATH}"
         fi
 
     # 5. Estrai score e band dal JSON
