@@ -7,6 +7,7 @@ instead of printing — the CLI layer handles display and formatting.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -956,8 +957,8 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
     ai_disc = _audit_ai_discovery_from_responses(r_ai_txt, r_ai_summary, r_ai_faq, r_ai_service)
 
     # v4.2: CDN AI Crawler check (#225) + JS Rendering check (#226)
-    # CDN check runs synchronously (needs separate requests with different UAs)
-    cdn_result = audit_cdn_ai_crawler(base_url)
+    # Fix: wrappa chiamate sincrone con asyncio.to_thread per non bloccare l'event loop
+    cdn_result = await asyncio.to_thread(audit_cdn_ai_crawler, base_url)
     js_result = audit_js_rendering(soup, r_home.text)
 
     # Fix #281: calcolo segnali tecnici (lang, RSS, freshness)

@@ -5,32 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
-## [3.16.0] — 2026-03-26
+## [3.16.1] — 2026-03-27
 
-### Added (v3.16.0 — Batch A: Signals & Trust)
+### Fixed
 
-- **Voice/Conversational Search** (#246) — question headings, concise answers, speakable
-- **Multi-Platform Presence** (#231) — platform count from sameAs (GitHub, LinkedIn, Reddit, etc.)
-- **Entity Disambiguation** (#256) — consistent brand naming across title, OG, schema
-- **First-Party Data** (#259) — original research patterns ("we analyzed", "our study")
-- **Stale Data Detection** (#261) — outdated copyright, old year references
-- **Social Proof** (#264) — testimonials, trust badges, review aggregates
-- **Accessibility Signals** (#252) — semantic HTML, ARIA landmarks, skip links
-- **AI Conversion Funnel** (#279) — CTA visibility, pricing link, contact info
-
-### Added (v3.16.0 — Batch B: Technical Signals)
-
-- **Temporal Signal Coherence** (#269) — date alignment across schema, meta, content
-- **Anchor Text Quality** (#268) — descriptive vs generic internal link text
-- **International GEO** (#262) — hreflang, multi-language, inLanguage schema
-- **AI Crawl Budget** (#271) — meta robots noindex/nofollow detection, sitemap link
+- **MCP Server: categorie `geo_fix` incomplete** — aggiunta `ai_discovery` alle categorie valide del tool `geo_fix`. Prima, passare `--only ai_discovery` via MCP restituiva errore 'Invalid categories' nonostante `fixer.py` lo supportasse (#290)
+- **Async audit: event loop bloccato da CDN check** — `audit_cdn_ai_crawler()` (sincrono, usa `requests`) ora wrappata con `asyncio.to_thread()` nel path `run_full_audit_async()` per non bloccare l'event loop (#291)
 
 ### Changed
 
-- Citability engine: **42 methods** total (12 new)
-- 812 tests passing
+- Commento SCORING meta tags corretto: 14 punti (non 20 come indicato)
 
 ---
+
+
 
 ## [3.15.1] — 2026-03-25
 

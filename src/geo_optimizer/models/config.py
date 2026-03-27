@@ -324,7 +324,7 @@ SCORING = {
     "schema_organization": 3,  # era 3
     "schema_website": 3,  # era 8
     "schema_sameas": 3,  # NUOVO: link sameAs a Wikipedia/Wikidata/LinkedIn
-    # Meta tags — 20 punti (invariato)
+    # Meta tags — 14 punti
     "meta_title": 5,
     "meta_description": 2,
     "meta_canonical": 3,
