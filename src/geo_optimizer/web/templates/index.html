@@ -71,6 +71,9 @@ nav a:hover,nav a.active{color:var(--text)}
   font-family:var(--font);font-size:.95rem;outline:none;transition:border-color .25s,box-shadow .25s}
 .audit-form input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 .audit-form input::placeholder{color:var(--text-muted)}
+.audit-form input:invalid:not(:placeholder-shown){border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+.audit-form{flex-wrap:wrap}
+.input-hint{width:100%;font-size:.8rem;color:#ef4444;margin-top:-.5rem}
 .btn-primary{padding:.8rem 1.8rem;border:none;border-radius:var(--radius-sm);
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   color:#fff;font-family:var(--font);font-size:.95rem;font-weight:600;
@@ -202,8 +205,10 @@ footer .credit{font-size:.72rem;color:var(--text-muted)}
   </div>
 
   <div class="audit-form">
-    <input type="url" id="url-input" placeholder="https://example.com" required autocomplete="url">
+    <input type="url" id="url-input" placeholder="https://example.com" required autocomplete="url"
+      pattern="https?://.*\..*" title="Insert a valid URL (es. https://example.com)">
     <button class="btn-primary" id="btn">Run Audit</button>
+    <div class="input-hint" id="url-hint" style="display:none"></div>
   </div>
 
   <div class="spinner" id="spinner">
@@ -304,8 +309,30 @@ function startSpin(){
 }
 function stopSpin(){$('spinner').classList.remove('active');clearInterval(spinInterval)}
 
+function isValidUrl(str){
+  /* Accetta URL con protocollo, oppure dominio semplice (es. example.com) */
+  if(/^https?:\/\/.+\..+/.test(str))return true;
+  /* Dominio senza protocollo: almeno un punto, niente spazi */
+  if(/^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(str))return true;
+  return false;
+}
+
 async function runAudit(){
-  const url=$('url-input').value;if(!url)return;
+  const input=$('url-input');
+  const hint=$('url-hint');
+  let url=input.value.trim();
+  if(!url){hint.style.display='none';return}
+  /* Validazione lato client */
+  if(!isValidUrl(url)){
+    hint.textContent='Please enter a valid URL (e.g. https://example.com)';
+    hint.style.display='block';
+    input.focus();
+    return;
+  }
+  hint.style.display='none';
+  /* Aggiungi https:// se manca il protocollo */
+  if(!/^https?:\/\//i.test(url))url='https://'+url;
+  input.value=url;
   $('btn').disabled=true;$('error').style.display='none';$('result').style.display='none';
   startSpin();
   try{

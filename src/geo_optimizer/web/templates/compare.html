@@ -84,9 +84,19 @@ const $=id=>document.getElementById(id);
 $('btn').addEventListener('click',run);
 $('url2').addEventListener('keypress',e=>{if(e.key==='Enter')run()});
 
+function isValidUrl(str){
+  if(/^https?:\/\/.+\..+/.test(str))return true;
+  if(/^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(str))return true;
+  return false;
+}
+
 async function run(){
-  const u1=$('url1').value,u2=$('url2').value;
+  let u1=$('url1').value.trim(),u2=$('url2').value.trim();
   if(!u1||!u2)return;
+  if(!isValidUrl(u1)){$('error').textContent='Site A: please enter a valid URL';$('error').style.display='block';return}
+  if(!isValidUrl(u2)){$('error').textContent='Site B: please enter a valid URL';$('error').style.display='block';return}
+  if(!/^https?:\/\//i.test(u1))u1='https://'+u1;$('url1').value=u1;
+  if(!/^https?:\/\//i.test(u2))u2='https://'+u2;$('url2').value=u2;
   $('btn').disabled=true;$('spinner').classList.add('active');$('error').style.display='none';$('results').style.display='none';
   try{
     const [r1,r2]=await Promise.all([fetch('/api/audit?url='+encodeURIComponent(u1)),fetch('/api/audit?url='+encodeURIComponent(u2))]);

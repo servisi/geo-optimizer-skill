@@ -610,8 +610,8 @@ class TestRichFormatter:
         result = _crea_audit_result_vuoto()
         output = format_audit_rich(result)
 
-        # Must contain "Not found" for missing robots.txt
-        assert "Not found" in output
+        # v2: testo in italiano "File non trovato"
+        assert "non trovato" in output
 
     @pytest.mark.skipif(
         not __import__("importlib").util.find_spec("rich"),
@@ -624,7 +624,8 @@ class TestRichFormatter:
         result = _crea_audit_result_vuoto()
         output = format_audit_rich(result)
 
-        assert "Not found" in output
+        # v2: testo in italiano "File non trovato"
+        assert "non trovato" in output
 
     @pytest.mark.skipif(
         not __import__("importlib").util.find_spec("rich"),
@@ -664,19 +665,17 @@ class TestRichFormatter:
         result = _crea_audit_result_vuoto()
         output = format_audit_rich(result)
 
-        assert "No schema" in output
+        # v2: testo in italiano "Nessuno schema trovato"
+        assert "Nessuno schema" in output
 
-    def test_status_icon_passed(self):
-        """_status_icon() ritorna l'icona check per True."""
-        from geo_optimizer.cli.rich_formatter import _status_icon
+    def test_score_color_returns_color(self):
+        """_score_color() ritorna un colore hex basato sulla percentuale."""
+        from geo_optimizer.cli.rich_formatter import _score_color
 
-        assert _status_icon(True) == "✅"
-
-    def test_status_icon_failed(self):
-        """_status_icon() ritorna l'icona X per False."""
-        from geo_optimizer.cli.rich_formatter import _status_icon
-
-        assert _status_icon(False) == "❌"
+        # Score alto → verde
+        assert "#22c55e" in _score_color(90, 100)
+        # Score basso → rosso
+        assert "#ef4444" in _score_color(10, 100)
 
     def test_robots_score_punteggio_zero_senza_robots(self):
         """_robots_score() ritorna 0 senza robots.txt."""

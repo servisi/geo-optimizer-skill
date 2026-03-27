@@ -1,18 +1,19 @@
 """
-Rich formatter for premium CLI output.
+Rich formatter per output CLI premium — design v2.
 
-Requires ``rich`` as optional dependency:
+Richiede ``rich`` come dipendenza opzionale:
     pip install geo-optimizer-skill[rich]
 
-Provides branded panels, color-coded score gauge, per-check card panels
-with progress bars, Tree view for schema types, and animated spinner.
-Graceful fallback via :func:`is_rich_available`.
+Design: dashboard immersivo con gradient, gauge gigante, barra stacked
+per breakdown categorie, card dettagliate con micro-bar, e footer motivazionale.
+Fallback automatico via :func:`is_rich_available`.
 """
 
 from __future__ import annotations
 
 import io
 import os
+from urllib.parse import urlparse
 
 from geo_optimizer.cli.scoring_helpers import (
     content_score as _content_score,
@@ -29,6 +30,9 @@ from geo_optimizer.cli.scoring_helpers import (
 from geo_optimizer.cli.scoring_helpers import (
     schema_score as _schema_score,
 )
+from geo_optimizer.cli.scoring_helpers import (
+    signals_score as _signals_score,
+)
 from geo_optimizer.models.results import AuditResult
 
 try:
@@ -38,168 +42,733 @@ try:
     from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
-    from rich.tree import Tree
 
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
 
-# ── Public helpers ─────────────────────────────────────────────────────────────
+# ── Helpers pubblici ──────────────────────────────────────────────────────────
 
 
 def is_rich_available() -> bool:
-    """Check whether the rich library is available."""
+    """Verifica se la libreria rich è disponibile."""
     return RICH_AVAILABLE
 
 
-def _status_icon(passed: bool) -> str:
-    """Return check/cross icon."""
-    return "✅" if passed else "❌"
+# ── Palette colori moderna ────────────────────────────────────────────────────
+
+# Colori accessibili WCAG AA su sfondo scuro
+_COLORS = {
+    "excellent": "#22c55e",  # verde brillante
+    "good": "#06b6d4",  # ciano
+    "foundation": "#f59e0b",  # ambra
+    "critical": "#ef4444",  # rosso
+    "accent": "#8b5cf6",  # viola
+    "muted": "#64748b",  # grigio ardesia
+    "surface": "#1e293b",  # sfondo card
+    "dim": "#475569",  # testo secondario
+    "brand_1": "#3b82f6",  # blu brand
+    "brand_2": "#06b6d4",  # ciano brand
+    "brand_3": "#8b5cf6",  # viola brand
+}
+
+# Icone per categoria (più espressive delle semplici check/cross)
+_CATEGORY_ICONS = {
+    "robots": "🤖",
+    "llms": "📄",
+    "schema": "🔗",
+    "meta": "🏷️",
+    "content": "📝",
+    "signals": "📡",
+    "ai_discovery": "🔍",
+}
+
+# Bande con descrizioni e icone
+_BAND_CONFIG = {
+    "excellent": {"icon": "🏆", "label": "EXCELLENT", "desc": "AI-ready — ottimizzazione completa"},
+    "good": {"icon": "✅", "label": "GOOD", "desc": "Buona base — pochi miglioramenti"},
+    "foundation": {"icon": "⚡", "label": "FOUNDATION", "desc": "Elementi chiave mancanti"},
+    "critical": {"icon": "🚨", "label": "CRITICAL", "desc": "Non visibile ai motori AI"},
+}
 
 
-# ── Color and bar helpers ──────────────────────────────────────────────────────
+def _band_color(band: str) -> str:
+    """Restituisce il colore per la banda."""
+    return _COLORS.get(band, _COLORS["critical"])
 
 
 def _score_color(score: int, max_score: int = 100) -> str:
-    """Return Rich color name based on score percentage."""
+    """Colore Rich basato sulla percentuale di score."""
     pct = score / max_score if max_score > 0 else 0
     if pct >= 0.85:
-        return "green"
-    if pct >= 0.6:
-        return "cyan"
-    if pct >= 0.3:
-        return "yellow"
-    return "red"
+        return _COLORS["excellent"]
+    if pct >= 0.60:
+        return _COLORS["good"]
+    if pct >= 0.30:
+        return _COLORS["foundation"]
+    return _COLORS["critical"]
 
 
-def _render_bar(score: int, max_score: int, width: int = 60) -> Text:
-    """Render a colored progress bar as Rich Text."""
+def _pct_color(pct: float) -> str:
+    """Colore per percentuale (0.0 - 1.0)."""
+    if pct >= 0.85:
+        return _COLORS["excellent"]
+    if pct >= 0.60:
+        return _COLORS["good"]
+    if pct >= 0.30:
+        return _COLORS["foundation"]
+    return _COLORS["critical"]
+
+
+# ── ASCII Art grande per lo score ─────────────────────────────────────────────
+
+# Cifre 5 righe alte — stile sottile e moderno
+_DIGITS = {
+    "0": ["╭━╮", "┃ ┃", "┃ ┃", "┃ ┃", "╰━╯"],
+    "1": [" ╻ ", "╺┃ ", " ┃ ", " ┃ ", "╺┻╸"],
+    "2": ["╭━╮", "╰━┃", "╭━╯", "┃  ", "╰━━"],
+    "3": ["╭━╮", "╰━┃", " ━┃", "╭━┃", "╰━╯"],
+    "4": ["╻ ╻", "┃ ┃", "╰━┃", "  ┃", "  ╹"],
+    "5": ["╭━━", "┃  ", "╰━╮", "╭━┃", "╰━╯"],
+    "6": ["╭━╮", "┃  ", "┣━╮", "┃ ┃", "╰━╯"],
+    "7": ["━━╮", "  ┃", " ╻╯", " ┃ ", " ╹ "],
+    "8": ["╭━╮", "┃ ┃", "┣━┫", "┃ ┃", "╰━╯"],
+    "9": ["╭━╮", "┃ ┃", "╰━┃", "  ┃", "╰━╯"],
+}
+
+
+def _render_big_number(number: int, color: str) -> list[Text]:
+    """Renderizza un numero grande in ASCII art (5 righe)."""
+    digits = str(number)
+    lines = []
+    for row in range(5):
+        line = Text()
+        for i, d in enumerate(digits):
+            if i > 0:
+                line.append(" ", style="default")
+            line.append(_DIGITS[d][row], style=f"bold {color}")
+        lines.append(line)
+    return lines
+
+
+# ── Barra stacked orizzontale (breakdown categorie) ──────────────────────────
+
+
+def _render_stacked_bar(categories: list[tuple[str, int, int]], width: int = 68) -> Text:
+    """Barra stacked colorata che mostra il contributo di ogni categoria.
+
+    Ogni segmento è proporzionale al punteggio ottenuto sul totale.
+    """
+    total_score = sum(score for _, score, _ in categories)
+    bar = Text()
+
+    # Colori per segmento
+    segment_colors = [
+        _COLORS["brand_1"],  # robots - blu
+        _COLORS["brand_2"],  # llms - ciano
+        _COLORS["accent"],  # schema - viola
+        _COLORS["excellent"],  # meta - verde
+        _COLORS["foundation"],  # content - ambra
+        _COLORS["good"],  # signals - ciano chiaro
+        _COLORS["brand_3"],  # ai_discovery - viola chiaro
+    ]
+
+    # Calcola la larghezza di ogni segmento
+    if total_score == 0:
+        bar.append("━" * width, style=f"dim {_COLORS['dim']}")
+        return bar
+
+    segments = []
+    remaining_width = width
+    for i, (_, score, _) in enumerate(categories):
+        if i == len(categories) - 1:
+            seg_width = remaining_width
+        else:
+            seg_width = max(1, round(score / total_score * width)) if score > 0 else 0
+            remaining_width -= seg_width
+        segments.append((seg_width, segment_colors[i % len(segment_colors)]))
+
+    for seg_width, color in segments:
+        if seg_width > 0:
+            bar.append("━" * seg_width, style=f"bold {color}")
+
+    # Riempi il resto fino a 100 punti
+    sum(mx for _, _, mx in categories)
+    filled_width = sum(sw for sw, _ in segments)
+    empty_width = width - filled_width
+    if empty_width > 0:
+        bar.append("╌" * empty_width, style=f"{_COLORS['dim']}")
+
+    return bar
+
+
+def _render_legend(categories: list[tuple[str, int, int]]) -> Text:
+    """Legenda compatta per la barra stacked."""
+    segment_colors = [
+        _COLORS["brand_1"],
+        _COLORS["brand_2"],
+        _COLORS["accent"],
+        _COLORS["excellent"],
+        _COLORS["foundation"],
+        _COLORS["good"],
+        _COLORS["brand_3"],
+    ]
+
+    legend = Text()
+    for i, (name, score, max_score) in enumerate(categories):
+        if i > 0:
+            legend.append("  ", style="default")
+        color = segment_colors[i % len(segment_colors)]
+        legend.append("━━", style=f"bold {color}")
+        legend.append(f" {name} ", style="dim")
+        legend.append(f"{score}", style=f"bold {color}")
+        legend.append(f"/{max_score}", style="dim")
+    return legend
+
+
+# ── Micro progress bar ────────────────────────────────────────────────────────
+
+
+def _micro_bar(score: int, max_score: int, width: int = 20) -> Text:
+    """Barra di progresso compatta con gradiente."""
     pct = score / max_score if max_score > 0 else 0
     filled = int(pct * width)
     empty = width - filled
     color = _score_color(score, max_score)
 
     bar = Text()
-    bar.append("━" * filled, style=f"bold {color}")
-    bar.append("━" * empty, style="bright_black")
-    bar.append(f"  {int(pct * 100)}%", style=f"dim {color}")
+    bar.append("▓" * filled, style=f"{color}")
+    bar.append("░" * empty, style=f"{_COLORS['dim']}")
+    bar.append(f" {int(pct * 100)}%", style=f"bold {color}")
     return bar
 
 
-def _stack(*renderables) -> Table:
-    """Stack renderables vertically using an invisible Table layout."""
-    t = Table(show_header=False, box=None, expand=True, padding=0)
-    t.add_column(ratio=1)
-    for r in renderables:
-        t.add_row(r)
-    return t
+# ── Header branding ──────────────────────────────────────────────────────────
 
-
-# ── Check content builders ─────────────────────────────────────────────────────
-
-
-def _build_robots_content(result: AuditResult, bar: Text):
-    """Build inner content for Robots.txt check panel."""
-    if not result.robots.found:
-        detail = Text("Not found", style="dim italic")
-    else:
-        parts = [f"{len(result.robots.bots_allowed)} bots allowed"]
-        if result.robots.bots_blocked:
-            parts.append(f"{len(result.robots.bots_blocked)} blocked")
-        if result.robots.bots_partial:
-            parts.append(f"{len(result.robots.bots_partial)} partial")
-        detail = Text("  •  ".join(parts))
-    return _stack(detail, Text(""), bar)
-
-
-def _build_llms_content(result: AuditResult, bar: Text):
-    """Build inner content for llms.txt check panel."""
-    if not result.llms.found:
-        detail = Text("Not found", style="dim italic")
-    else:
-        parts = [f"~{result.llms.word_count} words"]
-        if result.llms.has_h1:
-            parts.append("H1")
-        if result.llms.has_sections:
-            parts.append("sections")
-        if result.llms.has_full:
-            parts.append("llms-full.txt")
-        detail = Text("  •  ".join(parts))
-    return _stack(detail, Text(""), bar)
-
-
-def _build_schema_content(result: AuditResult, bar: Text):
-    """Build inner content for Schema JSON-LD check panel with Tree view."""
-    if not result.schema.found_types:
-        detail = Text("No schema", style="dim italic")
-        return _stack(detail, Text(""), bar)
-
-    tree = Tree("📋 Types", guide_style="dim cyan")
-    for schema_type in result.schema.found_types[:5]:
-        tree.add(f"[bold]{schema_type}[/]")
-    return _stack(tree, Text(""), bar)
-
-
-def _build_meta_content(result: AuditResult, bar: Text):
-    """Build inner content for Meta Tags check panel with inline checkmarks."""
-    meta_checks = [
-        ("title", result.meta.has_title),
-        ("description", result.meta.has_description),
-        ("canonical", result.meta.has_canonical),
-        ("OG", result.meta.has_og_title),
-    ]
-    parts = []
-    for label, present in meta_checks:
-        if present:
-            parts.append(f"[green]✓[/] {label}")
-        else:
-            parts.append(f"[red]✗[/] [dim]{label}[/]")
-    detail = Text.from_markup("   ".join(parts))
-    return _stack(detail, Text(""), bar)
-
-
-def _build_content_content(result: AuditResult, bar: Text):
-    """Build inner content for Content Quality check panel."""
-    parts = []
-    if result.content.has_h1:
-        parts.append("H1")
-    parts.append(f"~{result.content.word_count} words")
-    if result.content.has_numbers:
-        parts.append(f"{result.content.numbers_count} stat")
-    if result.content.has_links:
-        parts.append(f"{result.content.external_links_count} link ext")
-    detail = Text("  •  ".join(parts))
-    return _stack(detail, Text(""), bar)
-
-
-# ── ASCII art header ───────────────────────────────────────────────────────────
-
-_GEO_ASCII = [
-    " ██████  ███████  ██████  ",
-    "██       ██      ██    ██ ",
-    "██   ███ █████   ██    ██ ",
-    "██    ██ ██      ██    ██ ",
-    " ██████  ███████  ██████  ",
+# Logo minimale ma d'impatto
+_LOGO_LINES = [
+    ("  ╔══╗  ╔══╗  ╔══╗  ", _COLORS["brand_1"]),
+    ("  ║ ═╣  ║╔═╝  ║  ║  ", _COLORS["brand_2"]),
+    ("  ║ ╔╣  ║╚═╗  ║  ║  ", _COLORS["accent"]),
+    ("  ╚══╝  ╚══╝  ╚══╝  ", _COLORS["brand_1"]),
 ]
 
-# Gradient: bright_blue → cyan → bright_blue (top-to-bottom)
-_GEO_COLORS = ["bright_blue", "blue", "cyan", "blue", "bright_blue"]
+
+# ── Builder card per ogni check ───────────────────────────────────────────────
 
 
-# ── Main formatter ─────────────────────────────────────────────────────────────
+def _check_status_text(passed: bool) -> Text:
+    """Badge status compatto."""
+    if passed:
+        return Text(" PASS ", style=f"bold white on {_COLORS['excellent']}")
+    return Text(" FAIL ", style=f"bold white on {_COLORS['critical']}")
+
+
+def _build_robots_card(result: AuditResult, score: int, max_score: int) -> Panel:
+    """Card dettagliata per Robots.txt."""
+    content_parts = []
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    if not result.robots.found:
+        content_parts.append(Text("  File non trovato", style=f"italic {_COLORS['dim']}"))
+    else:
+        # Info bot con dettaglio
+        info = Text()
+        info.append(f"  ✓ {len(result.robots.bots_allowed)}", style=f"bold {_COLORS['excellent']}")
+        info.append(" allowed", style=_COLORS["dim"])
+        if result.robots.bots_blocked:
+            info.append(f"   ✗ {len(result.robots.bots_blocked)}", style=f"bold {_COLORS['critical']}")
+            info.append(" blocked", style=_COLORS["dim"])
+        if result.robots.bots_partial:
+            info.append(f"   ◐ {len(result.robots.bots_partial)}", style=f"bold {_COLORS['foundation']}")
+            info.append(" partial", style=_COLORS["dim"])
+        content_parts.append(info)
+
+        # Citation bots
+        citation = Text()
+        if result.robots.citation_bots_ok:
+            citation.append("  ✓ Citation bots", style=_COLORS["excellent"])
+            if result.robots.citation_bots_explicit:
+                citation.append(" (explicit)", style=_COLORS["dim"])
+        else:
+            citation.append("  ✗ Citation bots missing", style=_COLORS["critical"])
+        content_parts.append(citation)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]🤖 Robots.txt[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_llms_card(result: AuditResult, score: int, max_score: int) -> Panel:
+    """Card dettagliata per llms.txt."""
+    content_parts = []
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    if not result.llms.found:
+        content_parts.append(Text("  File non trovato", style=f"italic {_COLORS['dim']}"))
+    else:
+        # Dettagli struttura
+        features = []
+        if result.llms.has_h1:
+            features.append(("H1", True))
+        else:
+            features.append(("H1", False))
+        if result.llms.has_sections:
+            features.append(("Sections", True))
+        else:
+            features.append(("Sections", False))
+        if result.llms.has_links:
+            features.append(("Links", True))
+        else:
+            features.append(("Links", False))
+        if result.llms.has_full:
+            features.append(("llms-full.txt", True))
+        else:
+            features.append(("llms-full.txt", False))
+
+        feat_text = Text("  ")
+        for label, present in features:
+            if present:
+                feat_text.append(f"✓ {label}", style=_COLORS["excellent"])
+            else:
+                feat_text.append(f"✗ {label}", style=_COLORS["dim"])
+            feat_text.append("  ", style="default")
+        content_parts.append(feat_text)
+
+        # Word count
+        wc = Text()
+        wc.append(f"  ~{result.llms.word_count:,} parole", style=_COLORS["dim"])
+        if result.llms.sections_count:
+            wc.append(f"  •  {result.llms.sections_count} sezioni", style=_COLORS["dim"])
+        content_parts.append(wc)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]📄 llms.txt[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_schema_card(result: AuditResult, score: int, max_score: int) -> Panel:
+    """Card dettagliata per Schema JSON-LD."""
+    content_parts = []
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    if not result.schema.found_types:
+        content_parts.append(Text("  Nessuno schema trovato", style=f"italic {_COLORS['dim']}"))
+    else:
+        # Schema trovati come tag inline
+        types_text = Text("  ")
+        for i, schema_type in enumerate(result.schema.found_types[:6]):
+            if i > 0:
+                types_text.append("  ", style="default")
+            types_text.append(f" {schema_type} ", style=f"bold {_COLORS['accent']} on #2e1065")
+        content_parts.append(types_text)
+
+        # Feature check
+        schema_features = []
+        if result.schema.has_faq:
+            schema_features.append("FAQPage")
+        if result.schema.has_article:
+            schema_features.append("Article")
+        if result.schema.has_organization:
+            schema_features.append("Organization")
+        if result.schema.has_website:
+            schema_features.append("WebSite")
+        if result.schema.has_sameas:
+            schema_features.append("sameAs")
+
+        if schema_features:
+            feat = Text()
+            feat.append("  ✓ ", style=_COLORS["excellent"])
+            feat.append(" • ".join(schema_features), style=_COLORS["dim"])
+            content_parts.append(feat)
+
+        # Richness
+        if result.schema.schema_richness_score > 0:
+            rich_text = Text()
+            rich_text.append(f"  Richness: {result.schema.schema_richness_score}/3", style=_COLORS["dim"])
+            rich_text.append(f"  (avg {result.schema.avg_attributes_per_schema:.0f} attr)", style=_COLORS["dim"])
+            content_parts.append(rich_text)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]🔗 Schema JSON-LD[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_meta_card(result: AuditResult, score: int, max_score: int) -> Panel:
+    """Card dettagliata per Meta Tags."""
+    content_parts = []
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    # Griglia meta tag 2x2
+    checks = [
+        ("Title", result.meta.has_title),
+        ("Description", result.meta.has_description),
+        ("Canonical", result.meta.has_canonical),
+        ("Open Graph", result.meta.has_og_title),
+    ]
+    row1 = Text("  ")
+    for label, present in checks[:2]:
+        icon = "✓" if present else "✗"
+        color_tag = _COLORS["excellent"] if present else _COLORS["critical"]
+        row1.append(f"{icon} {label}", style=color_tag)
+        row1.append("     ", style="default")
+    content_parts.append(row1)
+
+    row2 = Text("  ")
+    for label, present in checks[2:]:
+        icon = "✓" if present else "✗"
+        color_tag = _COLORS["excellent"] if present else _COLORS["critical"]
+        row2.append(f"{icon} {label}", style=color_tag)
+        row2.append("  ", style="default")
+    content_parts.append(row2)
+
+    # Anteprima title (se presente)
+    if result.meta.title_text:
+        title_preview = result.meta.title_text[:50]
+        if len(result.meta.title_text) > 50:
+            title_preview += "…"
+        preview = Text()
+        preview.append(f'  "{title_preview}"', style=f"italic {_COLORS['dim']}")
+        content_parts.append(preview)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]🏷️  Meta Tags[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_content_card(result: AuditResult, score: int, max_score: int) -> Panel:
+    """Card dettagliata per Content Quality."""
+    content_parts = []
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    # Metriche principali
+    metrics = Text("  ")
+    metrics.append(f"{result.content.word_count:,}", style=f"bold {_COLORS['brand_2']}")
+    metrics.append(" parole", style=_COLORS["dim"])
+    metrics.append("  •  ", style=_COLORS["dim"])
+    metrics.append(f"{result.content.heading_count}", style=f"bold {_COLORS['brand_2']}")
+    metrics.append(" headings", style=_COLORS["dim"])
+    if result.content.numbers_count:
+        metrics.append("  •  ", style=_COLORS["dim"])
+        metrics.append(f"{result.content.numbers_count}", style=f"bold {_COLORS['brand_2']}")
+        metrics.append(" stats", style=_COLORS["dim"])
+    content_parts.append(metrics)
+
+    # Feature check compatti
+    features = [
+        ("H1", result.content.has_h1),
+        ("Hierarchy", result.content.has_heading_hierarchy),
+        ("Lists", result.content.has_lists_or_tables),
+        ("Front-load", result.content.has_front_loading),
+        ("Ext. links", result.content.has_links),
+    ]
+    feat_text = Text("  ")
+    for label, present in features:
+        if present:
+            feat_text.append(f"✓ {label}", style=_COLORS["excellent"])
+        else:
+            feat_text.append(f"✗ {label}", style=_COLORS["dim"])
+        feat_text.append("  ", style="default")
+    content_parts.append(feat_text)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]📝 Content Quality[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_signals_card(result: AuditResult, score: int, max_score: int) -> Panel:
+    """Card compatta per Signals + AI Discovery combinati."""
+    content_parts = []
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    # Signals
+    signals_items = [
+        ("Lang attr", result.signals.has_lang),
+        ("RSS feed", result.signals.has_rss),
+        ("Freshness", result.signals.has_freshness),
+    ]
+    sig_text = Text("  ")
+    for label, present in signals_items:
+        if present:
+            sig_text.append(f"✓ {label}", style=_COLORS["excellent"])
+        else:
+            sig_text.append(f"✗ {label}", style=_COLORS["dim"])
+        sig_text.append("  ", style="default")
+    content_parts.append(sig_text)
+
+    # Lang value se presente
+    if result.signals.has_lang and result.signals.lang_value:
+        lang_text = Text()
+        lang_text.append(f"  lang=\"{result.signals.lang_value}\"", style=f"italic {_COLORS['dim']}")
+        content_parts.append(lang_text)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]📡 Signals[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_ai_discovery_card(result: AuditResult) -> Panel | None:
+    """Card per AI Discovery endpoints."""
+    ai = result.ai_discovery
+    if not ai.endpoints_found and not ai.has_well_known_ai:
+        # Mostra solo se c'è qualcosa o se il punteggio è > 0
+        pass
+
+    content_parts = []
+
+    # Punteggio AI Discovery
+    from geo_optimizer.core.scoring import _score_ai_discovery
+
+    score = _score_ai_discovery(ai)
+    max_score = 6
+
+    bar = _micro_bar(score, max_score)
+    content_parts.append(bar)
+    content_parts.append(Text())
+
+    endpoints = [
+        ("/.well-known/ai.txt", ai.has_well_known_ai),
+        ("/ai/summary.json", ai.has_summary),
+        ("/ai/faq.json", ai.has_faq),
+        ("/ai/service.json", ai.has_service),
+    ]
+    for path, present in endpoints:
+        line = Text("  ")
+        if present:
+            line.append("✓ ", style=_COLORS["excellent"])
+            line.append(path, style=f"bold {_COLORS['dim']}")
+        else:
+            line.append("✗ ", style=_COLORS["critical"])
+            line.append(path, style=_COLORS["dim"])
+        content_parts.append(line)
+
+    color = _score_color(score, max_score)
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]🔍 AI Discovery[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{score}[/][dim]/{max_score}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_cdn_card(result: AuditResult) -> Panel | None:
+    """Card per CDN AI Crawler Access."""
+    cdn = result.cdn_check
+    if not cdn.checked:
+        return None
+
+    content_parts = []
+
+    if cdn.cdn_detected:
+        header = Text()
+        header.append("  CDN: ", style=_COLORS["dim"])
+        header.append(cdn.cdn_detected.upper(), style=f"bold {_COLORS['brand_1']}")
+        content_parts.append(header)
+
+    # Bot results come tabella compatta
+    for bot in cdn.bot_results:
+        line = Text("  ")
+        if not bot["blocked"] and not bot["challenge_detected"]:
+            line.append("✓ ", style=_COLORS["excellent"])
+        else:
+            line.append("✗ ", style=_COLORS["critical"])
+        line.append(f"{bot['bot']}", style="bold")
+        line.append(f"  HTTP {bot['status']}", style=_COLORS["dim"])
+        if bot["challenge_detected"]:
+            line.append("  (challenge)", style=_COLORS["foundation"])
+        elif bot["blocked"]:
+            line.append("  (blocked)", style=_COLORS["critical"])
+        content_parts.append(line)
+
+    color = _COLORS["excellent"] if not cdn.any_blocked else _COLORS["critical"]
+    status = "PASS" if not cdn.any_blocked else "BLOCKED"
+
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]🛡️  CDN Crawler Access[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{status}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+def _build_js_card(result: AuditResult) -> Panel | None:
+    """Card per JS Rendering Check."""
+    js = result.js_rendering
+    if not js.checked:
+        return None
+
+    content_parts = []
+
+    metrics = Text()
+    metrics.append(f"  {js.raw_word_count:,}", style=f"bold {_COLORS['brand_2']}")
+    metrics.append(" parole in HTML", style=_COLORS["dim"])
+    metrics.append(f"  •  {js.raw_heading_count}", style=f"bold {_COLORS['brand_2']}")
+    metrics.append(" headings", style=_COLORS["dim"])
+    content_parts.append(metrics)
+
+    if js.framework_detected:
+        fw = Text()
+        fw.append("  Framework: ", style=_COLORS["dim"])
+        fw.append(js.framework_detected, style=f"bold {_COLORS['accent']}")
+        content_parts.append(fw)
+
+    if js.has_empty_root:
+        content_parts.append(Text("  ⚠ Container SPA vuoto rilevato", style=_COLORS["foundation"]))
+    if js.has_noscript_content:
+        content_parts.append(Text("  ℹ Fallback <noscript> presente", style=_COLORS["dim"]))
+
+    color = _COLORS["excellent"] if not js.js_dependent else _COLORS["critical"]
+    status = "PASS" if not js.js_dependent else "JS-DEPENDENT"
+
+    t = Table(show_header=False, box=None, expand=True, padding=0)
+    t.add_column(ratio=1)
+    for part in content_parts:
+        t.add_row(part)
+
+    return Panel(
+        t,
+        title="[bold]⚙️  JS Rendering[/]",
+        title_align="left",
+        subtitle=f"[bold {color}]{status}[/]",
+        subtitle_align="right",
+        border_style=color,
+        box=box.ROUNDED,
+        padding=(1, 2),
+    )
+
+
+# ── Main formatter ────────────────────────────────────────────────────────────
 
 
 def format_audit_rich(result: AuditResult) -> str:
-    """Format AuditResult with premium Rich card-based output.
+    """Formatta AuditResult con design dashboard immersivo.
 
-    Each check is rendered as a colored Panel (card) with:
-    - Title: icon + check name (top-left border)
-    - Subtitle: score (bottom-right border)
-    - Content: details + progress bar
-    - Border color: matches score status
+    Layout:
+    1. Header branding con logo gradient
+    2. Info panel con URL e HTTP status
+    3. Score gauge gigante con numero ASCII art
+    4. Barra stacked breakdown categorie
+    5. Check card dettagliate (7 categorie)
+    6. Card opzionali (CDN, JS Rendering)
+    7. Raccomandazioni con priorità
+    8. Footer motivazionale
 
-    Returns a string with ANSI codes for colored terminal output.
+    Ritorna stringa con codici ANSI per output terminale colorato.
     """
     from geo_optimizer import __version__
 
@@ -207,176 +776,174 @@ def format_audit_rich(result: AuditResult) -> str:
     buf = io.StringIO()
     console = Console(file=buf, width=80, force_terminal=True, no_color=_no_color)
 
-    # ── ASCII art header ──────────────────────────────────────────
+    # ── 1. Header branding ───────────────────────────────────────
     console.print()
-    for line, color in zip(_GEO_ASCII, _GEO_COLORS):
-        console.print(Align.center(Text(line, style=f"bold {color}")))
-    console.print(Align.center(Text("O P T I M I Z E R", style="bold dim")))
+    for line_text, color in _LOGO_LINES:
+        console.print(Align.center(Text(line_text, style=f"bold {color}")))
+    console.print(Align.center(Text("O P T I M I Z E R", style=f"bold {_COLORS['dim']}")))
     console.print()
 
-    # ── Info panel ────────────────────────────────────────────────
+    # ── 2. Info panel ────────────────────────────────────────────
+    urlparse(result.url).hostname or result.url
     info = Text()
-    info.append("  Target    ", style="dim")
-    info.append(result.url, style="bold cyan underline")
-    info.append("\n  Response  ", style="dim")
-    info.append(str(result.http_status), style="bold")
-    info.append(f"  •  {result.page_size:,} bytes", style="dim")
+    info.append("  🌐  ", style="default")
+    info.append(result.url, style=f"bold {_COLORS['brand_2']} underline")
+    info.append("\n  ⚡  ", style="default")
+    info.append(f"HTTP {result.http_status}", style="bold")
+    info.append(f"  •  {result.page_size:,} bytes", style=_COLORS["dim"])
 
     console.print(
         Panel(
             info,
             box=box.ROUNDED,
-            border_style="bright_blue",
-            subtitle=f"[dim]v{__version__}[/dim]",
+            border_style=_COLORS["brand_1"],
+            subtitle=f"[{_COLORS['dim']}]v{__version__}[/]",
             subtitle_align="right",
             padding=(0, 1),
         )
     )
 
-    # ── Main score gauge ──────────────────────────────────────────
-    main_color = _score_color(result.score)
+    # ── 3. Score gauge gigante ───────────────────────────────────
+    main_color = _band_color(result.band)
+    band_cfg = _BAND_CONFIG.get(result.band, _BAND_CONFIG["critical"])
 
     console.print()
-    score_display = Text()
-    score_display.append(f"{result.score}", style=f"bold {main_color}")
-    score_display.append(" / 100", style="dim")
-    console.print(Align.center(score_display))
 
-    # Score bar (centered)
-    main_filled = int(result.score * 50 / 100)
-    main_empty = 50 - main_filled
+    # Numero grande ASCII art
+    big_lines = _render_big_number(result.score, main_color)
+    for line in big_lines:
+        # Aggiungi " / 100" accanto alla riga centrale
+        console.print(Align.center(line))
+
+    # Sottotitolo score
+    score_sub = Text()
+    score_sub.append("/ 100", style=f"bold {_COLORS['dim']}")
+    console.print(Align.center(score_sub))
+    console.print()
+
+    # Barra score principale (gradient)
+    main_width = 60
+    main_filled = int(result.score * main_width / 100)
+    main_empty = main_width - main_filled
     main_bar = Text()
-    main_bar.append("━" * main_filled, style=f"bold {main_color}")
-    main_bar.append("━" * main_empty, style="bright_black")
+    main_bar.append("█" * main_filled, style=f"bold {main_color}")
+    main_bar.append("░" * main_empty, style=_COLORS["dim"])
     console.print(Align.center(main_bar))
 
-    # Band label
-    band_labels = {
-        "excellent": "EXCELLENT — Site is well optimized for AI engines",
-        "good": "GOOD — Core optimizations in place",
-        "foundation": "FOUNDATION — Core elements missing",
-        "critical": "CRITICAL — Not visible to AI engines",
-    }
-    band_icons = {"excellent": "🏆", "good": "✅", "foundation": "⚠️ ", "critical": "❌"}
-    band_icon = band_icons.get(result.band, "")
-    band_label = band_labels.get(result.band, result.band.upper())
-    console.print(Align.center(Text(f"{band_icon}  {band_label}", style=main_color)))
+    # Band label con icona e descrizione
+    band_text = Text()
+    band_text.append(f"{band_cfg['icon']}  ", style="default")
+    band_text.append(band_cfg["label"], style=f"bold {main_color}")
+    band_text.append(f"  —  {band_cfg['desc']}", style=_COLORS["dim"])
+    console.print(Align.center(band_text))
     console.print()
 
-    # ── Check cards ───────────────────────────────────────────────
-    checks = [
-        ("Robots.txt", _robots_score(result), 18, result.robots.citation_bots_ok, _build_robots_content),
-        ("llms.txt", _llms_score(result), 18, result.llms.found and result.llms.has_h1, _build_llms_content),
-        ("Schema JSON-LD", _schema_score(result), 22, result.schema.has_website, _build_schema_content),
-        (
-            "Meta Tags",
-            _meta_score(result),
-            20,
-            result.meta.has_title and result.meta.has_description,
-            _build_meta_content,
-        ),
-        ("Content Quality", _content_score(result), 14, result.content.has_h1, _build_content_content),
+    # ── 4. Breakdown stacked bar ─────────────────────────────────
+    r_score = _robots_score(result)
+    l_score = _llms_score(result)
+    s_score = _schema_score(result)
+    m_score = _meta_score(result)
+    c_score = _content_score(result)
+    sig_score = _signals_score(result)
+    from geo_optimizer.core.scoring import _score_ai_discovery
+
+    ai_score = _score_ai_discovery(result.ai_discovery) if result.ai_discovery else 0
+
+    categories = [
+        ("Robots", r_score, 18),
+        ("llms.txt", l_score, 18),
+        ("Schema", s_score, 22),
+        ("Meta", m_score, 14),
+        ("Content", c_score, 14),
+        ("Signals", sig_score, 8),
+        ("AI Disc.", ai_score, 6),
     ]
 
-    for name, score, max_score, passed, builder in checks:
-        icon = _status_icon(passed)
-        color = _score_color(score, max_score)
-        bar = _render_bar(score, max_score)
-        content = builder(result, bar)
+    stacked = _render_stacked_bar(categories, width=68)
+    legend = _render_legend(categories)
 
-        console.print(
-            Panel(
-                content,
-                title=f"{icon} [bold]{name}[/]",
-                title_align="left",
-                subtitle=f"[bold {color}]{score} / {max_score}[/]",
-                subtitle_align="right",
-                border_style=color,
-                box=box.ROUNDED,
-                padding=(1, 2),
-            )
+    breakdown_content = Table(show_header=False, box=None, expand=True, padding=0)
+    breakdown_content.add_column(ratio=1)
+    breakdown_content.add_row(Align.center(stacked))
+    breakdown_content.add_row(Text())
+    breakdown_content.add_row(Align.center(legend))
+
+    console.print(
+        Panel(
+            breakdown_content,
+            title="[bold]📊 Score Breakdown[/]",
+            title_align="left",
+            border_style=_COLORS["brand_1"],
+            box=box.ROUNDED,
+            padding=(1, 2),
         )
+    )
 
-    # ── CDN AI Crawler Check (#225) ──────────────────────────────
-    if result.cdn_check.checked:
-        cdn = result.cdn_check
-        cdn_content = Text()
-        if cdn.cdn_detected:
-            cdn_content.append(f"  CDN detected: {cdn.cdn_detected.upper()}\n", style="dim")
-        cdn_content.append(
-            f"  Browser baseline: HTTP {cdn.browser_status} ({cdn.browser_content_length:,} bytes)\n", style="dim"
-        )
-        for bot in cdn.bot_results:
-            icon = "✅" if not bot["blocked"] and not bot["challenge_detected"] else "❌"
-            status_info = f"HTTP {bot['status']}"
-            if bot["challenge_detected"]:
-                status_info += " (challenge page)"
-            elif bot["blocked"]:
-                status_info += " (blocked)"
-            cdn_content.append(f"  {icon} {bot['bot']}: {status_info} ({bot['content_length']:,} bytes)\n")
+    # ── 5. Check card dettagliate ────────────────────────────────
+    console.print()
+    console.print(_build_robots_card(result, r_score, 18))
+    console.print(_build_llms_card(result, l_score, 18))
+    console.print(_build_schema_card(result, s_score, 22))
+    console.print(_build_meta_card(result, m_score, 14))
+    console.print(_build_content_card(result, c_score, 14))
+    console.print(_build_signals_card(result, sig_score, 8))
+    console.print(_build_ai_discovery_card(result))
 
-        cdn_color = "green" if not cdn.any_blocked else "red"
-        cdn_icon = "✅" if not cdn.any_blocked else "❌"
-        console.print(
-            Panel(
-                cdn_content,
-                title=f"{cdn_icon} [bold]CDN AI Crawler Access[/]",
-                title_align="left",
-                subtitle=f"[bold {cdn_color}]{'PASS' if not cdn.any_blocked else 'BLOCKED'}[/]",
-                subtitle_align="right",
-                border_style=cdn_color,
-                box=box.ROUNDED,
-                padding=(1, 2),
-            )
-        )
+    # ── 6. Card opzionali ────────────────────────────────────────
+    cdn_card = _build_cdn_card(result)
+    if cdn_card:
+        console.print(cdn_card)
 
-    # ── JS Rendering Check (#226) ────────────────────────────────
-    if result.js_rendering.checked:
-        js = result.js_rendering
-        js_content = Text()
-        js_content.append(f"  Words in raw HTML: {js.raw_word_count}\n")
-        js_content.append(f"  Headings in raw HTML: {js.raw_heading_count}\n")
-        if js.framework_detected:
-            js_content.append(f"  Framework: {js.framework_detected}\n", style="dim")
-        if js.has_empty_root:
-            js_content.append("  ⚠️  Empty SPA root container detected\n", style="yellow")
-        if js.has_noscript_content:
-            js_content.append("  ℹ️  <noscript> fallback content found\n", style="dim")
-        js_content.append(f"  {js.details}\n")
+    js_card = _build_js_card(result)
+    if js_card:
+        console.print(js_card)
 
-        js_color = "green" if not js.js_dependent else "red"
-        js_icon = "✅" if not js.js_dependent else "❌"
-        console.print(
-            Panel(
-                js_content,
-                title=f"{js_icon} [bold]JS Rendering Access[/]",
-                title_align="left",
-                subtitle=f"[bold {js_color}]{'PASS' if not js.js_dependent else 'JS-DEPENDENT'}[/]",
-                subtitle_align="right",
-                border_style=js_color,
-                box=box.ROUNDED,
-                padding=(1, 2),
-            )
-        )
-
-    # ── Recommendations card ──────────────────────────────────────
+    # ── 7. Raccomandazioni ───────────────────────────────────────
     if result.recommendations:
-        rec_lines = []
+        rec_parts = []
         for i, rec in enumerate(result.recommendations, 1):
-            rec_lines.append(f"  [yellow bold]{i}.[/]  {rec}")
-        rec_text = "\n".join(rec_lines)
+            rec_line = Text()
+            rec_line.append(f"  {i}. ", style=f"bold {_COLORS['foundation']}")
+            rec_line.append(rec, style="default")
+            rec_parts.append(rec_line)
+
+        rec_table = Table(show_header=False, box=None, expand=True, padding=0)
+        rec_table.add_column(ratio=1)
+        for part in rec_parts:
+            rec_table.add_row(part)
 
         console.print()
         console.print(
             Panel(
-                rec_text,
-                title="💡 [bold]Recommendations[/]",
+                rec_table,
+                title="[bold]💡 Raccomandazioni[/]",
                 title_align="left",
-                border_style="yellow",
+                border_style=_COLORS["foundation"],
                 box=box.ROUNDED,
                 padding=(1, 2),
             )
         )
+
+    # ── 8. Footer ────────────────────────────────────────────────
+    console.print()
+    footer = Text()
+    footer.append("  GEO Optimizer", style=f"bold {_COLORS['brand_1']}")
+    footer.append(f"  v{__version__}", style=_COLORS["dim"])
+    footer.append("  •  ", style=_COLORS["dim"])
+    footer.append("github.com/Auriti-Labs/geo-optimizer-skill", style=f"{_COLORS['dim']} underline")
+    console.print(Align.center(footer))
+
+    # Messaggio motivazionale basato sulla banda
+    console.print()
+    motiv_messages = {
+        "excellent": "Il tuo sito è pronto per i motori AI. Continua così! 🚀",
+        "good": "Buon lavoro! Pochi ritocchi per raggiungere l'eccellenza.",
+        "foundation": "Le basi ci sono. Segui le raccomandazioni per scalare.",
+        "critical": "Inizia dalle raccomandazioni — ogni punto conta.",
+    }
+    motiv = motiv_messages.get(result.band, "")
+    if motiv:
+        console.print(Align.center(Text(motiv, style=f"italic {_COLORS['dim']}")))
 
     console.print()
     return buf.getvalue()

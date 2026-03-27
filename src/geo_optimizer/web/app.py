@@ -629,9 +629,10 @@ async def audit_pdf(
     if not await _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
 
-    # Normalizza URL
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Validazione formato URL
+    url, error = _normalize_url(url)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
     # Validazione anti-SSRF
     safe, reason = validate_public_url(url)
@@ -714,9 +715,10 @@ async def badge(
     if not await _check_rate_limit(_get_client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
 
-    # Normalize URL
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Validazione formato URL
+    url, error = _normalize_url(url)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
     # Anti-SSRF validation
     safe, reason = validate_public_url(url)
@@ -799,9 +801,13 @@ async def badge_endpoint(
             status_code=429,
         )
 
-    # Normalizza URL
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    # Validazione formato URL
+    url, error = _normalize_url(url)
+    if error:
+        return JSONResponse(
+            {"schemaVersion": 1, "label": "GEO Score", "message": "invalid url", "color": "lightgrey"},
+            status_code=400,
+        )
 
     # Validazione anti-SSRF
     safe, reason = validate_public_url(url)
@@ -843,13 +849,38 @@ async def badge_endpoint(
     )
 
 
+def _normalize_url(raw: str) -> tuple[str | None, str]:
+    """Normalizza e valida formato URL.
+
+    Ritorna (url_normalizzato, errore). Se errore è non-vuoto, l'URL è invalido.
+    """
+    from urllib.parse import urlparse
+
+    url = raw.strip()
+
+    # Vuoto o contiene spazi → non è un URL
+    if not url or " " in url:
+        return None, "Invalid input: please enter a URL (e.g. https://example.com)"
+
+    # Aggiungi https:// se manca il protocollo
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    # Deve avere hostname con almeno un punto (dominio reale)
+    parsed = urlparse(url)
+    if not parsed.hostname or "." not in parsed.hostname:
+        return None, "Invalid URL: a valid domain is required (e.g. https://example.com)"
+
+    return url, ""
+
+
 async def _run_audit(url: str) -> JSONResponse:
     """Common logic for running an audit."""
     from geo_optimizer.utils.validators import validate_public_url
 
-    # Normalize URL
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
+    url, error = _normalize_url(url)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
     # Anti-SSRF validation
     safe, reason = validate_public_url(url)
