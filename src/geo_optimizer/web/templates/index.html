@@ -36,15 +36,21 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 
 .wrapper{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:2rem 1.5rem}
 
-/* ─── Nav ─── */
-nav{display:flex;align-items:center;justify-content:center;gap:1.5rem;
-  padding:.75rem 0;margin-bottom:2.5rem;border-bottom:1px solid var(--border)}
-nav a{color:var(--text-dim);font-size:.85rem;font-weight:500;letter-spacing:.02em;
-  transition:color .2s}
-nav a:hover,nav a.active{color:var(--text)}
-.version-badge{font-family:var(--mono);font-size:.7rem;color:var(--accent);
-  background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);
-  padding:.15rem .5rem;border-radius:20px;margin-left:.5rem}
+/* ─── Professional Nav ─── */
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;margin-bottom:2.5rem;background:rgba(6,8,15,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm)}
+.nav-logo{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:.95rem;color:var(--text);white-space:nowrap;text-decoration:none}
+.nav-logo .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
+.nav-logo .ver{font-family:var(--mono);font-size:.65rem;color:var(--accent);background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:.1rem .4rem;border-radius:20px;margin-left:.25rem}
+.nav-links{display:flex;align-items:center;gap:1.25rem}
+.nav-links a{color:var(--text-dim);font-size:.82rem;font-weight:500;letter-spacing:.02em;transition:color .2s;white-space:nowrap}
+.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.nav-cta{display:flex;align-items:center;gap:.4rem;color:var(--text-dim);font-size:.82rem;font-weight:500;border:1px solid var(--border);padding:.3rem .7rem;border-radius:20px;transition:all .2s;white-space:nowrap}
+.nav-cta:hover{color:var(--text);border-color:var(--border-hover)}
+.nav-cta svg{width:14px;height:14px;fill:currentColor;flex-shrink:0}
+.nav-cta .star-count{font-family:var(--mono);font-size:.75rem}
+@media(max-width:768px){.nav-links{overflow-x:auto;gap:.9rem;scrollbar-width:none}.nav-links::-webkit-scrollbar{display:none}.nav-logo .ver{display:none}.nav-cta .star-count{display:none}}
+@media(max-width:480px){.nav-logo span:not(.dot){display:none}.nav-logo .ver{display:none}}
+.version-badge{display:none}
 
 /* ─── Hero ─── */
 .hero{text-align:center;margin-bottom:2.5rem}
@@ -145,6 +151,15 @@ nav a:hover,nav a.active{color:var(--text)}
   padding:.4rem .8rem;border-radius:20px;transition:all .2s}
 .action-link:hover{color:var(--text);border-color:var(--border-hover)}
 
+/* ─── Manifesto Teaser ─── */
+.manifesto-teaser{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem}
+.manifesto-teaser h3{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.5rem}
+.manifesto-teaser p{color:var(--text-dim);font-size:.85rem;line-height:1.65;margin-bottom:.85rem}
+.manifesto-pills{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.85rem}
+.manifesto-pill{font-size:.75rem;font-weight:500;padding:.25rem .6rem;border-radius:20px;border:1px solid var(--border);color:var(--text-dim)}
+.manifesto-link{font-size:.82rem;color:var(--accent);font-weight:500}
+.manifesto-link:hover{color:var(--accent2)}
+
 /* ─── Footer ─── */
 footer{text-align:center;padding:2rem 0 1rem;border-top:1px solid var(--border);
   margin-top:2rem;color:var(--text-muted);font-size:.8rem}
@@ -185,12 +200,24 @@ footer .credit{font-size:.72rem;color:var(--text-muted)}
 
 <div class="wrapper">
   <nav>
-    <a href="/" class="active">Audit</a>
-    <a href="/compare">Compare</a>
-    <a href="/roadmap">Roadmap</a>
-    <a href="/research">Research</a>
-    <a href="https://auriti-labs.github.io/geo-optimizer-skill/">Docs</a>
-    <span class="version-badge" id="ver-badge">...</span>
+    <div class="nav-logo">
+      <span class="dot"></span>
+      <span>GEO Optimizer</span>
+      <span class="ver" id="nav-ver">v3.18.5</span>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="active">Audit</a>
+      <a href="/compare">Compare</a>
+      <a href="/research">Research</a>
+      <a href="/roadmap">Roadmap</a>
+      <a href="https://auriti-labs.github.io/geo-optimizer-skill/">Docs</a>
+      <a href="/manifesto">Manifesto</a>
+    </div>
+    <a class="nav-cta" href="https://github.com/Auriti-Labs/geo-optimizer-skill" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 .25a7.75 7.75 0 1 0 0 15.5A7.75 7.75 0 0 0 8 .25Zm3.89 4.74-1.67 7.9c-.12.54-.44.67-.9.42L7.9 11.84l-1.16 1.12c-.13.13-.24.24-.49.24l.18-2.5 4.56-4.12c.2-.17-.04-.27-.3-.1L3.43 11.1 1.13 10.4c-.53-.16-.54-.53.11-.78l10.57-4.08c.44-.16.83.11.08.4Z"/></svg>
+      GitHub
+      <span class="star-count" id="nav-stars"></span>
+    </a>
   </nav>
 
   <div class="hero">
@@ -250,6 +277,18 @@ footer .credit{font-size:.72rem;color:var(--text-muted)}
     <div class="actions" id="actions"></div>
   </div>
 
+  <div class="manifesto-teaser">
+    <h3>Why this tool exists</h3>
+    <p>AI search is already deciding which websites get cited and which don't. The signals are documented, the research is published — but most of the web has no idea. GEO Optimizer exists to make AI visibility auditable, transparent, and accessible to every developer, not just teams with enterprise budgets.</p>
+    <div class="manifesto-pills">
+      <span class="manifesto-pill">Auditability</span>
+      <span class="manifesto-pill">Scientific Foundation</span>
+      <span class="manifesto-pill">Open Source</span>
+      <span class="manifesto-pill">Precision</span>
+    </div>
+    <a class="manifesto-link" href="/manifesto">Read the full manifesto →</a>
+  </div>
+
   <footer>
     <div class="install-row">
       <span class="install-cmd">pip install geo-optimizer-skill</span>
@@ -283,7 +322,7 @@ const SPIN_MSGS = ['Checking robots.txt...','Analyzing llms.txt...','Parsing sch
 (async function init(){
   try{
     const h = await fetch('/health');
-    if(h.ok){const d=await h.json();document.getElementById('ver-badge').textContent='v'+d.version}
+    if(h.ok){const d=await h.json();var vb=document.getElementById('nav-ver');if(vb)vb.textContent='v'+d.version;}
   }catch(e){}
   try{
     const s = await fetch('/api/stats');
@@ -293,6 +332,7 @@ const SPIN_MSGS = ['Checking robots.txt...','Analyzing llms.txt...','Parsing sch
       document.getElementById('stars').textContent=fmt(d.github_stars);
       document.getElementById('downloads').textContent=fmt(d.pypi_downloads_month);
       document.getElementById('audits').textContent=fmt(d.audits_run);
+      var ns=document.getElementById('nav-stars');if(ns&&d.github_stars)ns.textContent='★ '+d.github_stars;
     }
   }catch(e){}
 })();

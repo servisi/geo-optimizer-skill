@@ -325,6 +325,16 @@ async def research_page(request: Request):
     return html.replace("__NONCE_ATTR__", nonce_attr)
 
 
+@app.get("/manifesto", response_class=HTMLResponse)
+async def manifesto_page(request: Request):
+    """The GEO Optimizer Manifesto — philosophy and principles."""
+    nonce = getattr(request.state, "csp_nonce", "")
+    nonce_attr = f' nonce="{nonce}"' if nonce else ""
+    template_path = Path(__file__).parent / "templates" / "manifesto.html"
+    html = template_path.read_text(encoding="utf-8")
+    return HTMLResponse(html.replace("__NONCE_ATTR__", nonce_attr))
+
+
 # ─── Documentazione online (Markdown → HTML) ─────────────────────────────────
 
 # Mappa slug → titolo per la sidebar e i meta tag

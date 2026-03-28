@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The GEO Optimizer Manifesto — Why AI Search Visibility Should Be Open</title>
+<meta name="description" content="Why AI search visibility should be auditable, open, and accessible to every website on the internet. The GEO Optimizer Manifesto.">
+<link rel="canonical" href="https://geo-optimizer-web.onrender.com/manifesto">
+<meta property="og:title" content="The GEO Optimizer Manifesto">
+<meta property="og:description" content="Why AI search visibility should be auditable, open, and accessible to every website on the internet.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://geo-optimizer-web.onrender.com/manifesto">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080f;--bg-card:#0d1117;--bg-card-hover:#111820;
+  --border:#1b2332;--border-hover:#2d3a4f;
+  --text:#e2e8f0;--text-dim:#64748b;--text-muted:#475569;
+  --accent:#3b82f6;--accent2:#8b5cf6;
+  --green:#22c55e;--cyan:#06b6d4;--yellow:#eab308;--red:#ef4444;
+  --radius:12px;--radius-sm:8px;
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:var(--accent2)}
+code{font-family:var(--mono);font-size:.85em;background:#1e293b;padding:.15em .4em;border-radius:4px}
+
+/* Grain overlay */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  opacity:.03;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* Glow orbs */
+.glow-orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.glow-orb.blue{width:500px;height:500px;background:rgba(59,130,246,.07);top:-150px;left:-150px}
+.glow-orb.purple{width:400px;height:400px;background:rgba(139,92,246,.06);bottom:-50px;right:-100px}
+
+/* ─── Layout ─── */
+.wrapper{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:2rem 1.5rem}
+
+/* ─── Professional Nav ─── */
+nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.65rem 1rem;margin-bottom:3rem;
+  background:rgba(6,8,15,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  border-radius:0 0 var(--radius-sm) var(--radius-sm);
+}
+.nav-logo{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:.95rem;color:var(--text);white-space:nowrap}
+.nav-logo .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
+.nav-logo .ver{font-family:var(--mono);font-size:.65rem;color:var(--accent);background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:.1rem .4rem;border-radius:20px;margin-left:.25rem}
+.nav-links{display:flex;align-items:center;gap:1.25rem}
+.nav-links a{color:var(--text-dim);font-size:.82rem;font-weight:500;letter-spacing:.02em;transition:color .2s;white-space:nowrap}
+.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.nav-cta{display:flex;align-items:center;gap:.4rem;color:var(--text-dim);font-size:.82rem;font-weight:500;border:1px solid var(--border);padding:.3rem .7rem;border-radius:20px;transition:all .2s;white-space:nowrap}
+.nav-cta:hover{color:var(--text);border-color:var(--border-hover)}
+.nav-cta svg{width:14px;height:14px;fill:currentColor;flex-shrink:0}
+.nav-cta .star-count{font-family:var(--mono);font-size:.75rem}
+@media(max-width:768px){
+  .nav-links{overflow-x:auto;gap:.9rem;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-logo .ver{display:none}
+  .nav-cta .star-count{display:none}
+}
+@media(max-width:480px){
+  nav{padding:.5rem .75rem}
+  .nav-logo span:not(.dot){display:none}
+  .nav-logo .ver{display:none}
+}
+
+/* ─── Hero ─── */
+.hero{text-align:center;margin-bottom:4rem;padding:2rem 0}
+.hero-eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;opacity:.8}
+.hero h1{font-size:3.2rem;font-weight:700;letter-spacing:-.04em;line-height:1.1;
+  background:linear-gradient(135deg,#60a5fa 0%,#a78bfa 50%,#60a5fa 100%);
+  background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimmer 5s ease infinite;margin-bottom:1.25rem}
+@keyframes shimmer{0%,100%{background-position:0% center}50%{background-position:200% center}}
+.hero-sub{color:var(--text-dim);font-size:1.15rem;line-height:1.65;max-width:560px;margin:0 auto}
+
+/* ─── Table of contents ─── */
+.toc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:3rem}
+.toc-title{font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:.75rem}
+.toc ol{padding-left:1.25rem;color:var(--text-dim);font-size:.85rem;line-height:2}
+.toc a{color:var(--text-dim);transition:color .2s}
+.toc a:hover{color:var(--accent)}
+
+/* ─── Sections ─── */
+section{margin-bottom:4rem}
+section h2{font-size:1.6rem;font-weight:700;letter-spacing:-.025em;margin-bottom:1.5rem;
+  padding-bottom:.75rem;border-bottom:1px solid var(--border);color:var(--text)}
+.section-num{font-family:var(--mono);font-size:.75rem;color:var(--accent);display:block;margin-bottom:.25rem;letter-spacing:.08em}
+section p{color:var(--text-dim);line-height:1.75;margin-bottom:1.1rem;font-size:.97rem}
+section p:last-child{margin-bottom:0}
+
+/* ─── Blockquote ─── */
+blockquote{border-left:3px solid var(--accent);padding:.75rem 1.25rem;margin:1.5rem 0;background:rgba(59,130,246,.04);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+blockquote p{color:var(--text);font-size:1rem;font-style:italic;margin-bottom:0}
+
+/* ─── Principle Cards ─── */
+.principles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;margin-top:1.5rem}
+.principle-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;transition:border-color .2s}
+.principle-card:hover{border-color:var(--border-hover)}
+.principle-card h3{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.principle-card h3::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.principle-card p{color:var(--text-dim);font-size:.87rem;line-height:1.65;margin-bottom:0}
+
+/* ─── Signals Table ─── */
+.signals-grid{display:flex;flex-direction:column;gap:1rem;margin-top:1.5rem}
+.signal-row{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;display:grid;grid-template-columns:180px 1fr;gap:1rem;align-items:start;transition:border-color .2s}
+.signal-row:hover{border-color:var(--border-hover)}
+.signal-meta{display:flex;flex-direction:column;gap:.35rem}
+.signal-name{font-weight:700;font-size:.95rem;color:var(--text)}
+.signal-pts{font-family:var(--mono);font-size:.75rem;padding:.2rem .5rem;border-radius:20px;display:inline-block;width:fit-content}
+.signal-pts.high{color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2)}
+.signal-pts.med{color:var(--yellow);background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.2)}
+.signal-pts.low{color:var(--cyan);background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2)}
+.signal-desc{color:var(--text-dim);font-size:.87rem;line-height:1.65}
+
+/* ─── Audience List ─── */
+.audience-list{list-style:none;display:flex;flex-direction:column;gap:.85rem;margin-top:1rem}
+.audience-list li{display:flex;align-items:flex-start;gap:.75rem;color:var(--text-dim);font-size:.95rem;line-height:1.65}
+.audience-list li::before{content:'→';color:var(--accent);font-family:var(--mono);flex-shrink:0;margin-top:.05em}
+
+/* ─── Commitments ─── */
+.commitments{display:flex;flex-direction:column;gap:1rem;margin-top:1rem}
+.commitment{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:0 var(--radius) var(--radius) 0;padding:1.1rem 1.25rem}
+.commitment strong{color:var(--text);font-size:.95rem;display:block;margin-bottom:.35rem}
+.commitment p{color:var(--text-dim);font-size:.87rem;line-height:1.65;margin-bottom:0}
+
+/* ─── Bottom Line ─── */
+.bottom-line{background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(139,92,246,.06));border:1px solid var(--border);border-radius:var(--radius);padding:2.5rem 2rem;text-align:center;margin-bottom:3rem}
+.bottom-line p{color:var(--text-dim);line-height:1.75;margin-bottom:1rem;font-size:.97rem;max-width:600px;margin-inline:auto}
+.bottom-line p:last-of-type{margin-bottom:0}
+.bottom-line .conclusion{font-size:1.05rem;color:var(--text);font-style:italic;margin-top:1.5rem}
+
+/* ─── Footer ─── */
+footer{text-align:center;padding:2rem 0 1rem;border-top:1px solid var(--border);
+  margin-top:2rem;color:var(--text-muted);font-size:.8rem}
+footer .links{display:flex;justify-content:center;gap:1.25rem;margin-bottom:.75rem;flex-wrap:wrap}
+footer .links a{color:var(--text-muted);font-size:.8rem}
+footer .credit{font-size:.72rem;color:var(--text-muted)}
+
+/* ─── Responsive ─── */
+@media(max-width:600px){
+  .wrapper{padding:1.25rem 1rem}
+  .hero h1{font-size:2.2rem}
+  .hero-sub{font-size:1rem}
+  .principles-grid{grid-template-columns:1fr}
+  .signal-row{grid-template-columns:1fr;gap:.5rem}
+  section h2{font-size:1.3rem}
+  .bottom-line{padding:1.5rem 1rem}
+}
+</style>
+
+<!-- Schema JSON-LD: WebPage -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"The GEO Optimizer Manifesto","url":"https://geo-optimizer-web.onrender.com/manifesto","description":"Why AI search visibility should be auditable, open, and accessible to every website on the internet.","isPartOf":{"@type":"WebSite","name":"GEO Optimizer","url":"https://geo-optimizer-web.onrender.com"},"author":{"@type":"Organization","name":"Auriti Labs","url":"https://github.com/Auriti-Labs"},"datePublished":"2025-01-01","inLanguage":"en"}
+</script>
+</head>
+<body>
+<div class="glow-orb blue"></div>
+<div class="glow-orb purple"></div>
+
+<div class="wrapper">
+  <nav>
+    <div class="nav-logo">
+      <span class="dot"></span>
+      <span>GEO Optimizer</span>
+      <span class="ver" id="nav-ver">v3.18.5</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Audit</a>
+      <a href="/compare">Compare</a>
+      <a href="/research">Research</a>
+      <a href="/roadmap">Roadmap</a>
+      <a href="https://auriti-labs.github.io/geo-optimizer-skill/">Docs</a>
+      <a href="/manifesto" class="active">Manifesto</a>
+    </div>
+    <a class="nav-cta" href="https://github.com/Auriti-Labs/geo-optimizer-skill" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 .25a7.75 7.75 0 1 0 0 15.5A7.75 7.75 0 0 0 8 .25Zm3.89 4.74-1.67 7.9c-.12.54-.44.67-.9.42L7.9 11.84l-1.16 1.12c-.13.13-.24.24-.49.24l.18-2.5 4.56-4.12c.2-.17-.04-.27-.3-.1L3.43 11.1 1.13 10.4c-.53-.16-.54-.53.11-.78l10.57-4.08c.44-.16.83.11.08.4Z"/></svg>
+      GitHub
+      <span class="star-count" id="nav-stars"></span>
+    </a>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">Open Source · Research-Backed · Developer-First</div>
+    <h1>The GEO Optimizer<br>Manifesto</h1>
+    <p class="hero-sub">Why AI search visibility should be auditable, open, and accessible to every website on the internet.</p>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#s1">The web changed. Most websites don't know it yet.</a></li>
+      <li><a href="#s2">The visibility gap is a tooling problem.</a></li>
+      <li><a href="#s3">What GEO Optimizer stands for.</a></li>
+      <li><a href="#s4">The eight signals that determine AI visibility.</a></li>
+      <li><a href="#s5">Who this is for.</a></li>
+      <li><a href="#s6">What we commit to.</a></li>
+      <li><a href="#s7">The bottom line.</a></li>
+    </ol>
+  </div>
+
+  <!-- Section 1 -->
+  <section id="s1">
+    <span class="section-num">01 —</span>
+    <h2>The web changed. Most websites don't know it yet.</h2>
+    <p>For two decades, search worked the same way. You published content. A crawler indexed it. Users clicked links. The cycle was legible, auditable, understood. An entire ecosystem of tools, agencies, and expertise grew around it — because it was a system you could study and improve.</p>
+    <blockquote><p>That cycle is breaking.</p></blockquote>
+    <p>When someone asks ChatGPT which project management tool to use, they don't see ten blue links. They get a synthesized answer. One or two sources get cited. The rest don't exist. When Perplexity answers a question about the best Python libraries for data science, it doesn't return a SERP — it returns a verdict. When Claude summarizes "the leading GEO optimization tools," it draws from a training corpus and live retrieval that most websites have never been optimized for.</p>
+    <p>This is Generative Engine Optimization. And right now, most of the web is invisible to it.</p>
+    <p>The shift isn't hypothetical. ChatGPT reached 500 million weekly active users in early 2025. Perplexity processes hundreds of millions of queries per month. AI Overviews appear in a significant fraction of Google searches. The number of users receiving their first contact with information through a synthesized AI answer is growing every quarter. Gartner projects that by 2026, traditional search engine volume will drop 25% as AI chatbots capture informational queries.</p>
+    <p>Most websites have never accounted for this.</p>
+  </section>
+
+  <!-- Section 2 -->
+  <section id="s2">
+    <span class="section-num">02 —</span>
+    <h2>The visibility gap is a tooling problem.</h2>
+    <p>The problem isn't that the signals are unknown. Research from Princeton's NLP group (KDD 2024) was the first to quantify what actually increases AI citation rates: source citations boost visibility by 27–115%. Quotation inclusion adds 41%. Statistical claims add 33%. Fluent, authoritative prose adds 29%. These are measurable effects from a peer-reviewed study on 10,000 queries validated on real Perplexity.ai responses.</p>
+    <p>AutoGEO (ICLR 2026, Carnegie Mellon) went further — using LLM-based rule extraction and reinforcement learning to improve on Princeton's baseline by 50.99%. The research is there. The signals are documented. The <code>llms.txt</code> specification from Answer.AI is published. The <code>geo-checklist.dev</code> standard exists. The path from "invisible" to "cited" is not a mystery.</p>
+    <p>The problem is that most website owners have no idea any of this exists.</p>
+    <p>Enterprise SEO platforms are adding "AI visibility" dashboards. They cost hundreds or thousands of dollars per month. They're built for large marketing teams, not independent developers or small agencies. They're walled gardens: black boxes that produce scores without explaining exactly what signal is missing or what fixing it is worth.</p>
+    <p>Meanwhile, every piece of data these platforms analyze is public. The <code>robots.txt</code> file is accessible to anyone. The JSON-LD schema is in the HTML source. Whether a site allows GPTBot, ClaudeBot, or PerplexityBot can be checked in seconds. Whether a site has a properly structured <code>llms.txt</code>, an <code>/ai/summary.json</code>, a <code>FAQPage</code> schema — all of this is inspectable without a subscription.</p>
+    <blockquote><p>The visibility gap isn't a data problem. It's an access problem. It's a tooling problem.</p></blockquote>
+  </section>
+
+  <!-- Section 3 -->
+  <section id="s3">
+    <span class="section-num">03 —</span>
+    <h2>What GEO Optimizer stands for.</h2>
+    <div class="principles-grid">
+      <div class="principle-card">
+        <h3>Auditability over opacity</h3>
+        <p>A score means nothing if you can't verify how it was calculated. Every check in our scoring engine is documented, tied to published research, and open for inspection. When we say Schema JSON-LD is worth 16 points, you can read exactly which signals we measure and why. When we say a site scores 47/100, we tell you exactly which 53 points are missing and precisely what it would take to earn them back.</p>
+      </div>
+      <div class="principle-card">
+        <h3>Scientific foundation over marketing claims</h3>
+        <p>We don't invent signals. Every check in our engine traces back to empirical research or documented specifications: Princeton KDD 2024, AutoGEO ICLR 2026, the <code>llms.txt</code> spec by Answer.AI, the <code>geo-checklist.dev</code> emerging standard, the established schema.org vocabulary. When we say a signal statistically increases AI citation rates, we cite the paper. When research updates, we update the weights.</p>
+      </div>
+      <div class="principle-card">
+        <h3>Universality over platform bias</h3>
+        <p>GEO Optimizer works on any publicly accessible URL, regardless of what technology powers it. It doesn't care if your site runs on a custom Rust backend, a static site generator, a PHP monolith, a headless architecture, or anything in between. The HTTP response is what AI engines see. That's what we audit. The tool has no concept of "supported platforms" — if it responds to an HTTP request, we can audit it.</p>
+      </div>
+      <div class="principle-card">
+        <h3>Open source over gatekeeping</h3>
+        <p>The algorithms are public. The weights are in the source code. The scoring rubric is in the documentation. Every architectural decision, every weight change, every new check is visible in the git history with a commit message explaining the rationale. You can fork this, extend it, integrate it into your CI pipeline, run it against your own infrastructure, and contribute improvements back — without asking permission or paying a license fee. Visibility shouldn't require a subscription.</p>
+      </div>
+      <div class="principle-card">
+        <h3>Precision over noise</h3>
+        <p>An audit that returns 50 vague recommendations helps no one. Every recommendation we surface is concrete, actionable, and tied to a specific score impact. "Add a FAQPage schema: +3 points." "Allow OAI-SearchBot in robots.txt: +13 points." "Create /llms.txt with at least 1,000 words: +4 points." You know exactly what you're getting for the work you do, and you can prioritize by return on effort.</p>
+      </div>
+      <div class="principle-card">
+        <h3>Developer experience as a first-class concern</h3>
+        <p>The web interface is for discovery. The CLI is where real work happens. JSON output that pipes into other tools. CI integration via <code>geo-action</code>. An MCP server for AI agent workflows. A Python API for custom integrations and monitoring scripts. GEO Optimizer is built by developers, for developers, with the assumption that a tool only gets used if it fits naturally into an existing workflow.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4 -->
+  <section id="s4">
+    <span class="section-num">04 —</span>
+    <h2>The eight signals that determine AI visibility.</h2>
+    <div class="signals-grid">
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">robots.txt</span>
+          <span class="signal-pts high">max 18 pts</span>
+        </div>
+        <p class="signal-desc">Are you letting the right crawlers in? OAI-SearchBot, ClaudeBot, Claude-SearchBot, and PerplexityBot are the crawlers that power real-time citations in ChatGPT, Claude, and Perplexity. If they're blocked — explicitly or via an overly restrictive wildcard — you're invisible by default, regardless of how good your content is. This is the most commonly misconfigured signal and the one with the most immediate fix.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">llms.txt</span>
+          <span class="signal-pts high">max 18 pts</span>
+        </div>
+        <p class="signal-desc">The emerging standard for machine-readable site context. Proposed by Answer.AI, <code>llms.txt</code> gives AI agents a structured index of your content, capabilities, and documentation — without requiring them to crawl and parse hundreds of pages. Think of it as <code>sitemap.xml</code> written for language models. Depth matters: a minimal file scores 5 points; a comprehensive, well-structured companion with <code>llms-full.txt</code> earns all 18.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">Schema JSON-LD</span>
+          <span class="signal-pts high">max 16 pts</span>
+        </div>
+        <p class="signal-desc">Structured data has always helped search engines. For AI engines, it's how entities, relationships, and facts become machine-readable. FAQPage schema answers questions directly. Article schema signals freshness and authorship. Organization schema establishes legal identity. WebSite schema provides canonical context. The richness of the schema — number of relevant attributes, presence of sameAs knowledge graph links — matters as much as which types are present.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">Meta Tags</span>
+          <span class="signal-pts med">max 14 pts</span>
+        </div>
+        <p class="signal-desc">The fundamentals: a descriptive title, a meta description that accurately summarizes the page, a canonical URL to prevent duplicate content confusion, and Open Graph tags so AI agents and social platforms have structured context. These signals have mattered for traditional search for decades. They matter for AI search for the same reason: they're the clearest, most explicit signals of what a page is about.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">Content Quality</span>
+          <span class="signal-pts med">max 12 pts</span>
+        </div>
+        <p class="signal-desc">Concrete numbers. External citations. Proper heading hierarchy with H2 and H3. Key information front-loaded in the first 30% of the content. Lists and tables that break up dense prose. Minimum word count that signals substance. The Princeton research is unambiguous: specific, well-structured, citation-ready content gets cited more. Vague, jargon-heavy, poorly organized content gets ignored.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">Technical Signals</span>
+          <span class="signal-pts low">max 6 pts</span>
+        </div>
+        <p class="signal-desc">Language declaration on the <code>&lt;html&gt;</code> element. A discoverable RSS or Atom feed. Freshness indicators via <code>dateModified</code> in schema or <code>Last-Modified</code> HTTP headers. Small signals, individually. But they establish context, recency, and trustworthiness — the baseline credibility that AI engines use to decide whether your content is worth referencing.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">AI Discovery</span>
+          <span class="signal-pts low">max 6 pts</span>
+        </div>
+        <p class="signal-desc">The new standard for machine-readable service context: <code>/.well-known/ai.txt</code> for crawler permissions, <code>/ai/summary.json</code> for structured capability descriptions, <code>/ai/faq.json</code> for pre-answered common queries, <code>/ai/service.json</code> for endpoint and feature discovery. These files are to AI agents what <code>robots.txt</code> was to traditional crawlers — a structured handshake between your site and the systems that will reference it.</p>
+      </div>
+      <div class="signal-row">
+        <div class="signal-meta">
+          <span class="signal-name">Brand &amp; Entity Signals</span>
+          <span class="signal-pts med">max 10 pts</span>
+        </div>
+        <p class="signal-desc">AI engines don't just index pages. They build models of entities. Brand name coherence across H1, title, og:title, and schema Organization name is the foundation. Knowledge graph connections via <code>sameAs</code> to Wikipedia, Wikidata, LinkedIn, and Crunchbase establish that your brand is a known, recognized entity, not an unknown string of text. About and contact pages signal that a real organization stands behind the content. Geographic identity and topic authority round out the entity model that AI engines use to decide how much to trust and cite your content.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5 -->
+  <section id="s5">
+    <span class="section-num">05 —</span>
+    <h2>Who this is for.</h2>
+    <ul class="audience-list">
+      <li>Every developer who has ever deployed a project and wondered why it doesn't appear in AI-generated answers about the problem it solves.</li>
+      <li>Every agency managing client sites that need to maintain visibility as search behavior fundamentally shifts.</li>
+      <li>Every indie founder who can't afford enterprise SEO tools but understands that organic visibility is existential — and that the rules are changing faster than most people realize.</li>
+      <li>Every technical writer, documentation team, and open source maintainer who wants their work to be cited when AI assistants answer questions their content directly addresses.</li>
+      <li>Every DevOps engineer who wants GEO checks in their CI pipeline — the same way they have linting, security scans, and performance budgets.</li>
+      <li>Every researcher who wants to understand, empirically, what the current state of AI citation mechanics actually is.</li>
+    </ul>
+  </section>
+
+  <!-- Section 6 -->
+  <section id="s6">
+    <span class="section-num">06 —</span>
+    <h2>What we commit to.</h2>
+    <div class="commitments">
+      <div class="commitment">
+        <strong>The core tool will stay open source.</strong>
+        <p>Every scoring decision will be documented. Every change to the rubric will appear in the changelog with a rationale. If we're wrong about a signal, we'll say so and update the weights.</p>
+      </div>
+      <div class="commitment">
+        <strong>We'll build for developers first.</strong>
+        <p>That means a CLI that behaves the way CLIs should, JSON output that pipes cleanly, and an API that doesn't require authentication for a basic audit. Complexity lives in the options, not in the defaults.</p>
+      </div>
+      <div class="commitment">
+        <strong>We'll be honest about uncertainty.</strong>
+        <p>GEO is a young field. Some signals that matter today may matter less as AI architectures evolve. Some signals we're not measuring yet may turn out to be critical. We'll update the rubric when the evidence changes, and we'll document why — not quietly recalibrate and hope no one notices.</p>
+      </div>
+      <div class="commitment">
+        <strong>We won't sell audit credits or put core functionality behind a paywall.</strong>
+        <p>The score you see is the real score. The recommendations you see are the real recommendations. Every feature in the paid tier of a competitor should be a feature in the open source tool.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7 -->
+  <section id="s7">
+    <span class="section-num">07 —</span>
+    <h2>The bottom line.</h2>
+    <div class="bottom-line">
+      <p>AI search is the next major shift in how people find, evaluate, and trust information online. The signals that determine visibility in that shift are measurable, documented, and optimizable today.</p>
+      <p>Most of the web doesn't know this yet. That gap won't stay open forever.</p>
+      <p>The sites that act now — that structure their content for citability, make themselves discoverable to AI agents, establish entity coherence and knowledge graph presence — will have a durable advantage when AI search becomes the dominant channel and everyone else starts scrambling.</p>
+      <p>GEO Optimizer exists to make that preparation practical, transparent, and accessible. Not just to teams with enterprise budgets. To every developer, every agency, every indie founder, every open source maintainer who wants to be visible in the systems that are increasingly mediating how the world finds information.</p>
+      <p>You shouldn't need a subscription to know if your site is being seen.</p>
+      <p class="conclusion"><em>That's why this tool exists. That's what it will keep doing.</em></p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="links">
+      <a href="https://github.com/auriti-labs/geo-optimizer-skill">GitHub</a>
+      <a href="https://pypi.org/project/geo-optimizer-skill/">PyPI</a>
+      <a href="https://auriti-labs.github.io/geo-optimizer-skill/">Docs</a>
+      <a href="https://github.com/auriti-labs/geo-optimizer-skill/issues">Issues</a>
+      <a href="/">Run an Audit</a>
+    </div>
+    <div class="credit">GEO Optimizer is open source software, MIT License &middot; Built by Auriti Labs &middot; Powered by Princeton KDD 2024 + AutoGEO ICLR 2026 research</div>
+  </footer>
+</div>
+
+<script__NONCE_ATTR__>
+(function(){
+  fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
+    var el=document.getElementById('nav-stars');
+    if(el&&d.github_stars){el.textContent='★ '+d.github_stars}
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>
