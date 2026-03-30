@@ -938,6 +938,16 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         result.recommendations = [f"Unable to reach {base_url}: {err}"]
         return result
 
+    # Fix #337: se la homepage ritorna errore HTTP, segnala e non analizzare la pagina di errore
+    if r.status_code not in (200, 203):
+        result = AuditResult(
+            url=base_url,
+            http_status=r.status_code,
+            error=f"HTTP {r.status_code}",
+        )
+        result.recommendations = [f"Site returned HTTP {r.status_code}. Check for Cloudflare/WAF blocks or server errors."]
+        return result
+
     import copy
 
     soup = BeautifulSoup(r.text, "html.parser")
@@ -1063,6 +1073,16 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
             error=str(err_home) if err_home else "Connection failed",
         )
         result.recommendations = [f"Unable to reach {base_url}: {err_home}"]
+        return result
+
+    # Fix #337: se la homepage ritorna errore HTTP, segnala e non analizzare la pagina di errore
+    if r_home.status_code not in (200, 203):
+        result = AuditResult(
+            url=base_url,
+            http_status=r_home.status_code,
+            error=f"HTTP {r_home.status_code}",
+        )
+        result.recommendations = [f"Site returned HTTP {r_home.status_code}. Check for Cloudflare/WAF blocks or server errors."]
         return result
 
     import copy
@@ -1302,6 +1322,10 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
                 allow_redirects=False,
             )
             result.browser_status = browser_r.status_code
+            # Fix #348: size check per evitare OOM su risposte enormi
+            if len(browser_r.content) > 5 * 1024 * 1024:  # 5 MB
+                result.error = "Response too large for CDN check"
+                return result
             result.browser_content_length = len(browser_r.text)
 
             # Detect CDN from headers

@@ -317,6 +317,11 @@ def _fetch_with_manual_redirects(
         r._content = content  # noqa: SLF001
         r._content_consumed = True  # noqa: SLF001
 
+        # Fix #338: imposta encoding esplicito per evitare UnicodeDecodeError su r.text
+        # Se il server dichiara un charset errato o assente, usiamo apparent_encoding come fallback
+        if not r.encoding or r.encoding == "ISO-8859-1":
+            r.encoding = r.apparent_encoding or "utf-8"
+
         return r, None
 
     return None, f"Too many redirects (max: {_MAX_REDIRECTS})"

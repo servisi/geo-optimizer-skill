@@ -188,6 +188,10 @@ def _extract_dates_from_soup(soup) -> dict[str, str | None]:
             items = data if isinstance(data, list) else [data]
             for item in items:
                 if isinstance(item, dict):
+                    # Fix #326: spacchetta @graph (Yoast/RankMath)
+                    if "@graph" in item and isinstance(item["@graph"], list):
+                        items.extend(item["@graph"])
+                        continue
                     if "dateModified" in item and not dates["dateModified"]:
                         dates["dateModified"] = item["dateModified"]
                     if "datePublished" in item and not dates["datePublished"]:
@@ -1297,13 +1301,11 @@ def detect_negative_signals(soup, clean_text: str | None = None) -> MethodScore:
     word_count = len(words)
     penalties = 0
 
-    # 1. Auto-promozione eccessiva: CTA ogni 200 parole
+    # 1. Auto-promozione eccessiva: CTA ogni 200 parole (fix #331: unificato con audit.py)
     cta_matches = _CTA_RE.findall(body_text)
     cta_count = len(cta_matches)
-    if word_count > 0 and cta_count > 0:
-        cta_ratio = word_count / max(cta_count, 1)
-        if cta_ratio < 200:
-            penalties += 2  # CTA troppo frequenti
+    if word_count > 0 and cta_count > 0 and cta_count / word_count > 0.005:
+        penalties += 2  # CTA troppo frequenti (1 CTA ogni 200 parole)
 
     # 2. Thin content: < 300 parole con H2 complessi
     h2_tags = soup.find_all("h2")
@@ -2392,7 +2394,7 @@ def detect_stale_data(soup, clean_text: str | None = None) -> MethodScore:
     return MethodScore(
         name="no_stale_data",
         label="No Stale Data",
-        detected=penalties == 0,
+        detected=penalties >= 1,  # fix #327: detected=True quando il problema esiste
         score=min(score, 4),
         max_score=4,
         impact="-10%",

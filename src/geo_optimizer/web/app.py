@@ -477,7 +477,7 @@ async def compare_page(request: Request):
 _STATS_API_URL = os.environ.get("GEO_STATS_API_URL", "https://agencypilot.it/api/geo-stats")
 _STATS_API_KEY = os.environ.get("GEO_STATS_API_KEY", "")
 
-# Fix #307: validazione anti-SSRF su GEO_STATS_API_URL all'avvio (solo urlparse, no import circolari)
+# Fix #307/#349: validazione anti-SSRF su GEO_STATS_API_URL all'avvio
 _STATS_API_URL_SAFE = True
 if _STATS_API_URL:
     from urllib.parse import urlparse as _urlparse_stats
@@ -487,6 +487,16 @@ if _STATS_API_URL:
         _STATS_API_URL_SAFE = False
     elif not _STATS_API_URL.startswith("https://"):
         _STATS_API_URL_SAFE = False
+    else:
+        # Fix #349: validazione anti-SSRF completa (blocca IP privati/metadata)
+        try:
+            from geo_optimizer.utils.validators import validate_public_url
+
+            safe, _ = validate_public_url(_STATS_API_URL)
+            if not safe:
+                _STATS_API_URL_SAFE = False
+        except Exception:
+            pass  # se il modulo non è caricabile, mantieni check base
 
 
 def _increment_remote_stat(key: str, amount: int = 1) -> None:

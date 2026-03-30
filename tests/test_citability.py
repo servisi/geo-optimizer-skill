@@ -1344,7 +1344,7 @@ class TestStaleData:
     def test_contenuto_pulito(self):
         html = "<html><body><p>Fresh content about modern SEO in 2026.</p></body></html>"
         result = detect_stale_data(_soup(html))
-        assert result.detected  # detected = pulito (nessuna penalità)
+        assert not result.detected  # fix #327: detected=False quando pulito (nessuna penalità)
         assert result.score == 4
 
     def test_copyright_vecchio(self):
@@ -1355,7 +1355,7 @@ class TestStaleData:
         </body></html>
         """
         result = detect_stale_data(_soup(html))
-        assert not result.detected
+        assert result.detected  # fix #327: detected=True quando ci sono problemi
         assert result.score <= 2
         assert result.details["old_copyright_in_footer"]
 
@@ -1367,7 +1367,7 @@ class TestStaleData:
         </body></html>
         """
         result = detect_stale_data(_soup(html))
-        assert not result.detected
+        assert result.detected  # fix #327: detected=True quando ci sono riferimenti stale
         assert result.score < 4
 
 
