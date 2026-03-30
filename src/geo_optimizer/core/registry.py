@@ -119,7 +119,7 @@ class CheckRegistry:
         Uses importlib.metadata to discover installed plugins.
         Returns the number of plugins successfully loaded.
 
-        Fix #18: caricamento dentro il lock per evitare race condition.
+        Fix #18: loading inside the lock to prevent race conditions.
         """
         with cls._lock:
             if cls._loaded_entry_points:
@@ -160,7 +160,7 @@ class CheckRegistry:
     def run_all(cls, url: str, soup: Any = None, **kwargs: Any) -> list[CheckResult]:
         """Run all registered checks and return results.
 
-        Fix #55: passa deepcopy del soup a ogni plugin per prevenire mutazione.
+        Fix #55: passes a deepcopy of soup to each plugin to prevent mutation.
 
         Args:
             url: URL of the site to check.
@@ -175,7 +175,7 @@ class CheckRegistry:
         results = []
         for check in cls._checks.values():
             try:
-                # Fix #55: ogni plugin riceve una copia isolata del soup
+                # Fix #55: each plugin receives an isolated copy of soup
                 plugin_soup = copy.deepcopy(soup) if soup is not None else None
                 result = check.run(url=url, soup=plugin_soup, **kwargs)
                 results.append(result)

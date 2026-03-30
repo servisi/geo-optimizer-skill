@@ -51,7 +51,7 @@ class RobotsResult:
 class LlmsTxtResult:
     found: bool = False
     has_h1: bool = False
-    has_description: bool = False  # alias di has_blockquote, mantenuto per retrocompatibilità API
+    has_description: bool = False  # alias for has_blockquote, kept for API backward compatibility
     has_sections: bool = False
     has_links: bool = False
     word_count: int = 0
@@ -59,11 +59,11 @@ class LlmsTxtResult:
     # #247: llms.txt Policy Intelligence — analisi contenuto
     sections_count: int = 0
     links_count: int = 0
-    # #39: validazione llms.txt v2 — conformità spec completa
-    has_blockquote: bool = False  # > blockquote description presente
-    has_optional_section: bool = False  # sezione ## Optional presente
-    companion_files_hint: bool = False  # link a file .md companion
-    validation_warnings: list[str] = field(default_factory=list)  # warning di conformità
+    # #39: llms.txt v2 validation — full spec conformance
+    has_blockquote: bool = False  # > blockquote description present
+    has_optional_section: bool = False  # ## Optional section present
+    companion_files_hint: bool = False  # link to companion .md files
+    validation_warnings: list[str] = field(default_factory=list)  # conformance warnings
 
 
 # ─── Schema JSON-LD ──────────────────────────────────────────────────────────
@@ -81,10 +81,10 @@ class SchemaResult:
     has_person: bool = False
     has_product: bool = False
     raw_schemas: list[dict] = field(default_factory=list)
-    any_schema_found: bool = False  # True se QUALSIASI JSON-LD valido trovato
-    has_sameas: bool = False  # proprietà sameAs trovata
+    any_schema_found: bool = False  # True if ANY valid JSON-LD was found
+    has_sameas: bool = False  # sameAs property found
     sameas_urls: list[str] = field(default_factory=list)
-    has_date_modified: bool = False  # dateModified in qualsiasi schema
+    has_date_modified: bool = False  # dateModified in any schema
     # Schema richness (Growth Marshal Feb 2026): schema con 5+ attributi rilevanti
     schema_richness_score: int = 0
     avg_attributes_per_schema: float = 0.0
@@ -125,9 +125,9 @@ class ContentResult:
     h1_text: str = ""
     numbers_count: int = 0
     external_links_count: int = 0
-    has_heading_hierarchy: bool = False  # H2+H3 presenti in gerarchia corretta
-    has_lists_or_tables: bool = False  # <ul>/<ol>/<table> trovati
-    has_front_loading: bool = False  # info chiave nel primo 30%
+    has_heading_hierarchy: bool = False  # H2+H3 present in correct hierarchy
+    has_lists_or_tables: bool = False  # <ul>/<ol>/<table> found
+    has_front_loading: bool = False  # key info in the first 30%
 
 
 # ─── Signals tecnici (v4.0) ──────────────────────────────────────────────────
@@ -135,7 +135,7 @@ class ContentResult:
 
 @dataclass
 class SignalsResult:
-    """Segnali tecnici per la scopribilità AI."""
+    """Technical signals for AI discoverability."""
 
     has_lang: bool = False
     lang_value: str = ""
@@ -150,14 +150,14 @@ class SignalsResult:
 
 @dataclass
 class BrandEntityResult:
-    """Segnali di identità brand ed entity per la percezione AI."""
+    """Brand and entity identity signals for AI perception."""
 
-    # Entity Coherence (3 punti)
+    # Entity Coherence (3 points)
     brand_name_consistent: bool = False
     names_found: list[str] = field(default_factory=list)
     schema_desc_matches_meta: bool = False
 
-    # Knowledge Graph Readiness (3 punti)
+    # Knowledge Graph Readiness (3 points)
     kg_pillar_count: int = 0
     kg_pillar_urls: list[str] = field(default_factory=list)
     has_wikipedia: bool = False
@@ -165,18 +165,18 @@ class BrandEntityResult:
     has_linkedin: bool = False
     has_crunchbase: bool = False
 
-    # About/Contact Signals (2 punti)
+    # About/Contact Signals (2 points)
     has_about_link: bool = False
-    has_contact_info: bool = False  # Organization con address/telephone/email o Person con jobTitle
+    has_contact_info: bool = False  # Organization with address/telephone/email or Person with jobTitle
 
-    # Geographic Identity (1 punto)
+    # Geographic Identity (1 point)
     has_geo_schema: bool = False  # address/areaServed/LocalBusiness
     has_hreflang: bool = False
     hreflang_count: int = 0
 
-    # Topic Authority (1 punto)
-    faq_depth: int = 0  # numero FAQ nel FAQPage schema
-    has_recent_articles: bool = False  # Article/BlogPosting con dateModified
+    # Topic Authority (1 point)
+    faq_depth: int = 0  # number of FAQs in the FAQPage schema
+    has_recent_articles: bool = False  # Article/BlogPosting with dateModified
 
 
 # ─── Citability (Princeton GEO Methods) ─────────────────────────────────────
@@ -217,8 +217,8 @@ class AiDiscoveryResult:
     has_faq: bool = False
     has_service: bool = False
     summary_valid: bool = False  # ha i campi richiesti (name + description)
-    faq_count: int = 0  # numero di FAQ trovate
-    endpoints_found: int = 0  # conteggio totale endpoint trovati (0-4)
+    faq_count: int = 0  # number of FAQs found
+    endpoints_found: int = 0  # total count of endpoints found (0-4)
 
 
 # ─── CDN AI Crawler Check (#225) ─────────────────────────────────────────────
@@ -241,7 +241,7 @@ class CdnAiCrawlerResult:
     any_blocked: bool = False
     cdn_detected: str = ""  # "cloudflare", "akamai", "aws", "" if none
     cdn_headers: dict[str, str] = field(default_factory=dict)
-    error: str = ""  # fix #304: messaggio errore (URL non sicura, timeout, ecc.)
+    error: str = ""  # fix #304: error message (unsafe URL, timeout, etc.)
 
 
 # ─── JS Rendering Check (#226) ──────────────────────────────────────────────
@@ -270,24 +270,24 @@ class JsRenderingResult:
 
 @dataclass
 class WebMcpResult:
-    """Verifica se il sito è pronto per AI agent via WebMCP e segnali correlati."""
+    """Checks whether the site is ready for AI agents via WebMCP and related signals."""
 
     checked: bool = False
 
     # WebMCP detection
     has_register_tool: bool = False  # navigator.modelContext.registerTool()
-    has_tool_attributes: bool = False  # attributi HTML toolname/tooldescription
-    tool_count: int = 0  # numero di tool dichiarati
+    has_tool_attributes: bool = False  # HTML attributes toolname/tooldescription
+    tool_count: int = 0  # number of declared tools
 
     # Agent-readiness signals
-    has_potential_action: bool = False  # schema potentialAction (SearchAction, ecc.)
-    potential_actions: list[str] = field(default_factory=list)  # tipi azione trovati
-    has_labeled_forms: bool = False  # form con label + description accessibili
+    has_potential_action: bool = False  # schema potentialAction (SearchAction, etc.)
+    potential_actions: list[str] = field(default_factory=list)  # action types found
+    has_labeled_forms: bool = False  # forms with accessible label + description
     labeled_forms_count: int = 0
-    has_openapi: bool = False  # link a OpenAPI/Swagger spec
+    has_openapi: bool = False  # link to OpenAPI/Swagger spec
 
     # Summary
-    agent_ready: bool = False  # True se almeno 1 segnale WebMCP o 2+ agent-readiness
+    agent_ready: bool = False  # True if at least 1 WebMCP signal or 2+ agent-readiness signals
     readiness_level: str = "none"  # "none", "basic", "ready", "advanced"
 
 
@@ -296,30 +296,30 @@ class WebMcpResult:
 
 @dataclass
 class PromptInjectionResult:
-    """Rilevamento pattern di prompt injection nel contenuto web (v4.4)."""
+    """Detection of prompt injection patterns in web content (v4.4)."""
 
     checked: bool = False
 
-    # Cat 1: testo nascosto tramite CSS inline
+    # Cat 1: text hidden via inline CSS
     hidden_text_found: bool = False
     hidden_text_count: int = 0
     hidden_text_samples: list[str] = field(default_factory=list)
 
-    # Cat 2: caratteri Unicode invisibili
+    # Cat 2: invisible Unicode characters
     invisible_unicode_found: bool = False
     invisible_unicode_count: int = 0
 
-    # Cat 3: istruzioni dirette a LLM
+    # Cat 3: direct LLM instructions
     llm_instruction_found: bool = False
     llm_instruction_count: int = 0
     llm_instruction_samples: list[str] = field(default_factory=list)
 
-    # Cat 4: prompt nei commenti HTML
+    # Cat 4: prompt in HTML comments
     html_comment_injection_found: bool = False
     html_comment_injection_count: int = 0
     html_comment_samples: list[str] = field(default_factory=list)
 
-    # Cat 5: testo monocromatico (colore ≈ sfondo)
+    # Cat 5: monochrome text (color ≈ background)
     monochrome_text_found: bool = False
     monochrome_text_count: int = 0
 
@@ -332,13 +332,13 @@ class PromptInjectionResult:
     data_attr_injection_count: int = 0
     data_attr_samples: list[str] = field(default_factory=list)
 
-    # Cat 8: aria-hidden con contenuto istruttivo
+    # Cat 8: aria-hidden with instructional content
     aria_hidden_injection_found: bool = False
     aria_hidden_injection_count: int = 0
     aria_hidden_samples: list[str] = field(default_factory=list)
 
     # Summary
-    patterns_found: int = 0  # categorie attive (0-8)
+    patterns_found: int = 0  # active categories (0-8)
     severity: str = "clean"  # "clean" | "suspicious" | "critical"
     risk_level: str = "none"  # "none" | "low" | "medium" | "high"
 

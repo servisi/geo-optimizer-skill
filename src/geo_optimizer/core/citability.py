@@ -158,13 +158,13 @@ def _get_clean_text(soup, soup_clean=None) -> str:
     import copy
 
     if soup_clean is not None:
-        # Usa copia del soup_clean pre-calcolato, rimuovi solo nav/footer/header
+        # Use a copy of the pre-computed soup_clean, strip only nav/footer/header
         working = copy.deepcopy(soup_clean)
         for tag in working(["nav", "footer", "header"]):
             tag.decompose()
         return working.get_text(separator=" ", strip=True)
 
-    # Fallback: crea copia pulita da zero con deepcopy (fix #285: evita BS(str(soup)))
+    # Fallback: build a clean copy from scratch with deepcopy (fix #285: avoid BS(str(soup)))
     working = copy.deepcopy(soup)
     for tag in working(["script", "style", "nav", "footer", "header"]):
         tag.decompose()
@@ -188,7 +188,7 @@ def _extract_dates_from_soup(soup) -> dict[str, str | None]:
             items = data if isinstance(data, list) else [data]
             for item in items:
                 if isinstance(item, dict):
-                    # Fix #326: spacchetta @graph (Yoast/RankMath)
+                    # Fix #326: unpack @graph (Yoast/RankMath)
                     if "@graph" in item and isinstance(item["@graph"], list):
                         items.extend(item["@graph"])
                         continue
@@ -273,7 +273,7 @@ def detect_quotations(soup, clean_text: str | None = None) -> MethodScore:
     # Blockquote with cite attribute = formal citation
     bq_with_cite = [bq for bq in blockquotes if bq.get("cite") or bq.find("cite")]
 
-    # Text pattern "..." — Author (fix #29: usa clean_text per evitare rumore)
+    # Text pattern "..." — Author (fix #29: use clean_text to avoid noise)
     body_text = clean_text or _get_clean_text(soup)
     text_attributions = _QUOTE_ATTRIBUTION_RE.findall(body_text)
 
@@ -349,7 +349,7 @@ def detect_fluency(soup, clean_text: str | None = None) -> MethodScore:
     para_lengths = [len(p.get_text().split()) for p in paragraphs if p.get_text().strip()]
     avg_para_len = sum(para_lengths) / max(len(para_lengths), 1)
 
-    # Logical connectives (fix #29: usa clean_text)
+    # Logical connectives (fix #29: use clean_text)
     body_text = clean_text or _get_clean_text(soup)
     connective_count = len(_CONNECTIVES.findall(body_text))
 
@@ -570,7 +570,7 @@ def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
     words = re.findall(r"\b[a-zA-Zà-ú]{3,}\b", body_text)
 
     if len(words) < 50:
-        # Testo troppo corto per analisi significativa
+        # Text too short for meaningful analysis
         return MethodScore(
             name="keyword_stuffing", label="No Keyword Stuffing", score=6, max_score=6, impact="-9%", detected=False
         )
@@ -579,18 +579,18 @@ def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
     total = len(words)
     threshold = 0.03
 
-    # Parole con frequenza anomala (>3%)
+    # Words with abnormal frequency (>3%)
     suspicious = {w: c for w, c in word_freq.most_common(20) if c / total > threshold and w not in _STOP_WORDS}
 
     stuffing_count = len(suspicious)
 
     # Over-optimization warning (C-SEO Bench 2025):
-    # 1. Frasi ripetitive (stessa frase che appare 3+ volte)
+    # 1. Repetitive phrases (same phrase appearing 3+ times)
     sentences = re.split(r"[.!?]+", body_text)
     sentence_counts = Counter(s.strip() for s in sentences if len(s.strip()) > 20)
     repeated_phrases = {s: c for s, c in sentence_counts.items() if c >= 3}
 
-    # 2. Front-loading di keyword nelle prime 200 parole
+    # 2. Keyword front-loading in the first 200 words
     first_200 = words[:200]
     front_loading_warning = False
     if len(first_200) >= 50:
@@ -602,14 +602,14 @@ def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
         if len(front_suspicious) >= 2:
             front_loading_warning = True
 
-    # Penalizzazione aggiuntiva per over-optimization
+    # Additional penalty for over-optimization
     over_opt_penalty = 0
     if repeated_phrases:
         over_opt_penalty += min(len(repeated_phrases), 2)
     if front_loading_warning:
         over_opt_penalty += 1
 
-    # Punteggio pieno se nessun stuffing rilevato
+    # Full score if no stuffing detected
     if stuffing_count == 0:
         score = 6
     elif stuffing_count <= 1:
@@ -619,7 +619,7 @@ def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
     else:
         score = 0
 
-    # Applica penalità over-optimization
+    # Apply over-optimization penalty
     score = max(score - over_opt_penalty, 0)
 
     return MethodScore(
@@ -665,11 +665,11 @@ def detect_answer_first(soup) -> MethodScore:
 
     answer_first_count = 0
     for h2 in h2_tags:
-        # Fix #400: cerca il primo testo dopo H2 in p, div, li (WordPress/Elementor)
+        # Fix #400: find the first text after H2 in p, div, li (WordPress/Elementor)
         next_el = h2.find_next(["p", "div", "li"])
         if not next_el:
             continue
-        # Controlla solo i primi 150 caratteri
+        # Check only the first 150 characters
         first_text = next_el.get_text(strip=True)[:150]
         if _FACT_RE.search(first_text):
             answer_first_count += 1
@@ -677,7 +677,7 @@ def detect_answer_first(soup) -> MethodScore:
     total_h2 = len(h2_tags)
     ratio = answer_first_count / total_h2 if total_h2 > 0 else 0
 
-    # Score proporzionale alla percentuale di H2 con answer-first
+    # Score proportional to the percentage of H2s with answer-first
     score = min(int(ratio * 8), 5)
 
     return MethodScore(
@@ -715,16 +715,16 @@ def detect_passage_density(soup) -> MethodScore:
         text = p.get_text(strip=True)
         word_count = len(text.split())
         if word_count < 10:
-            # Paragrafi troppo corti non contano
+            # Paragraphs that are too short are skipped
             continue
         total_paras += 1
-        # Paragrafo denso: 50-150 parole con almeno un dato numerico
+        # Dense paragraph: 50-150 words with at least one numeric data point
         if 50 <= word_count <= 150 and re.search(r"\b\d+(?:\.\d+)?[%$€]?|\b\d{3,}\b", text):
             dense_paras += 1
 
     ratio = dense_paras / total_paras if total_paras > 0 else 0
 
-    # Score proporzionale alla percentuale di paragrafi densi
+    # Score proportional to the percentage of dense paragraphs
     score = min(int(ratio * 10), 5)
 
     return MethodScore(
@@ -750,7 +750,7 @@ def _count_syllables(word: str) -> int:
     word = word.lower().strip()
     if len(word) <= 3:
         return 1
-    # Conta gruppi vocalici come approssimazione
+    # Count vowel groups as an approximation
     vowels = "aeiouyàèéìòùü"
     count = 0
     prev_vowel = False
@@ -759,7 +759,7 @@ def _count_syllables(word: str) -> int:
         if is_vowel and not prev_vowel:
             count += 1
         prev_vowel = is_vowel
-    # Minimo 1 sillaba
+    # At least 1 syllable
     return max(count, 1)
 
 
@@ -770,22 +770,22 @@ def detect_readability(soup, clean_text: str | None = None) -> MethodScore:
     if len(words) < 30:
         return MethodScore(name="readability", label="Readability Score", max_score=8, impact="+15%")
 
-    # Conta frasi
+    # Count sentences
     sentences = [s.strip() for s in re.split(r"[.!?]+", body_text) if len(s.strip().split()) >= 3]
     num_sentences = max(len(sentences), 1)
     num_words = len(words)
 
-    # Conta sillabe totali
+    # Count total syllables
     total_syllables = sum(_count_syllables(w) for w in words)
 
     # Flesch-Kincaid Grade Level
     fk_grade = 0.39 * (num_words / num_sentences) + 11.8 * (total_syllables / num_words) - 15.59
 
-    # Verifica lunghezza sezioni tra heading
+    # Check section length between headings
     headings = soup.find_all(["h1", "h2", "h3", "h4"])
     section_lengths = []
     for _i, h in enumerate(headings):
-        # Conta parole tra questo heading e il prossimo
+        # Count words between this heading and the next
         section_text = []
         sibling = h.find_next_sibling()
         while sibling and sibling.name not in ["h1", "h2", "h3", "h4"]:
@@ -796,14 +796,14 @@ def detect_readability(soup, clean_text: str | None = None) -> MethodScore:
         if section_word_count > 0:
             section_lengths.append(section_word_count)
 
-    # Sezioni con lunghezza ottimale (100-150 parole)
+    # Sections with optimal length (100-150 words)
     optimal_sections = sum(1 for sl in section_lengths if 100 <= sl <= 150) if section_lengths else 0
     section_ratio = optimal_sections / max(len(section_lengths), 1)
 
-    # Calcolo score
+    # Score calculation
     score = 0
 
-    # Sweet spot Grade 6-8: massime citazioni AI
+    # Sweet spot Grade 6-8: maximum AI citations
     if 6 <= fk_grade <= 8:
         score += 5
     elif 5 <= fk_grade <= 10:
@@ -811,7 +811,7 @@ def detect_readability(soup, clean_text: str | None = None) -> MethodScore:
     elif 4 <= fk_grade <= 12:
         score += 1
 
-    # Bonus per sezioni con lunghezza ottimale
+    # Bonus for sections with optimal length
     score += min(int(section_ratio * 3), 3)
 
     return MethodScore(
@@ -838,11 +838,11 @@ def detect_faq_in_content(soup) -> MethodScore:
     """Detect FAQ patterns in content (not FAQPage schema, which has zero impact)."""
     faq_count = 0
 
-    # Pattern 1: heading che finisce con "?" seguito da paragrafo
+    # Pattern 1: heading ending with "?" followed by a paragraph
     for heading in soup.find_all(["h2", "h3", "h4"]):
         heading_text = heading.get_text(strip=True)
         if heading_text.endswith("?"):
-            # Cerca paragrafo di risposta dopo il heading
+            # Look for an answer paragraph after the heading
             next_elem = heading.find_next_sibling()
             if next_elem and next_elem.name in ["p", "div", "ul", "ol"]:
                 answer_text = next_elem.get_text(strip=True)
@@ -855,7 +855,7 @@ def detect_faq_in_content(soup) -> MethodScore:
         summary = detail.find("summary")
         if summary:
             summary_text = summary.get_text(strip=True)
-            # Verifica che ci sia contenuto dopo il summary
+            # Verify there is content after the summary
             detail_text = detail.get_text(strip=True).replace(summary_text, "").strip()
             if len(detail_text) >= 20:
                 faq_count += 1
@@ -867,7 +867,7 @@ def detect_faq_in_content(soup) -> MethodScore:
         if dd and "?" in dt.get_text():
             faq_count += 1
 
-    # Score basato sul numero di FAQ trovate
+    # Score based on the number of FAQ patterns found
     if faq_count >= 5:
         score = 6
     elif faq_count >= 3:
@@ -892,7 +892,7 @@ def detect_faq_in_content(soup) -> MethodScore:
 
 # ─── 14. Image Alt Text Quality (+8%) ────────────────────────────────────────
 
-# Pattern per alt text generici da penalizzare
+# Pattern for generic alt text to penalize
 _GENERIC_ALT_RE = re.compile(
     r"^(?:image|photo|picture|img|foto|immagine|screenshot|banner|icon|logo"
     r"|img\d+|image\d+|photo\d+|dsc\d+|pic\d+|untitled)$",
@@ -904,7 +904,7 @@ def detect_image_alt_quality(soup) -> MethodScore:
     """Detect image alt text quality: penalize missing or generic alt text."""
     images = soup.find_all("img")
     if not images:
-        # Nessuna immagine = score neutro
+        # No images = neutral score
         return MethodScore(
             name="image_alt_quality",
             label="Image Alt Quality",
@@ -928,13 +928,13 @@ def detect_image_alt_quality(soup) -> MethodScore:
         elif len(alt.strip()) > 10:
             descriptive_alt += 1
         else:
-            # Alt corto ma non generico — conta come parziale
+            # Short alt text but not generic — counts as partial
             generic_alt += 1
 
     total = len(images)
     descriptive_ratio = descriptive_alt / total if total > 0 else 0
 
-    # Score basato sulla qualità degli alt
+    # Score based on alt text quality
     score = 0
     if descriptive_ratio >= 0.8:
         score = 5
@@ -970,7 +970,7 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
     now = datetime.now(tz=timezone.utc)
     current_year = now.year
 
-    # Fix #5: usa helper condiviso per estrarre date
+    # Fix #5: use shared helper to extract dates
     _dates = _extract_dates_from_soup(soup)
     date_modified = _dates["dateModified"]
     date_published = _dates["datePublished"]
@@ -984,9 +984,9 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
         if not date_str:
             continue
         has_date_signal = True
-        # Prova a parsare la data (formato ISO)
+        # Try to parse the date (ISO format)
         try:
-            # Gestisci formati comuni
+            # Handle common formats
             clean_date = str(date_str)[:10]  # YYYY-MM-DD
             parsed = datetime.strptime(clean_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             diff = now - parsed
@@ -999,32 +999,32 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
         except (ValueError, TypeError):
             continue
 
-    # Cerca riferimenti ad anni nel testo
+    # Look for year references in the text
     body_text = clean_text or _get_clean_text(soup)
     year_refs = re.findall(r"\b(20[12]\d)\b", body_text)
     year_counts = Counter(year_refs)
 
-    # Verifica se contiene anno passato senza dateModified recente
+    # Check whether it contains past years without a recent dateModified
     has_old_year_refs = any(int(y) < current_year for y in year_counts)
     has_current_year_refs = any(int(y) >= current_year for y in year_counts)
 
-    # Calcolo score
+    # Score calculation
     score = 0
     warnings = []
 
-    # Fix #401: differenziare score per freschezza
+    # Fix #401: differentiate score by freshness level
     if is_fresh and months_old is not None and months_old <= 3:
-        score += 4  # very fresh: < 3 mesi
+        score += 4  # very fresh: < 3 months
     elif is_fresh:
-        score += 3  # fresh: 3-6 mesi
+        score += 3  # fresh: 3-6 months
     elif has_date_signal and months_old is not None:
         if months_old <= 12:
-            score += 2  # aging: 6-12 mesi
+            score += 2  # aging: 6-12 months
         else:
             warnings.append(f"Contenuto aggiornato {int(months_old)} mesi fa")
     elif not has_date_signal:
         warnings.append("Nessun segnale di data (dateModified/datePublished) trovato")
-        score += 1  # Punto base per non penalizzare troppo
+        score += 1  # Base point to avoid penalizing too harshly
 
     if has_current_year_refs:
         score += 2
@@ -1051,17 +1051,17 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
 
 # ─── 16. Citability Density (+15%) ───────────────────────────────────────────
 
-# Pattern per fatti citabili: numeri, date, claim specifici (NO IGNORECASE)
+# Pattern for citable facts: numbers, dates, specific claims (NO IGNORECASE)
 _CITABLE_FACT_NUMERIC_RE = re.compile(
-    r"\b\d+(?:\.\d+)?%"  # percentuali
-    r"|\$\d+(?:[.,]\d+)*"  # valute $
-    r"|€\d+(?:[.,]\d+)*"  # valute €
-    r"|\b\d{4}\b"  # anni
-    r"|\b\d+(?:\.\d+)?\s*(?:million|billion|thousand|miliardi|milioni)\b"  # grandi numeri
-    r"|\b\d+(?:\.\d+)?\s*(?:x|times|volte)\b",  # moltiplicatori
+    r"\b\d+(?:\.\d+)?%"  # percentages
+    r"|\$\d+(?:[.,]\d+)*"  # currency $
+    r"|€\d+(?:[.,]\d+)*"  # currency €
+    r"|\b\d{4}\b"  # years
+    r"|\b\d+(?:\.\d+)?\s*(?:million|billion|thousand|miliardi|milioni)\b"  # large numbers
+    r"|\b\d+(?:\.\d+)?\s*(?:x|times|volte)\b",  # multipliers
     re.IGNORECASE,
 )
-# Nomi propri: 2-4 parole che iniziano con maiuscola (case-sensitive!)
+# Proper nouns: 2-4 words starting with a capital letter (case-sensitive!)
 _CITABLE_PROPER_NAME_RE = re.compile(r"(?<!\.\s)(?<!^)\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3}\b")
 
 
@@ -1092,7 +1092,7 @@ def detect_citability_density(soup, clean_text: str | None = None) -> MethodScor
 
     density_ratio = dense_paras / total_paras
 
-    # Score basato su percentuale di paragrafi densi
+    # Score based on percentage of dense paragraphs
     if density_ratio >= 0.5:
         score = 7
     elif density_ratio >= 0.3:
@@ -1122,7 +1122,7 @@ def detect_citability_density(soup, clean_text: str | None = None) -> MethodScor
 
 # ─── 17. Definition Pattern Detection (+10%) ─────────────────────────────────
 
-# Pattern per definizioni esplicite
+# Pattern for explicit definitions
 _DEFINITION_RE = re.compile(
     r"\b(?:is|are|refers?\s+to|means?|defines?|represents?|consists?\s+of"
     r"|è|sono|si\s+riferisce\s+a|significa|definisce|rappresenta|consiste\s+in)\b",
@@ -1139,15 +1139,15 @@ def detect_definition_patterns(soup) -> MethodScore:
     definitions_found = 0
 
     for heading in headings:
-        # Cerca il primo paragrafo dopo il heading
+        # Find the first paragraph after the heading
         next_elem = heading.find_next_sibling()
         if not next_elem:
-            # Prova con find_next (potrebbe essere nested)
+            # Fall back to find_next (could be nested)
             next_elem = heading.find_next("p")
         if not next_elem or next_elem.name != "p":
             continue
 
-        # Controlla i primi 150 caratteri del paragrafo
+        # Check the first 150 characters of the paragraph
         first_text = next_elem.get_text(strip=True)[:150]
         if _DEFINITION_RE.search(first_text):
             definitions_found += 1
@@ -1155,7 +1155,7 @@ def detect_definition_patterns(soup) -> MethodScore:
     total_headings = len(headings)
     ratio = definitions_found / total_headings if total_headings > 0 else 0
 
-    # Score basato su quanti heading hanno definizione
+    # Score based on how many headings have a definition
     if ratio >= 0.6:
         score = 5
     elif ratio >= 0.4:
@@ -1191,15 +1191,15 @@ def detect_format_mix(soup) -> MethodScore:
     has_lists = len(soup.find_all(["ul", "ol"])) >= 1
     has_tables = len(soup.find_all("table")) >= 1
 
-    # Formati aggiuntivi (bonus)
+    # Additional formats (bonus)
     has_code = len(soup.find_all(["pre", "code"])) >= 1
     has_blockquote = len(soup.find_all("blockquote")) >= 1
 
-    # Conta formati presenti
+    # Count formats present
     base_formats = sum([has_paragraphs, has_lists, has_tables])
     bonus_formats = sum([has_code, has_blockquote])
 
-    # Score: pieno se ha tutti e 3 i formati base
+    # Score: full if all 3 base formats are present
     if base_formats == 3:
         score = 4 + min(bonus_formats, 1)  # max 5
     elif base_formats == 2:
@@ -1229,7 +1229,7 @@ def detect_format_mix(soup) -> MethodScore:
 
 # ─── 19. Attribution Completeness (+12%) — Quality Signal Batch 2 ─────────────
 
-# Pattern per attribuzione inline: "secondo X", "according to X (2024)", etc.
+# Pattern for inline attribution: "according to X", "X (2024) found that", etc.
 _ATTRIBUTION_INLINE_RE = re.compile(
     r"\b(?:according to|as reported by|as noted by|as stated by"
     r"|secondo|come riportato da|come indicato da)\b"
@@ -1237,7 +1237,7 @@ _ATTRIBUTION_INLINE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Pattern per footnote: [1], [2], numeri in apice
+# Pattern for footnotes: [1], [2], superscript numbers
 _FOOTNOTE_RE = re.compile(r"\[(\d{1,3})\]|\{\d{1,3}\}|<sup>\d{1,3}</sup>")
 
 
@@ -1245,10 +1245,10 @@ def detect_attribution(soup, clean_text: str | None = None) -> MethodScore:
     """Detect attribution completeness: inline citations, footnotes, sourced claims."""
     body_text = clean_text or _get_clean_text(soup)
 
-    # Citazioni inline (vicine al claim)
+    # Inline citations (close to the claim)
     inline_attributions = _ATTRIBUTION_INLINE_RE.findall(body_text)
 
-    # Link inline vicino a testo di claim (paragrafi con link + pattern autorevole)
+    # Inline links near claim text (paragraphs with links + authoritative pattern)
     inline_link_citations = 0
     for p in soup.find_all("p"):
         p_text = p.get_text(strip=True)
@@ -1256,11 +1256,11 @@ def detect_attribution(soup, clean_text: str | None = None) -> MethodScore:
         if links_in_p and _AUTHORITY_RE.search(p_text):
             inline_link_citations += 1
 
-    # Footnote (fine pagina)
+    # Footnotes (end of page)
     raw_html = str(soup)
     footnotes = _FOOTNOTE_RE.findall(raw_html)
 
-    # Conta sup tag con numeri (note a piè di pagina HTML)
+    # Count sup tags with numbers (HTML footnotes)
     sup_footnotes = 0
     for sup in soup.find_all("sup"):
         sup_text = sup.get_text(strip=True)
@@ -1270,7 +1270,7 @@ def detect_attribution(soup, clean_text: str | None = None) -> MethodScore:
     total_inline = len(inline_attributions) + inline_link_citations
     total_footnotes = len(footnotes) + sup_footnotes
 
-    # Score: inline vale di più di footnote
+    # Score: inline citations weigh more than footnotes
     score = min(total_inline * 2 + total_footnotes, 5)
 
     return MethodScore(
@@ -1306,18 +1306,18 @@ def detect_negative_signals(soup, clean_text: str | None = None) -> MethodScore:
     word_count = len(words)
     penalties = 0
 
-    # 1. Auto-promozione eccessiva: CTA ogni 200 parole (fix #331: unificato con audit.py)
+    # 1. Excessive self-promotion: CTA every 200 words (fix #331: unified with audit.py)
     cta_matches = _CTA_RE.findall(body_text)
     cta_count = len(cta_matches)
     if word_count > 0 and cta_count > 0 and cta_count / word_count > 0.005:
-        penalties += 2  # CTA troppo frequenti (1 CTA ogni 200 parole)
+        penalties += 2  # CTAs too frequent (1 CTA per 200 words)
 
-    # 2. Thin content: < 300 parole con H2 complessi
+    # 2. Thin content: < 300 words with complex H2 headings
     h2_tags = soup.find_all("h2")
     if h2_tags and word_count < 300:
-        penalties += 2  # Contenuto troppo sottile per argomento strutturato
+        penalties += 2  # Content too thin for a structured topic
 
-    # 3. Contenuto senza autore
+    # 3. Content with no author
     author_meta = soup.find("meta", attrs={"name": re.compile(r"author", re.I)})
     author_bio = soup.find_all(
         ["div", "section", "aside"],
@@ -1327,14 +1327,14 @@ def detect_negative_signals(soup, clean_text: str | None = None) -> MethodScore:
     if not author_meta and not author_bio and not author_schema:
         penalties += 1
 
-    # 4. Frasi ripetitive (stessa frase 3+ volte)
+    # 4. Repetitive sentences (same sentence 3+ times)
     sentences = [s.strip().lower() for s in re.split(r"[.!?]+", body_text) if len(s.strip()) > 20]
     sentence_counts = Counter(sentences)
     repeated = sum(1 for c in sentence_counts.values() if c >= 3)
     if repeated > 0:
         penalties += min(repeated, 2)
 
-    # Score INVERSO: 5 se nessun segnale, 0 se molti
+    # Inverted score: 5 if no signals, 0 if many
     score = max(5 - penalties, 0)
 
     return MethodScore(
@@ -1381,23 +1381,23 @@ def detect_comparison_content(soup, clean_text: str | None = None) -> MethodScor
         h_text = h.get_text(strip=True)
         if _PRO_CON_RE.search(h_text):
             pro_con_sections += 1
-    # Cerca anche nel testo (fix #30: usa clean_text)
+    # Search in text as well (fix #30: use clean_text)
     body_text = clean_text or _get_clean_text(soup)
     pro_con_in_text = len(_PRO_CON_RE.findall(body_text))
 
-    # 3. Tabelle comparative (>3 righe e >2 colonne = bonus)
+    # 3. Comparison tables (>3 rows and >2 columns = bonus)
     comparison_tables = 0
     large_tables = 0
     for table in soup.find_all("table"):
         rows = table.find_all("tr")
         if len(rows) >= 2:
             comparison_tables += 1
-            # Controlla se è "grande" (>3 righe e >2 colonne)
+            # Check if it's "large" (>3 rows and >2 columns)
             cols = rows[0].find_all(["th", "td"]) if rows else []
             if len(rows) > 3 and len(cols) > 2:
                 large_tables += 1
 
-    # Calcola score
+    # Calculate score
     score += min(vs_headings, 2)
     score += min(pro_con_sections + (1 if pro_con_in_text > 0 else 0), 2)
     score += min(comparison_tables + large_tables, 2)
@@ -1445,7 +1445,7 @@ def detect_eeat(soup) -> MethodScore:
     trust_count = sum(trust_links.values())
     score += min(trust_count, 3)
 
-    # Experience: autore con bio dettagliata (cerchiamo pattern anno/esperienza)
+    # Experience: author with a detailed bio (look for year/experience patterns)
     author_sections = soup.find_all(
         ["div", "section", "aside"],
         class_=re.compile(r"author|bio|about-author|byline|contributor", re.I),
@@ -1453,7 +1453,7 @@ def detect_eeat(soup) -> MethodScore:
     has_detailed_bio = False
     for section in author_sections:
         bio_text = section.get_text(strip=True)
-        # Bio dettagliata: > 50 caratteri con numeri o anni
+        # Detailed bio: > 50 characters with numbers or years
         if len(bio_text) > 50 and re.search(r"\b\d+\s*(?:years?|anni|experience)\b", bio_text, re.I):
             has_detailed_bio = True
             break
@@ -1461,7 +1461,7 @@ def detect_eeat(soup) -> MethodScore:
     if has_detailed_bio:
         score += 1
 
-    # HTTPS (cerchiamo canonical o og:url con https)
+    # HTTPS (look for canonical or og:url starting with https)
     canonical = soup.find("link", attrs={"rel": "canonical"})
     og_url = soup.find("meta", attrs={"property": "og:url"})
     is_https = False
@@ -1500,16 +1500,16 @@ def detect_content_decay(soup, clean_text: str | None = None) -> MethodScore:
     current_year = now.year
     penalties = 0
 
-    # 1. Anni passati nel testo senza dateModified recente
+    # 1. Past years in text without a recent dateModified
     year_refs = re.findall(r"\b(20[12]\d)\b", body_text)
     old_years = [int(y) for y in year_refs if int(y) < current_year - 1]
     current_years = [int(y) for y in year_refs if int(y) >= current_year]
 
-    # Fix #9: usa helper condiviso per estrarre date
+    # Fix #9: use shared helper to extract dates
     _dates = _extract_dates_from_soup(soup)
     date_modified = _dates["dateModified"]
 
-    # Verifica se dateModified è recente
+    # Check whether dateModified is recent
     is_recently_modified = False
     if date_modified:
         try:
@@ -1520,7 +1520,7 @@ def detect_content_decay(soup, clean_text: str | None = None) -> MethodScore:
         except (ValueError, TypeError):
             pass
 
-    # Penalizza anni vecchi senza aggiornamento recente
+    # Penalize old years without a recent update
     if old_years and not is_recently_modified and not current_years:
         penalties += min(len(set(old_years)), 3)
 
@@ -1532,19 +1532,19 @@ def detect_content_decay(soup, clean_text: str | None = None) -> MethodScore:
         re.IGNORECASE,
     )
     for match in update_patterns:
-        # Estrai l'anno dal match
+        # Extract the year from the match
         year_str = match[2] or match[5]
         if year_str and int(year_str) < current_year - 1:
             penalties += 1
 
-    # 3. Conta link esterni (non possiamo testare se rotti, ma segnaliamo quantità)
+    # 3. Count external links (cannot test if broken, but report the count)
     external_links = 0
     for a in soup.find_all("a", href=True):
         href = a["href"]
         if href.startswith("http") and not href.startswith("#"):
             external_links += 1
 
-    # Score INVERSO: 5 se nessun decay, 0 se molto
+    # Inverted score: 5 if no decay, 0 if severe
     score = max(5 - penalties, 0)
 
     return MethodScore(
@@ -1571,7 +1571,7 @@ def detect_boilerplate_ratio(soup, soup_clean=None) -> MethodScore:
     """Detect content-to-boilerplate ratio: main/article text vs total page text."""
     import copy
 
-    # Fix #4: usa soup_clean pre-calcolato se disponibile
+    # Fix #4: use pre-computed soup_clean if available
     if soup_clean is not None:
         total_soup = soup_clean
     else:
@@ -1592,19 +1592,19 @@ def detect_boilerplate_ratio(soup, soup_clean=None) -> MethodScore:
             details={"ratio": 0, "method": "insufficient_text"},
         )
 
-    # Cerca contenuto principale in <main> o <article>
+    # Look for the main content in <main> or <article>
     content_tag = soup.find("main") or soup.find("article")
     method = "main_tag"
 
     if content_tag:
         content_text = content_tag.get_text(separator=" ", strip=True)
     else:
-        # Euristica: rimuovi nav, header, footer, sidebar
+        # Heuristic: remove nav, header, footer, sidebar
         method = "heuristic"
         clean_soup = copy.deepcopy(soup)
         for tag in clean_soup(["script", "style", "nav", "header", "footer"]):
             tag.decompose()
-        # Rimuovi sidebar per class/id
+        # Remove sidebar by class/id
         for tag in clean_soup.find_all(
             ["div", "aside", "section"],
             class_=re.compile(r"sidebar|widget|menu|navigation|nav-", re.I),
@@ -1620,7 +1620,7 @@ def detect_boilerplate_ratio(soup, soup_clean=None) -> MethodScore:
     content_len = len(content_text)
     ratio = content_len / total_len if total_len > 0 else 0
 
-    # Score basato sul rapporto
+    # Score based on the ratio
     if ratio >= 0.6:
         score = 4
     elif ratio >= 0.45:
@@ -1673,10 +1673,10 @@ def detect_nuance_signals(soup, clean_text: str | None = None) -> MethodScore:
     """Detect nuance and intellectual honesty signals in content."""
     body_text = clean_text or _get_clean_text(soup)
 
-    # Pattern di onestà nel testo
+    # Honesty patterns in text
     nuance_matches = _NUANCE_RE.findall(body_text)
 
-    # Heading con sezioni dedicate a limitazioni/svantaggi
+    # Headings with sections dedicated to limitations/drawbacks
     nuance_headings = 0
     for h in soup.find_all(["h2", "h3", "h4"]):
         h_text = h.get_text(strip=True)
@@ -1685,7 +1685,7 @@ def detect_nuance_signals(soup, clean_text: str | None = None) -> MethodScore:
 
     total_signals = len(nuance_matches) + nuance_headings * 2
 
-    # Score basato sulla quantità di segnali
+    # Score based on the number of signals
     if total_signals >= 5:
         score = 3
     elif total_signals >= 3:
@@ -1712,7 +1712,7 @@ def detect_nuance_signals(soup, clean_text: str | None = None) -> MethodScore:
 
 # ─── 26. Snippet-Ready / Zero-Click (#249) ────────────────────────────────────
 
-# Pattern per definizioni esplicite nei primi 150 char dopo heading
+# Pattern for explicit definitions in the first 150 chars after a heading
 _SNIPPET_DEF_RE = re.compile(
     r"\b(?:is|are|refers?\s+to|means?|can\s+be\s+defined\s+as"
     r"|è|sono|si\s+riferisce\s+a|significa)\b",
@@ -1734,7 +1734,7 @@ def detect_snippet_ready(soup) -> MethodScore:
 
     for heading in headings:
         heading_text = heading.get_text(strip=True)
-        # Trova il primo paragrafo dopo il heading
+        # Find the first paragraph after the heading
         next_p = heading.find_next("p")
         if not next_p:
             continue
@@ -1747,7 +1747,7 @@ def detect_snippet_ready(soup) -> MethodScore:
                 snippet_ready_count += 1
                 continue
 
-        # Pattern 2: definizione esplicita nei primi 150 char dopo heading
+        # Pattern 2: explicit definition in the first 150 chars after heading
         first_150 = p_text[:150]
         if _SNIPPET_DEF_RE.search(first_150):
             snippet_ready_count += 1
@@ -1755,7 +1755,7 @@ def detect_snippet_ready(soup) -> MethodScore:
     total_headings = len(headings)
     ratio = snippet_ready_count / total_headings if total_headings > 0 else 0
 
-    # Score proporzionale
+    # Proportional score
     if ratio >= 0.5:
         score = 4
     elif ratio >= 0.3:
@@ -1784,7 +1784,7 @@ def detect_snippet_ready(soup) -> MethodScore:
 
 # ─── 27. Chunk Quotability (#229) ────────────────────────────────────────────
 
-# Fix #7: rimossa _CONCRETE_DATA_RE duplicata — usa _CITABLE_FACT_NUMERIC_RE
+# Fix #7: removed duplicate _CONCRETE_DATA_RE — use _CITABLE_FACT_NUMERIC_RE
 
 
 def detect_chunk_quotability(soup) -> MethodScore:
@@ -1803,17 +1803,17 @@ def detect_chunk_quotability(soup) -> MethodScore:
     for p in paragraphs:
         text = p.get_text(strip=True)
         word_count = len(text.split())
-        # Solo paragrafi nella fascia 50-150 parole
+        # Only paragraphs in the 50-150 word range
         if word_count < 50 or word_count > 150:
             continue
         candidate_count += 1
-        # Verifica dato concreto
-        if _CITABLE_FACT_NUMERIC_RE.search(text):  # fix #7: regex unificata
+        # Verify concrete data
+        if _CITABLE_FACT_NUMERIC_RE.search(text):  # fix #7: unified regex
             quotable_count += 1
 
     ratio = quotable_count / candidate_count if candidate_count > 0 else 0
 
-    # Score proporzionale alla % di paragrafi quotabili
+    # Score proportional to the % of quotable paragraphs
     if ratio >= 0.5:
         score = 4
     elif ratio >= 0.3:
@@ -1849,7 +1849,7 @@ def detect_blog_structure(soup) -> MethodScore:
     Checks: datePublished/dateModified, author bio, categories/tags.
     Only scores if Article or BlogPosting schema is present (non-blog pages get 0).
     """
-    # Cerca schema Article o BlogPosting nel JSON-LD
+    # Look for Article or BlogPosting schema in JSON-LD
     article_schema = None
     for script in soup.find_all("script", type="application/ld+json"):
         try:
@@ -1867,7 +1867,7 @@ def detect_blog_structure(soup) -> MethodScore:
         if article_schema:
             break
 
-    # Se non c'è schema Article/BlogPosting, score 0 senza penalizzare
+    # If no Article/BlogPosting schema, score 0 without penalty
     if not article_schema:
         return MethodScore(
             name="blog_structure",
@@ -1882,7 +1882,7 @@ def detect_blog_structure(soup) -> MethodScore:
     score = 0
     has_dates = bool(article_schema.get("datePublished") or article_schema.get("dateModified"))
     has_author = bool(article_schema.get("author"))
-    # Cerca categorie/tag nei meta o nello schema
+    # Look for categories/tags in meta tags or schema
     has_categories = bool(
         article_schema.get("articleSection")
         or article_schema.get("keywords")
@@ -2267,7 +2267,7 @@ def detect_entity_disambiguation(soup) -> MethodScore:
         first_p = body.find("p")
         if first_p:
             first_text = first_p.get_text(strip=True)
-            # Cerca pattern definitorio: "X is...", "X è..."
+            # Look for definition pattern: "X is...", "X è..."
             if re.search(r"\b(?:is|are|è|sono)\s+(?:a|an|the|un|una|il|la|lo)\b", first_text, re.I):
                 score += 1
 
@@ -2782,7 +2782,7 @@ def detect_anchor_text_quality(soup, base_url: str) -> MethodScore:
 
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        # Determina se è un link interno
+        # Determine if it's an internal link
         if href.startswith("http"):
             link_domain = urlparse(href).netloc.replace("www.", "")
             if link_domain != base_domain:
@@ -2797,7 +2797,7 @@ def detect_anchor_text_quality(soup, base_url: str) -> MethodScore:
 
         total_internal += 1
 
-        # Controlla se è generico
+        # Check if it's generic
         if anchor_text in _GENERIC_ANCHORS:
             generic_count += 1
         elif len(anchor_text.split()) > 3:
@@ -2939,7 +2939,7 @@ def detect_crawl_budget(soup) -> MethodScore:
     Since citability analysis only has access to HTML (not robots.txt),
     checks: link rel='sitemap' in head, meta robots noindex/nofollow penalties.
     """
-    score = 3  # Punteggio pieno di default, con penalità
+    score = 3  # Full score by default, with penalties
     penalties = []
 
     # 1. Controlla meta robots per noindex/nofollow
@@ -2976,7 +2976,7 @@ def detect_crawl_budget(soup) -> MethodScore:
     if sitemap_link and sitemap_link.get("href"):
         has_sitemap_link = True
 
-    # Bonus se sitemap è referenziata nel head (segnale positivo per AI crawler)
+    # Bonus if sitemap is referenced in head (positive signal for AI crawlers)
     if not has_sitemap_link and score > 0:
         # Non penalizzare, ma niente bonus
         pass
@@ -3051,7 +3051,7 @@ _IMPROVEMENT_SUGGESTIONS = {
     "crawl_budget": "Remove meta robots noindex/nofollow to allow AI crawlers to index content (+5%)",
 }
 
-# Ordine per impatto decrescente (escluso penalità)
+# Order by decreasing impact (excluding penalties)
 _METHOD_ORDER = [
     "quotation_addition",
     "statistics_addition",
@@ -3093,7 +3093,7 @@ _METHOD_ORDER = [
     "anchor_text_quality",
     "international_geo",
     "crawl_budget",
-    # Penalità
+    # Penalties
     "keyword_stuffing",
     "no_negative_signals",
     "no_content_decay",

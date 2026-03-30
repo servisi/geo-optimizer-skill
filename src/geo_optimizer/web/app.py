@@ -94,9 +94,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Fix #315: HSTS — forza HTTPS per 1 anno su tutti i sottodomini
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         # Use 'nonce-{value}' instead of 'unsafe-inline' for XSS protection (fix #75)
-        # Nota #287: style-src usa 'unsafe-inline' perché tutti i <style> sono hardcodati
+        # Note #287: style-src uses 'unsafe-inline' because all <style> tags are hardcoded
         # nei template (non user-controllabili). Rimuoverlo richiederebbe nonce su ogni
-        # tag <style> in ogni template — complessità alta per rischio nullo.
+        # in templates (not user-controllable). Removing it would require nonce on every style tag.
         response.headers["Content-Security-Policy"] = (
             f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
@@ -473,7 +473,7 @@ async def compare_page(request: Request):
 
 
 # ─── Stats API esterna (AgencyPilot) ─────────────────────────────────────────
-# Il contatore audit è persistente su un DB SQLite esterno via API REST
+# Audit counter persisted on an external SQLite DB via REST API
 _STATS_API_URL = os.environ.get("GEO_STATS_API_URL", "https://agencypilot.it/api/geo-stats")
 _STATS_API_KEY = os.environ.get("GEO_STATS_API_KEY", "")
 
@@ -496,7 +496,7 @@ if _STATS_API_URL:
             if not safe:
                 _STATS_API_URL_SAFE = False
         except Exception:
-            pass  # se il modulo non è caricabile, mantieni check base
+            pass  # if module not loadable, keep basic check
 
 
 def _increment_remote_stat(key: str, amount: int = 1) -> None:
@@ -506,7 +506,7 @@ def _increment_remote_stat(key: str, amount: int = 1) -> None:
 
     if not _STATS_API_KEY:
         return
-    # Fix #307: blocca se URL non è safe (SSRF prevention)
+    # Fix #307: block if URL is not safe (SSRF prevention)
     if not _STATS_API_URL_SAFE:
         return
     # Fix #36: valida URL stats API (solo HTTPS)
@@ -522,7 +522,7 @@ def _increment_remote_stat(key: str, amount: int = 1) -> None:
         )
         urllib.request.urlopen(req, timeout=3)
     except Exception:
-        pass  # Best-effort: non bloccare l'audit se l'API è down
+        pass  # Best-effort: don't block the audit if the API is down
 
 
 @app.get("/health")
@@ -563,7 +563,7 @@ async def stats():
         except Exception:
             return None
 
-    # Fix #307: chiama _STATS_API_URL solo se è stata validata come safe all'avvio
+    # Fix #307: call _STATS_API_URL only if validated as safe at startup
     _stats_fetch_target = _STATS_API_URL if _STATS_API_URL_SAFE else None
 
     async def _maybe_fetch_stats() -> dict | None:
@@ -668,7 +668,7 @@ async def report(report_id: str):
         raise HTTPException(status_code=400, detail="Invalid report ID format")
 
     # Fix #286: accesso alla cache protetto da lock per evitare race condition
-    # Fix #343: verifica TTL — report scaduti non vengono più serviti
+    # Fix #343: check TTL — expired reports are no longer served
     async with _audit_cache_lock:
         entry = _audit_cache.get(report_id)
         if entry and (time.time() - entry.get("cached_at", 0)) >= _CACHE_TTL:
@@ -707,7 +707,7 @@ async def audit_pdf(
     if not safe:
         raise HTTPException(status_code=400, detail=f"Unsafe URL: {reason}")
 
-    # Verifica disponibilità weasyprint
+    # Check weasyprint availability
     try:
         from geo_optimizer.cli.pdf_formatter import format_audit_pdf  # noqa: F401
     except Exception:
@@ -927,7 +927,7 @@ def _normalize_url(raw: str) -> tuple[str | None, str]:
 
     url = raw.strip()
 
-    # Vuoto o contiene spazi → non è un URL
+    # Empty or contains spaces — not a URL
     if not url or " " in url:
         return None, "Invalid input: please enter a URL (e.g. https://example.com)"
 

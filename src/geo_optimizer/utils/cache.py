@@ -105,7 +105,7 @@ class FileCache:
                 oldest.unlink(missing_ok=True)
                 total_size -= file_size
             except (FileNotFoundError, OSError):
-                pass  # File già rimosso da un altro processo, skip
+                pass  # File already removed by another process, skip
 
     def clear(self) -> int:
         """Clear the entire cache. Returns the number of files removed."""

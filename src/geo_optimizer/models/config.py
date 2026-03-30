@@ -23,9 +23,9 @@ MAX_TOTAL_URLS: int = 10_000
 
 # ─── AI bots — 3-tier classification (training/search/user) ──────────────────
 #
-# Training: crawl per addestrare modelli (meno critico per visibilità diretta)
-# Search:   citano il sito nelle risposte AI (massima priorità per GEO)
-# User:     fetch on-demand quando un utente chiede di un URL specifico
+# Training: crawl to train models (less critical for direct visibility)
+# Search:   cite the site in AI responses (highest priority for GEO)
+# User:     on-demand fetch when a user asks about a specific URL
 
 AI_BOTS = {
     # ── OpenAI ──────────────────────────────────────────────────────────────
@@ -312,69 +312,69 @@ OPTIONAL_CATEGORIES = {"Privacy & Legal", "Terms", "Contact", "Other"}
 # ─── Scoring weights ─────────────────────────────────────────────────────────
 
 SCORING = {
-    # robots.txt — 18 punti (era 20)
+    # robots.txt — 18 points (was 20)
     "robots_found": 5,
-    "robots_citation_ok": 13,  # era 15
-    # robots_some_allowed: rimosso dal dict, ora in ROBOTS_PARTIAL_SCORE (fix #332)
-    # llms.txt — 18 punti (era 20) — qualità graduata + blockquote v2
-    "llms_found": 5,  # era 6 — 1 punto spostato a llms_blockquote (#39)
-    "llms_h1": 2,  # era 3
-    "llms_blockquote": 1,  # #39: blockquote description presente
-    "llms_sections": 2,  # era 4
-    "llms_links": 2,  # era 3
-    "llms_depth": 2,  # NUOVO: word_count >= 1000
-    "llms_depth_high": 2,  # NUOVO: word_count >= 5000
-    "llms_full": 2,  # NUOVO: has llms-full.txt
-    # Schema JSON-LD — 16 punti (era 25) — qualsiasi tipo valido + sameAs + richness
-    "schema_any_valid": 2,  # qualsiasi JSON-LD schema valido trovato (era 5, ridotto per richness)
-    "schema_richness": 3,  # NUOVO: schema con 5+ attributi rilevanti (Growth Marshal 2026)
-    "schema_faq": 3,  # era 5 — ridotto, migrato a brand_topic_authority
-    "schema_article": 3,  # era 4
-    "schema_organization": 3,  # era 3
-    "schema_website": 2,  # era 3
-    "schema_sameas": 0,  # era 3, migrato a brand KG — mantenuto a 0 per retrocompat
-    # Meta tags — 14 punti
+    "robots_citation_ok": 13,  # was 15
+    # robots_some_allowed: removed from dict, now in ROBOTS_PARTIAL_SCORE (fix #332)
+    # llms.txt — 18 points (was 20) — graduated quality + blockquote v2
+    "llms_found": 5,  # was 6 — 1 point moved to llms_blockquote (#39)
+    "llms_h1": 2,  # was 3
+    "llms_blockquote": 1,  # #39: blockquote description present
+    "llms_sections": 2,  # was 4
+    "llms_links": 2,  # was 3
+    "llms_depth": 2,  # NEW: word_count >= 1000
+    "llms_depth_high": 2,  # NEW: word_count >= 5000
+    "llms_full": 2,  # NEW: has llms-full.txt
+    # Schema JSON-LD — 16 points (was 25) — any valid type + sameAs + richness
+    "schema_any_valid": 2,  # any valid JSON-LD schema found (was 5, reduced for richness)
+    "schema_richness": 3,  # NEW: schema with 5+ relevant attributes (Growth Marshal 2026)
+    "schema_faq": 3,  # was 5 — reduced, migrated to brand_topic_authority
+    "schema_article": 3,  # was 4
+    "schema_organization": 3,  # was 3
+    "schema_website": 2,  # was 3
+    "schema_sameas": 0,  # was 3, migrated to brand KG — kept at 0 for backward compat
+    # Meta tags — 14 points
     "meta_title": 5,
     "meta_description": 2,
     "meta_canonical": 3,
     "meta_og": 4,
-    # Content quality — 12 punti (era 15) — controlli struttura
-    "content_h1": 2,  # era 3
-    "content_numbers": 1,  # era 2
-    "content_links": 1,  # era 2
-    "content_word_count": 2,  # era 4
-    "content_heading_hierarchy": 2,  # NUOVO: ha H2 + H3 in gerarchia corretta
-    "content_lists_or_tables": 2,  # NUOVO: ha <ul>/<ol>/<table>
-    "content_front_loading": 2,  # NUOVO: info chiave nel primo 30% del contenuto
-    # Signals — 6 punti (NUOVA categoria)
-    "signals_lang": 3,  # NUOVO: <html lang="...">
-    "signals_rss": 2,  # era 3
-    "signals_freshness": 1,  # era 2
-    # AI Discovery — 6 punti (geo-checklist.dev standard)
-    "ai_discovery_well_known": 2,  # /.well-known/ai.txt presente
-    "ai_discovery_summary": 2,  # /ai/summary.json valido
-    "ai_discovery_faq": 1,  # /ai/faq.json presente
-    "ai_discovery_service": 1,  # /ai/service.json presente
-    # Brand & Entity — 10 punti (NUOVA categoria v4.3)
-    "brand_entity_coherence": 3,  # nome coerente tra H1/title/og:title/schema
-    "brand_kg_readiness": 3,  # sameAs verso Wikipedia/Wikidata/LinkedIn/Crunchbase
-    "brand_about_contact": 2,  # link /about + Organization con address/telephone
+    # Content quality — 12 points (was 15) — structure checks
+    "content_h1": 2,  # was 3
+    "content_numbers": 1,  # was 2
+    "content_links": 1,  # was 2
+    "content_word_count": 2,  # was 4
+    "content_heading_hierarchy": 2,  # NEW: has H2 + H3 in correct hierarchy
+    "content_lists_or_tables": 2,  # NEW: has <ul>/<ol>/<table>
+    "content_front_loading": 2,  # NEW: key info in the first 30% of content
+    # Signals — 6 points (NEW category)
+    "signals_lang": 3,  # NEW: <html lang="...">
+    "signals_rss": 2,  # was 3
+    "signals_freshness": 1,  # was 2
+    # AI Discovery — 6 points (geo-checklist.dev standard)
+    "ai_discovery_well_known": 2,  # /.well-known/ai.txt present
+    "ai_discovery_summary": 2,  # /ai/summary.json valid
+    "ai_discovery_faq": 1,  # /ai/faq.json present
+    "ai_discovery_service": 1,  # /ai/service.json present
+    # Brand & Entity — 10 points (NEW category v4.3)
+    "brand_entity_coherence": 3,  # name consistent across H1/title/og:title/schema
+    "brand_kg_readiness": 3,  # sameAs pointing to Wikipedia/Wikidata/LinkedIn/Crunchbase
+    "brand_about_contact": 2,  # /about link + Organization with address/telephone
     "brand_geo_identity": 1,  # hreflang + schema geo (address, areaServed)
-    "brand_topic_authority": 1,  # FAQ depth + Article con dateModified
+    "brand_topic_authority": 1,  # FAQ depth + Article with dateModified
 }
 
-# Punteggio parziale robots.txt: wildcard Allow senza permesso esplicito ai citation bot
-# Separato dal dict SCORING perché alternativo (non additivo) a robots_citation_ok (fix #332)
+# Partial robots.txt score: wildcard Allow without explicit permission to citation bots
+# Separate from the SCORING dict because it is an alternative (not additive) to robots_citation_ok (fix #332)
 ROBOTS_PARTIAL_SCORE = 10
 
-# Minimum word threshold for content_word_count (300 parole = contenuto sostanziale)
+# Minimum word threshold for content_word_count (300 words = substantial content)
 CONTENT_MIN_WORDS = 300
 
-# Soglie profondità llms.txt
+# Depth thresholds for llms.txt
 LLMS_DEPTH_WORDS = 1000
 LLMS_DEPTH_HIGH_WORDS = 5000
 
-# Domini autorevoli sameAs (per collegamento knowledge graph)
+# Authoritative sameAs domains (for knowledge graph linking)
 SAMEAS_AUTHORITATIVE_DOMAINS = {
     "wikipedia.org",
     "wikidata.org",
@@ -386,7 +386,7 @@ SAMEAS_AUTHORITATIVE_DOMAINS = {
     "facebook.com",
 }
 
-# Domini pillar per Knowledge Graph (disambiguazione AI — i 4 più rilevanti)
+# Pillar domains for Knowledge Graph (AI disambiguation — the 4 most relevant)
 KG_PILLAR_DOMAINS = {
     "wikipedia.org",
     "wikidata.org",
@@ -396,7 +396,7 @@ KG_PILLAR_DOMAINS = {
 
 # ─── Prompt Injection Detection (#276) ────────────────────────────────────────
 
-# Pattern regex per istruzioni dirette a LLM nel contenuto
+# Regex patterns for direct LLM instructions in page content
 PROMPT_INJECTION_LLM_PATTERNS = [
     r"ignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions?",
     r"you\s+are\s+(?:now\s+)?(?:a|an)\s+(?:helpful\s+)?assistant",
@@ -411,32 +411,32 @@ PROMPT_INJECTION_LLM_PATTERNS = [
     r"\[INST\]|\[SYS\]|<\|system\|>|<\|user\|>",
     r"###\s*(?:System|Human|Assistant)\s*:",
     r"<\s*system\s*>",
-    # fix #387: token Llama 3 / Gemma / Mistral
+    # fix #387: Llama 3 / Gemma / Mistral tokens
     r"<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|<\|begin_of_text\|>",
     r"<start_of_turn>|<end_of_turn>",
-    # fix #387: pattern jailbreak comuni
+    # fix #387: common jailbreak patterns
     r"\bDAN\s+mode\b|\bdeveloper\s+mode\b",
     r"pretend\s+(?:you\s+have\s+no|there\s+are\s+no)\s+restrictions?",
     r"(?:reveal|repeat|show|tell)\s+(?:me\s+)?(?:your|the)\s+(?:system\s+)?(?:prompt|instructions?)",
 ]
 
-# Parole chiave sospette nei commenti HTML
+# Suspicious keywords in HTML comments
 PROMPT_INJECTION_COMMENT_KEYWORDS = ["prompt:", "instruction:", "context:", "system:", "ai:", "llm:"]
 
-# Soglie e limiti
+# Thresholds and limits
 PROMPT_INJECTION_MAX_SAMPLES = 3
 PROMPT_INJECTION_SAMPLE_MAX_LEN = 150
 PROMPT_INJECTION_UNICODE_THRESHOLD = 5
 PROMPT_INJECTION_COMMENT_MAX_LEN = 500
 MICROFONT_SIZE_THRESHOLD_PX = 2.0
 
-# ─── Soglie condivise (fix #388) ─────────────────────────────────────────────
+# ─── Shared thresholds (fix #388) ────────────────────────────────────────────
 
-# Soglia keyword stuffing: densità parola singola sopra la quale è spam
-# Ricerca SEMrush 2025: > 2.5% è segnale di manipolazione per AI engine
+# Keyword stuffing threshold: single-word density above which it is considered spam
+# SEMrush 2025 research: > 2.5% is a manipulation signal for AI engines
 KEYWORD_STUFFING_THRESHOLD = 0.025
 
-# Pattern URL per pagine "about" (fix #391)
+# URL patterns for "about" pages (fix #391)
 ABOUT_LINK_PATTERNS = [
     "/about",
     "/chi-siamo",
@@ -451,7 +451,7 @@ ABOUT_LINK_PATTERNS = [
 
 # ─── Trust Stack Score (#273) ─────────────────────────────────────────────────
 
-# Soglie grading composito (0-25): (soglia_minima, grade, trust_level)
+# Composite grading thresholds (0-25): (min_threshold, grade, trust_level)
 TRUST_STACK_GRADE_BANDS = [
     (22, "A", "excellent"),
     (17, "B", "high"),
@@ -460,7 +460,7 @@ TRUST_STACK_GRADE_BANDS = [
     (0, "F", "low"),
 ]
 
-# Domini fonti autorevoli per Academic Trust
+# Authoritative source domains for Academic Trust
 ACADEMIC_AUTHORITY_DOMAINS = [
     "ncbi.nlm.nih.gov",
     "pubmed.ncbi.nlm.nih.gov",
@@ -474,7 +474,7 @@ ACADEMIC_AUTHORITY_DOMAINS = [
     "ssrn.com",
 ]
 
-# Domini social riconosciuti per Social Trust
+# Recognized social domains for Social Trust
 SOCIAL_PROOF_DOMAINS = [
     "twitter.com",
     "x.com",
@@ -486,7 +486,7 @@ SOCIAL_PROOF_DOMAINS = [
     "threads.net",
 ]
 
-# Pattern heading per sezione References/Fonti
+# Heading patterns for the References/Sources section
 REFERENCES_HEADING_PATTERNS = [
     "references",
     "fonti",
@@ -498,14 +498,14 @@ REFERENCES_HEADING_PATTERNS = [
     "bibliografia",
 ]
 
-# Soglia minima match statistici per Academic Trust
+# Minimum statistical match count for Academic Trust
 ACADEMIC_STATISTICS_MIN_MATCHES = 2
 
 # ─── Score bands ─────────────────────────────────────────────────────────────
 
 SCORE_BANDS = {
-    "excellent": (86, 100),  # era (91, 100)
-    "good": (68, 85),  # era (71, 90)
-    "foundation": (36, 67),  # era (41, 70)
-    "critical": (0, 35),  # era (0, 40)
+    "excellent": (86, 100),  # was (91, 100)
+    "good": (68, 85),  # was (71, 90)
+    "foundation": (36, 67),  # was (41, 70)
+    "critical": (0, 35),  # was (0, 40)
 }

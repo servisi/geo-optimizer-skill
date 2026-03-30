@@ -51,7 +51,7 @@ _MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 # Sitemap fetching
 # ---------------------------------------------------------------------------
 
-_MAX_SITEMAP_DEPTH = 3  # Limite profondità ricorsione sitemap index
+_MAX_SITEMAP_DEPTH = 3  # Maximum sitemap index recursion depth
 
 
 def fetch_sitemap(
@@ -143,7 +143,7 @@ def fetch_sitemap(
 
     soup = BeautifulSoup(r.content, "xml")
 
-    # Sitemap index (contiene altri sitemap)
+    # Sitemap index (contains nested sitemaps)
     sitemap_tags = soup.find_all("sitemap")
     if sitemap_tags:
         logger.info("Sitemap index found: %d sitemaps", len(sitemap_tags))
@@ -175,7 +175,7 @@ def fetch_sitemap(
                 urls.extend(sub_urls)
         return urls
 
-    # Sitemap normale
+    # Regular sitemap
     url_tags = soup.find_all("url")
     logger.info("URLs found: %d", len(url_tags))
     if on_status:

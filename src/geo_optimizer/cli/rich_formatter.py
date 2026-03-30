@@ -76,7 +76,7 @@ _COLORS = {
     "brand_3": "#8b5cf6",  # viola brand
 }
 
-# Icone per categoria (più espressive delle semplici check/cross)
+# Icons per category (more expressive than simple check/cross)
 _CATEGORY_ICONS = {
     "robots": "🤖",
     "llms": "📄",
@@ -613,7 +613,7 @@ def _build_ai_discovery_card(result: AuditResult) -> Panel | None:
     """Card per AI Discovery endpoints."""
     ai = result.ai_discovery
     if not ai.endpoints_found and not ai.has_well_known_ai:
-        # Mostra solo se c'è qualcosa o se il punteggio è > 0
+        # Only show if there is data or score > 0
         pass
 
     content_parts = []

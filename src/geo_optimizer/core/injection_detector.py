@@ -1,17 +1,17 @@
 """
-Rilevamento pattern di prompt injection nel contenuto web (#276).
+Prompt injection pattern detection in web content (#276).
 
-Rileva 8 categorie di manipolazione AI nel contenuto:
-1. Testo nascosto via CSS (display:none, visibility:hidden, font-size:0)
-2. Caratteri Unicode invisibili (zero-width, RTL marks)
-3. Istruzioni dirette a LLM ("ignore previous instructions", token speciali)
-4. Prompt nei commenti HTML (<!-- instruction: ... -->)
-5. Testo monocromatico (colore ≈ sfondo)
+Detects 8 categories of AI manipulation in content:
+1. CSS-hidden text (display:none, visibility:hidden, font-size:0)
+2. Invisible Unicode characters (zero-width, RTL marks)
+3. Direct LLM instructions ("ignore previous instructions", special tokens)
+4. Prompts in HTML comments (<!-- instruction: ... -->)
+5. Monochrome text (color ≈ background)
 6. Micro-font injection (font-size < 2px)
 7. Data attribute injection (data-ai-*, data-prompt-*)
-8. aria-hidden con contenuto istruttivo
+8. aria-hidden with instructional content
 
-Basato su UC Berkeley EMNLP 2024: text injections can manipulate AI search rankings.
+Based on UC Berkeley EMNLP 2024: text injections can manipulate AI search rankings.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from geo_optimizer.models.config import (
 )
 from geo_optimizer.models.results import PromptInjectionResult
 
-# ─── Pattern compilati (una volta sola all'import) ───────────────────────────
+# ─── Compiled patterns (once at import time) ─────────────────────────────────
 
 _LLM_PATTERNS_COMPILED = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in PROMPT_INJECTION_LLM_PATTERNS]
 
@@ -54,23 +54,23 @@ _RGBA_ALPHA_RE = re.compile(r"rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0(?:\.\d+
 
 
 def _truncate(text: str, max_len: int = PROMPT_INJECTION_SAMPLE_MAX_LEN) -> str:
-    """Tronca il testo alla lunghezza massima con ellissi."""
+    """Truncate text to the maximum length with an ellipsis."""
     return text[:max_len] + "…" if len(text) > max_len else text
 
 
 def _get_text_safe(element) -> str:
-    """Estrae testo da un elemento BeautifulSoup in modo sicuro."""
+    """Safely extract text from a BeautifulSoup element."""
     try:
         return element.get_text(strip=True)
     except Exception:
         return ""
 
 
-# ─── Categoria 1: Testo nascosto via CSS ─────────────────────────────────────
+# ─── Category 1: CSS-hidden text ─────────────────────────────────────────────
 
 
 def _detect_hidden_text(soup) -> tuple[bool, int, list[str]]:
-    """Rileva testo nascosto tramite CSS inline."""
+    """Detect text hidden via inline CSS."""
     found_count = 0
     samples: list[str] = []
 
@@ -90,11 +90,11 @@ def _detect_hidden_text(soup) -> tuple[bool, int, list[str]]:
     return found_count > 0, found_count, samples
 
 
-# ─── Categoria 2: Unicode invisibile ─────────────────────────────────────────
+# ─── Category 2: Invisible Unicode ───────────────────────────────────────────
 
 
 def _detect_invisible_unicode(soup) -> tuple[bool, int]:
-    """Rileva caratteri Unicode invisibili nel body text."""
+    """Detect invisible Unicode characters in the body text."""
     body = soup.find("body")
     if not body:
         return False, 0
@@ -106,11 +106,11 @@ def _detect_invisible_unicode(soup) -> tuple[bool, int]:
     return count >= PROMPT_INJECTION_UNICODE_THRESHOLD, count
 
 
-# ─── Categoria 3: Istruzioni LLM ─────────────────────────────────────────────
+# ─── Category 3: LLM instructions ────────────────────────────────────────────
 
 
 def _detect_llm_instructions(raw_html: str) -> tuple[bool, int, list[str]]:
-    """Rileva istruzioni dirette a LLM nel contenuto HTML."""
+    """Detect direct LLM instructions in the HTML content."""
     found_count = 0
     samples: list[str] = []
 
@@ -126,11 +126,11 @@ def _detect_llm_instructions(raw_html: str) -> tuple[bool, int, list[str]]:
     return found_count > 0, found_count, samples
 
 
-# ─── Categoria 4: Commenti HTML con prompt ────────────────────────────────────
+# ─── Category 4: HTML comments with prompts ──────────────────────────────────
 
 
 def _detect_html_comment_injection(raw_html: str) -> tuple[bool, int, list[str]]:
-    """Rileva prompt injection nei commenti HTML."""
+    """Detect prompt injection in HTML comments."""
     found_count = 0
     samples: list[str] = []
 
@@ -141,16 +141,16 @@ def _detect_html_comment_injection(raw_html: str) -> tuple[bool, int, list[str]]
 
         is_suspicious = False
 
-        # Commento troppo lungo
+        # Comment is too long
         if len(comment) > PROMPT_INJECTION_COMMENT_MAX_LEN:
             is_suspicious = True
 
-        # Parole chiave sospette
+        # Suspicious keywords
         comment_lower = comment.lower()
         if any(kw in comment_lower for kw in PROMPT_INJECTION_COMMENT_KEYWORDS):
             is_suspicious = True
 
-        # Pattern LLM nel commento
+        # LLM pattern in the comment
         if any(p.search(comment) for p in _LLM_PATTERNS_COMPILED):
             is_suspicious = True
 
@@ -162,11 +162,11 @@ def _detect_html_comment_injection(raw_html: str) -> tuple[bool, int, list[str]]
     return found_count > 0, found_count, samples
 
 
-# ─── Categoria 5: Testo monocromatico ────────────────────────────────────────
+# ─── Category 5: Monochrome text ─────────────────────────────────────────────
 
 
 def _normalize_hex(h: str) -> str:
-    """Normalizza un colore hex a 6 cifre lowercase."""
+    """Normalize a hex color to 6-digit lowercase."""
     h = h.lower()
     if len(h) == 3:
         return h[0] * 2 + h[1] * 2 + h[2] * 2
@@ -174,7 +174,7 @@ def _normalize_hex(h: str) -> str:
 
 
 def _detect_monochrome_text(soup) -> tuple[bool, int]:
-    """Rileva testo con colore uguale o simile allo sfondo."""
+    """Detect text whose color matches or is very close to the background."""
     found_count = 0
 
     for el in soup.find_all(style=True):
@@ -183,13 +183,13 @@ def _detect_monochrome_text(soup) -> tuple[bool, int]:
         if len(text) < 3:
             continue
 
-        # Check rgba con alpha trasparente
+        # Check rgba with transparent alpha
         alpha_match = _RGBA_ALPHA_RE.search(style)
         if alpha_match and float(alpha_match.group(1)) < 0.05:
             found_count += 1
             continue
 
-        # Check colore hex == background hex
+        # Check hex color == background hex
         fg_match = _COLOR_HEX_RE.search(style)
         bg_match = _BG_HEX_RE.search(style)
         if fg_match and bg_match:
@@ -201,11 +201,11 @@ def _detect_monochrome_text(soup) -> tuple[bool, int]:
     return found_count > 0, found_count
 
 
-# ─── Categoria 6: Micro-font ─────────────────────────────────────────────────
+# ─── Category 6: Micro-font ──────────────────────────────────────────────────
 
 
 def _detect_microfont(soup) -> tuple[bool, int]:
-    """Rileva elementi con font-size < 2px che contengono testo."""
+    """Detect elements with font-size < 2px that contain text."""
     found_count = 0
 
     for el in soup.find_all(style=True):
@@ -218,7 +218,7 @@ def _detect_microfont(soup) -> tuple[bool, int]:
         if m:
             value = float(m.group(1))
             unit = m.group(2).lower()
-            # Converti a px approssimativo
+            # Convert to approximate px
             if unit == "pt":
                 value *= 1.33
             elif unit in ("em", "rem"):
@@ -229,11 +229,11 @@ def _detect_microfont(soup) -> tuple[bool, int]:
     return found_count > 0, found_count
 
 
-# ─── Categoria 7: Data attribute injection ────────────────────────────────────
+# ─── Category 7: Data attribute injection ────────────────────────────────────
 
 
 def _detect_data_attr_injection(soup) -> tuple[bool, int, list[str]]:
-    """Rileva data attribute sospetti (data-ai-*, data-prompt-*, ecc.)."""
+    """Detect suspicious data attributes (data-ai-*, data-prompt-*, etc.)."""
     found_count = 0
     samples: list[str] = []
 
@@ -248,11 +248,11 @@ def _detect_data_attr_injection(soup) -> tuple[bool, int, list[str]]:
     return found_count > 0, found_count, samples
 
 
-# ─── Categoria 8: aria-hidden injection ───────────────────────────────────────
+# ─── Category 8: aria-hidden injection ───────────────────────────────────────
 
 
 def _detect_aria_hidden_injection(soup) -> tuple[bool, int, list[str]]:
-    """Rileva aria-hidden con contenuto istruttivo per AI."""
+    """Detect aria-hidden elements with instructional AI content."""
     found_count = 0
     samples: list[str] = []
 
@@ -263,11 +263,11 @@ def _detect_aria_hidden_injection(soup) -> tuple[bool, int, list[str]]:
 
         is_suspicious = False
 
-        # Testo troppo lungo per un elemento decorativo
+        # Text is too long for a decorative element
         if len(text.split()) > 50:
             is_suspicious = True
 
-        # Contiene istruzioni LLM
+        # Contains LLM instructions
         if any(p.search(text) for p in _LLM_PATTERNS_COMPILED):
             is_suspicious = True
 
@@ -279,40 +279,40 @@ def _detect_aria_hidden_injection(soup) -> tuple[bool, int, list[str]]:
     return found_count > 0, found_count, samples
 
 
-# ─── Orchestratore ────────────────────────────────────────────────────────────
+# ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 
 def audit_prompt_injection(soup, raw_html: str) -> PromptInjectionResult:
-    """Analizza il contenuto per pattern di prompt injection.
+    """Analyze content for prompt injection patterns.
 
-    Zero richieste HTTP — lavora solo su dati già disponibili.
+    Zero HTTP requests — works only on already-available data.
 
     Args:
-        soup: BeautifulSoup del documento HTML.
-        raw_html: testo grezzo dell'HTML per regex su commenti e attributi.
+        soup: BeautifulSoup of the HTML document.
+        raw_html: Raw HTML text for regex matching on comments and attributes.
 
     Returns:
-        PromptInjectionResult con severity e dettagli per categoria.
+        PromptInjectionResult with severity and per-category details.
     """
     result = PromptInjectionResult(checked=True)
 
-    # Cat 1: testo nascosto CSS
+    # Cat 1: CSS-hidden text
     result.hidden_text_found, result.hidden_text_count, result.hidden_text_samples = _detect_hidden_text(soup)
 
-    # Cat 2: Unicode invisibile
+    # Cat 2: invisible Unicode
     result.invisible_unicode_found, result.invisible_unicode_count = _detect_invisible_unicode(soup)
 
-    # Cat 3: istruzioni LLM
+    # Cat 3: LLM instructions
     result.llm_instruction_found, result.llm_instruction_count, result.llm_instruction_samples = (
         _detect_llm_instructions(raw_html)
     )
 
-    # Cat 4: commenti HTML con prompt
+    # Cat 4: HTML comments with prompts
     result.html_comment_injection_found, result.html_comment_injection_count, result.html_comment_samples = (
         _detect_html_comment_injection(raw_html)
     )
 
-    # Cat 5: testo monocromatico
+    # Cat 5: monochrome text
     result.monochrome_text_found, result.monochrome_text_count = _detect_monochrome_text(soup)
 
     # Cat 6: micro-font
@@ -328,14 +328,14 @@ def audit_prompt_injection(soup, raw_html: str) -> PromptInjectionResult:
         _detect_aria_hidden_injection(soup)
     )
 
-    # Calcola summary
+    # Compute summary
     _compute_severity(result)
 
     return result
 
 
 def _compute_severity(result: PromptInjectionResult) -> None:
-    """Calcola severity e risk_level in base ai pattern trovati."""
+    """Compute severity and risk_level based on detected patterns."""
     categories_active = sum(
         [
             result.hidden_text_found,
@@ -350,7 +350,7 @@ def _compute_severity(result: PromptInjectionResult) -> None:
     )
     result.patterns_found = categories_active
 
-    # Severity: la presenza di istruzioni LLM o commenti con prompt è sempre critica
+    # Severity: LLM instructions or prompts in comments are always critical
     if result.llm_instruction_found or result.html_comment_injection_found:
         result.severity = "critical"
     elif categories_active >= 3:
@@ -360,7 +360,7 @@ def _compute_severity(result: PromptInjectionResult) -> None:
     else:
         result.severity = "clean"
 
-    # Risk level granulare
+    # Granular risk level
     if result.llm_instruction_found or result.html_comment_injection_found or categories_active >= 3:
         result.risk_level = "high"
     elif (

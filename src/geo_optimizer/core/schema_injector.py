@@ -252,7 +252,7 @@ def generate_faq_schema(faq_items: list[dict[str, str]]) -> dict:
     """Generate FAQPage schema from FAQ items."""
     import copy
 
-    schema = copy.deepcopy(SCHEMA_TEMPLATES["faq"])  # fix #17: deepcopy per sicurezza
+    schema = copy.deepcopy(SCHEMA_TEMPLATES["faq"])  # fix #17: deepcopy for safety
     schema["mainEntity"] = [
         {
             "@type": "Question",

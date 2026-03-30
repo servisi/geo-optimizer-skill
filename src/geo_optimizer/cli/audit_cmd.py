@@ -114,8 +114,8 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
         except ImportError:
             _use_spinner = False
 
-    # Fix #284: usa path async se httpx è disponibile e non si usa cache
-    # Il path async fa fetch paralleli ed è 2-3x più veloce
+    # Fix #284: use async path if httpx is available and cache is not used
+    # Async path does parallel fetches and is 2-3x faster
     _use_async = False
     if not cache:
         try:
@@ -176,7 +176,7 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
     elif output_format == "pdf":
         from geo_optimizer.cli.pdf_formatter import format_audit_pdf
 
-        # PDF è binario: scrive su file e termina (non passa per click.echo)
+        # PDF is binary: write to file and exit (doesn't go through click.echo)
         pdf_path = output_file or "geo-report.pdf"
         try:
             pdf_bytes = format_audit_pdf(result)

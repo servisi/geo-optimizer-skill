@@ -13,7 +13,7 @@ import logging
 import re
 from urllib.parse import urljoin, urlparse
 
-from geo_optimizer.core.scoring import (  # noqa: F401 (re-esportato per retrocompatibilità)
+from geo_optimizer.core.scoring import (  # noqa: F401 (re-exported for backward compatibility)
     compute_geo_score,
     compute_score_breakdown,
     get_score_band,
@@ -124,34 +124,34 @@ def _validate_llms_content(result: LlmsTxtResult, content: str) -> None:
     lines = content.splitlines()
     warnings: list[str] = []
 
-    # Validazione blockquote (> description) — REQUIRED per spec
+    # Blockquote validation (> description) — REQUIRED by spec
     blockquotes = [line for line in lines if line.startswith("> ")]
     if blockquotes:
         result.has_blockquote = True
     else:
         warnings.append("llms.txt should have a > blockquote description after H1")
 
-    # Validazione H1 come prima riga non vuota
+    # H1 validation — must be the first non-empty line
     non_empty_lines = [line for line in lines if line.strip()]
     if non_empty_lines and not non_empty_lines[0].startswith("# "):
         warnings.append("H1 should be the first line of llms.txt")
 
-    # Validazione link markdown
+    # Markdown link validation
     if not result.has_links:
         warnings.append("llms.txt should contain markdown links to site pages")
 
-    # Validazione lunghezza minima
+    # Minimum length validation
     if result.word_count < 100:
         warnings.append("llms.txt is too short, consider adding more content")
 
-    # Sezione ## Optional — buona pratica
+    # ## Optional section — best practice
     h2_lines = [line for line in lines if line.startswith("## ")]
     for h2 in h2_lines:
         if "optional" in h2.lower():
             result.has_optional_section = True
             break
 
-    # Companion files: link a file .md (es. something.html.md)
+    # Companion files: links to .md files (e.g. something.html.md)
     links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", content)
     for _text, url in links:
         if url.endswith(".md"):
@@ -189,7 +189,7 @@ def audit_llms_txt(base_url: str) -> LlmsTxtResult:
     # Check blockquote description
     blockquotes = [line for line in lines if line.startswith("> ")]
     if blockquotes:
-        # Fix #317: sincronizza has_description (alias retrocompatibile) con has_blockquote
+        # Fix #317: sync has_description (backward-compat alias) with has_blockquote
         result.has_blockquote = True
         result.has_description = True
 
@@ -197,17 +197,17 @@ def audit_llms_txt(base_url: str) -> LlmsTxtResult:
     h2_lines = [line for line in lines if line.startswith("## ")]
     if h2_lines:
         result.has_sections = True
-    # #247: conta sezioni H2 per Policy Intelligence
+    # #247: count H2 sections for Policy Intelligence
     result.sections_count = len(h2_lines)
 
     # Check markdown links
     links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", content)
     if links:
         result.has_links = True
-    # #247: conta link per Policy Intelligence
+    # #247: count links for Policy Intelligence
     result.links_count = len(links)
 
-    # #39: validazione v2 — conformità spec completa
+    # #39: v2 validation — full spec compliance
     _validate_llms_content(result, content)
 
     # Check /llms-full.txt (llmstxt.org spec — optional extended version)
@@ -240,7 +240,7 @@ def audit_schema(soup, url: str) -> SchemaResult:
                 logging.debug("JSON-LD too large (%d bytes), skipping", len(raw))
                 continue
             data = json.loads(raw)
-            # Fix: supporto formato @graph (usato da Yoast SEO, RankMath, ecc.)
+            # Fix: support @graph format (used by Yoast SEO, RankMath, etc.)
             if isinstance(data, dict) and "@graph" in data:
                 schemas = data["@graph"] if isinstance(data["@graph"], list) else [data["@graph"]]
             elif isinstance(data, list):
@@ -279,19 +279,19 @@ def audit_schema(soup, url: str) -> SchemaResult:
                     elif t == "Product":
                         result.has_product = True
 
-                    # Qualsiasi tipo schema valido (non unknown) contribuisce
+                    # Any valid schema type (not unknown) counts
                     if t != "unknown":
                         result.any_schema_found = True
 
-                # Controlla la proprietà sameAs
+                # Check the sameAs property
                 same_as = schema.get("sameAs", [])
                 if isinstance(same_as, str):
                     same_as = [same_as]
                 if same_as:
                     result.has_sameas = True
-                    result.sameas_urls.extend(same_as[:10])  # limita a 10
+                    result.sameas_urls.extend(same_as[:10])  # cap at 10
 
-                # Controlla dateModified
+                # Check dateModified
                 if schema.get("dateModified"):
                     result.has_date_modified = True
 
@@ -300,19 +300,19 @@ def audit_schema(soup, url: str) -> SchemaResult:
             logging.debug("Invalid JSON schema ignored: %s", exc)
             result.json_parse_errors += 1  # fix #399: traccia errori per raccomandazioni
 
-    # Schema richness (Growth Marshal Feb 2026): conta attributi per ogni schema
-    # Schema generico (@type + name + url = 3 attributi) performa PEGGIO di nessuno schema
-    # Schema ricco (5+ attributi) → 61.7% citation rate vs 41.6% generico
+    # Schema richness (Growth Marshal Feb 2026): count attributes per schema
+    # Generic schema (@type + name + url = 3 attrs) performs WORSE than no schema
+    # Rich schema (5+ attributes) → 61.7% citation rate vs 41.6% generic
     _GENERIC_KEYS = {"@context", "@type", "@id"}
     attr_counts = []
     for schema_obj in result.raw_schemas:
-        # Conta solo attributi rilevanti (esclusi @context, @type, @id)
+        # Count only relevant attributes (excluding @context, @type, @id)
         relevant_attrs = [k for k in schema_obj if k not in _GENERIC_KEYS]
         attr_counts.append(len(relevant_attrs))
 
     if attr_counts:
         result.avg_attributes_per_schema = round(sum(attr_counts) / len(attr_counts), 1)
-        # Score: 0 se media < 3 (generico), 1 se 3-4, 3 se 5+ (ricco)
+        # Score: 0 if avg < 3 (generic), 1 if 3-4, 3 if 5+ (rich)
         avg = result.avg_attributes_per_schema
         # Fix #394: gradino intermedio (4+ attributi = 2pt)
         if avg >= 5:
@@ -412,8 +412,8 @@ def audit_content_quality(soup, url: str, soup_clean=None) -> ContentResult:
     headings = soup.find_all(["h1", "h2", "h3", "h4"])
     result.heading_count = len(headings)
 
-    # Fix #285: usa soup_clean pre-calcolato se disponibile, altrimenti crea copia
-    # Usa copy.deepcopy() invece di BS(str(soup)) per evitare re-parse costoso
+    # Fix #285: use pre-computed soup_clean if available, otherwise create a copy
+    # Use copy.deepcopy() instead of BS(str(soup)) to avoid costly re-parsing
     if soup_clean is None:
         soup_clean = copy.deepcopy(soup)
         for tag in soup_clean(["script", "style"]):
@@ -431,7 +431,7 @@ def audit_content_quality(soup, url: str, soup_clean=None) -> ContentResult:
     words = body_text.split()
     result.word_count = len(words)
 
-    # External links (citazioni)
+    # External links (citations)
     parsed = urlparse(url)
     base_domain = parsed.netloc
     all_links = soup.find_all("a", href=True)
@@ -440,23 +440,23 @@ def audit_content_quality(soup, url: str, soup_clean=None) -> ContentResult:
     if external_links:
         result.has_links = True
 
-    # Gerarchia heading: H2 E H3 presenti
+    # Heading hierarchy: both H2 and H3 present
     h2_tags = soup_clean.find_all("h2")
     h3_tags = soup_clean.find_all("h3")
     if h2_tags and h3_tags:
         result.has_heading_hierarchy = True
 
-    # Liste o tabelle
+    # Lists or tables
     lists = soup_clean.find_all(["ul", "ol", "table"])
     if lists:
         result.has_lists_or_tables = True
 
-    # Front-loading: primo 30% del testo ha contenuto sostanziale con dati concreti
-    # Fix #306: la soglia era calcolata male (sempre >= 50 per pagine >= 50 parole)
+    # Front-loading: first 30% of text has substantial content with concrete data
+    # Fix #306: threshold was computed incorrectly (always >= 50 for pages >= 50 words)
     if words:
         soglia_30 = max(len(words) * 30 // 100, 1)
         first_30pct = words[:soglia_30]
-        # Il primo 30% deve avere almeno 50 parole E contenere numeri/statistiche
+        # First 30% must have at least 50 words AND contain numbers/statistics
         if len(first_30pct) >= 50:
             import re as _re_fl
 
@@ -499,7 +499,7 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
             data = json.loads(r.text)
             result.has_summary = True
             result.endpoints_found += 1
-            # Fix #389: validazione più rigorosa — name >= 2 char, description >= 20 char
+            # Fix #389: stricter validation — name >= 2 chars, description >= 20 chars
             if (
                 isinstance(data, dict)
                 and len(str(data.get("name", ""))) >= 2
@@ -517,7 +517,7 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
             data = json.loads(r.text)
             result.has_faq = True
             result.endpoints_found += 1
-            # Fix #389: valida struttura FAQ — ogni item deve avere question + answer >= 20 char
+            # Fix #389: validate FAQ structure — each item must have question + answer >= 20 chars
             faqs = data if isinstance(data, list) else data.get("faqs", []) if isinstance(data, dict) else []
             if isinstance(faqs, list):
                 valid = [
@@ -533,7 +533,7 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
     if r and not err and r.status_code == 200:
         try:
             data = json.loads(r.text)
-            # Fix #389: valida campi richiesti — name + capabilities list
+            # Fix #389: validate required fields — name + capabilities list
             if isinstance(data, dict) and data.get("name") and isinstance(data.get("capabilities"), list):
                 result.has_service = True
                 result.endpoints_found += 1
@@ -638,7 +638,7 @@ def build_recommendations(
             "It helps structure content for AI systems."
         )
     elif llms.found:
-        # #247: llms.txt Policy Intelligence — raccomandazioni sulla qualità del contenuto
+        # #247: llms.txt Policy Intelligence — recommendations on content quality
         if llms.sections_count == 0:
             recommendations.append(
                 "Add H2 sections to llms.txt to organize content by topic (e.g. ## Features, ## Documentation, ## API)"
@@ -648,11 +648,11 @@ def build_recommendations(
                 f"llms.txt has only {llms.links_count} links. "
                 "Add more markdown links to key pages for better AI indexing coverage."
             )
-        # #39: aggiungi validation warnings alle raccomandazioni
+        # #39: add validation warnings to recommendations
         if hasattr(llms, "validation_warnings"):
             for warning in llms.validation_warnings:
                 recommendations.append(warning)
-    # Fix #399: segnala errori JSON-LD
+    # Fix #399: report JSON-LD parse errors
     if schema.json_parse_errors > 0:
         recommendations.append(
             f"Found {schema.json_parse_errors} JSON-LD script(s) with parse errors — validate at schema.org/validator"
@@ -668,14 +668,14 @@ def build_recommendations(
     if not content.has_links:
         recommendations.append("Cite authoritative sources with external links (increase AI credibility)")
 
-    # #263: Raccomandazioni Machine-Readable Presence (RSS + sitemap)
+    # #263: Machine-Readable Presence recommendations (RSS + sitemap)
     if signals is not None and not signals.has_rss:
         recommendations.append(
             "Add RSS/Atom feed and link it in <head> with "
             '<link rel="alternate" type="application/rss+xml"> for AI discovery'
         )
 
-    # Raccomandazioni AI discovery (geo-checklist.dev)
+    # AI discovery recommendations (geo-checklist.dev)
     if ai_discovery is not None:
         if not ai_discovery.has_well_known_ai:
             recommendations.append("Create /.well-known/ai.txt to define AI crawler permissions")
@@ -686,7 +686,7 @@ def build_recommendations(
         if not ai_discovery.has_service:
             recommendations.append("Create /ai/service.json to describe service capabilities for AI")
 
-    # #232: Raccomandazione e-commerce se Product schema è incompleto
+    # #232: E-commerce recommendation when Product schema is incomplete
     if schema.has_product and hasattr(schema, "ecommerce_signals"):
         signals_dict = schema.ecommerce_signals
         missing_fields = [k for k, v in signals_dict.items() if not v and k != "complete"]
@@ -696,7 +696,7 @@ def build_recommendations(
                 "Rich Product schema improves AI shopping visibility."
             )
 
-    # Brand & Entity raccomandazioni (v4.3)
+    # Brand & Entity recommendations (v4.3)
     if brand_entity is not None:
         if not brand_entity.brand_name_consistent and len(brand_entity.names_found) >= 2:
             recommendations.append("Use consistent brand name across title, og:title, H1, and schema Organization")
@@ -717,7 +717,7 @@ def build_recommendations(
                 "Add address, telephone or contactPoint to Organization schema for entity validation"
             )
 
-    # WebMCP raccomandazioni (#233)
+    # WebMCP recommendations (#233)
     if webmcp is not None and webmcp.checked:
         if webmcp.readiness_level == "none":
             recommendations.append("Add potentialAction (SearchAction) to WebSite schema for AI agent discoverability")
@@ -731,7 +731,7 @@ def build_recommendations(
                 "for Chrome AI agent support"
             )
 
-    # Negative Signals raccomandazioni (v4.3)
+    # Negative Signals recommendations (v4.3)
     if negative_signals is not None and negative_signals.checked:
         if negative_signals.cta_density_high:
             recommendations.append(
@@ -785,7 +785,7 @@ def _build_audit_result(
     http_status: int,
     page_size: int,
     soup=None,
-    soup_clean=None,  # Fix #285: soup pre-pulito (senza script/style) per evitare re-parse
+    soup_clean=None,  # Fix #285: pre-cleaned soup (without script/style) to avoid re-parsing
     extra_checks: dict = None,
     signals: SignalsResult = None,  # v4.0: segnali tecnici
     ai_discovery=None,  # Standard AI discovery endpoints (.well-known/ai.txt, ecc.)
@@ -820,34 +820,34 @@ def _build_audit_result(
     """
     from geo_optimizer.core.registry import CheckRegistry
 
-    # Usa SignalsResult vuoto se non fornito
+    # Use empty SignalsResult if not provided
     effective_signals = signals if signals is not None else SignalsResult()
 
-    # Usa AiDiscoveryResult vuoto se non fornito
+    # Use empty AiDiscoveryResult if not provided
     from geo_optimizer.models.results import AiDiscoveryResult
 
     effective_ai_discovery = ai_discovery if ai_discovery is not None else AiDiscoveryResult()
 
-    # v4.3: usa BrandEntityResult vuoto se non fornito
+    # v4.3: use empty BrandEntityResult if not provided
     effective_brand_entity = brand_entity if brand_entity is not None else BrandEntityResult()
 
-    # v4.3: usa WebMcpResult vuoto se non fornito (#233)
+    # v4.3: use empty WebMcpResult if not provided (#233)
     effective_webmcp = webmcp if webmcp is not None else WebMcpResult()
 
-    # v4.3: usa NegativeSignalsResult vuoto se non fornito
+    # v4.3: use empty NegativeSignalsResult if not provided
     effective_negative_signals = negative_signals if negative_signals is not None else NegativeSignalsResult()
 
-    # v4.4: usa PromptInjectionResult vuoto se non fornito (#276)
+    # v4.4: use empty PromptInjectionResult if not provided (#276)
     from geo_optimizer.models.results import PromptInjectionResult
 
     effective_prompt_injection = prompt_injection if prompt_injection is not None else PromptInjectionResult()
 
-    # v4.5: usa TrustStackResult vuoto se non fornito (#273)
+    # v4.5: use empty TrustStackResult if not provided (#273)
     from geo_optimizer.models.results import TrustStackResult
 
     effective_trust_stack = trust_stack if trust_stack is not None else TrustStackResult()
 
-    # Calcola score, breakdown e band (v4.0: include signals, ai_discovery)
+    # Compute score, breakdown, and band (v4.0: includes signals, ai_discovery)
     score = compute_geo_score(
         robots, llms, schema, meta, content, effective_signals, effective_ai_discovery, effective_brand_entity
     )
@@ -856,7 +856,7 @@ def _build_audit_result(
     )
     band = get_score_band(score)
 
-    # Raccomandazioni
+    # Recommendations
     recommendations = build_recommendations(
         base_url,
         robots,
@@ -872,8 +872,8 @@ def _build_audit_result(
         effective_prompt_injection,
     )
 
-    # Fix #104: esegui plugin registrati in CheckRegistry
-    # I risultati non influenzano il punteggio base
+    # Fix #104: run plugins registered in CheckRegistry
+    # Their results do not affect the base score
     plugin_results = {}
     if CheckRegistry.all():
         check_results = CheckRegistry.run_all(base_url, soup=soup)
@@ -888,13 +888,13 @@ def _build_audit_result(
             for r in check_results
         }
 
-    # Citability Score: analisi contenuto con 42 metodi (fix #31)
-    # Fix #285: passa soup_clean pre-calcolato per evitare re-parse in citability
+    # Citability Score: content analysis with 42 methods (fix #31)
+    # Fix #285: pass pre-computed soup_clean to avoid re-parsing in citability
     from geo_optimizer.core.citability import audit_citability
 
     citability = audit_citability(soup, base_url, soup_clean=soup_clean) if soup else CitabilityResult()
 
-    # v4.2: CDN + JS checks (#225, #226)
+    # v4.2: CDN + JS rendering checks (#225, #226)
     effective_cdn = cdn_check if cdn_check is not None else CdnAiCrawlerResult()
     effective_js = js_rendering if js_rendering is not None else JsRenderingResult()
 
@@ -990,7 +990,7 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         result.recommendations = [f"Unable to reach {base_url}: {err}"]
         return result
 
-    # Fix #337: se la homepage ritorna errore HTTP, segnala e non analizzare la pagina di errore
+    # Fix #337: if homepage returns HTTP error, report it and skip analysis of the error page
     if r.status_code not in (200, 203):
         result = AuditResult(
             url=base_url,
@@ -1006,45 +1006,45 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # Fix #285: calcola soup_clean una volta sola e passalo ai sub-audit
-    # Evita 3-4 re-parse dello stesso HTML (risparmio 50-200ms per pagina)
+    # Fix #285: compute soup_clean once and pass it to all sub-audits
+    # Avoids 3-4 re-parses of the same HTML (saves 50-200ms per page)
     soup_clean = copy.deepcopy(soup)
     for tag in soup_clean(["script", "style"]):
         tag.decompose()
 
-    # Esegui tutti i sub-audit
-    # Fix #120: passa effective_bots che include eventuali extra_bots da project_config
+    # Run all sub-audits
+    # Fix #120: pass effective_bots which includes any extra_bots from project_config
     robots = audit_robots_txt(base_url, bots=effective_bots)
     llms = audit_llms_txt(base_url)
     schema = audit_schema(soup, base_url)
     meta = audit_meta_tags(soup, base_url)
     content = audit_content_quality(soup, base_url, soup_clean=soup_clean)
 
-    # v4.1: audit AI discovery endpoints
+    # v4.1: AI discovery endpoints audit
     ai_disc = audit_ai_discovery(base_url)
 
     # v4.2: CDN AI Crawler check (#225) + JS Rendering check (#226)
     cdn_result = audit_cdn_ai_crawler(base_url)
     js_result = audit_js_rendering(soup, r.text)
 
-    # Fix #281: calcolo segnali tecnici (lang, RSS, freshness)
+    # Fix #281: compute technical signals (lang, RSS, freshness)
     signals = audit_signals(soup, schema)
 
-    # v4.3: Brand & Entity signals (zero richieste HTTP, solo dati già disponibili)
+    # v4.3: Brand & Entity signals (zero HTTP requests, uses pre-fetched data only)
     brand_entity_result = audit_brand_entity(soup, schema, meta, content)
 
-    # v4.3: WebMCP Readiness check (#233) — zero fetch HTTP
+    # v4.3: WebMCP Readiness check (#233) — zero HTTP fetch
     webmcp_result = audit_webmcp_readiness(soup, r.text, schema)
 
-    # v4.3: Negative Signals detection — zero fetch HTTP
+    # v4.3: Negative Signals detection — zero HTTP fetch
     negative_signals_result = audit_negative_signals(soup, r.text, content, meta, schema)
 
-    # v4.4: Prompt Injection Pattern Detection (#276) — zero fetch HTTP
+    # v4.4: Prompt Injection Pattern Detection (#276) — zero HTTP fetch
     from geo_optimizer.core.injection_detector import audit_prompt_injection
 
     prompt_injection_result = audit_prompt_injection(soup, r.text)
 
-    # v4.5: Trust Stack Score (#273) — aggregazione 5-layer, zero fetch HTTP
+    # v4.5: Trust Stack Score (#273) — 5-layer aggregation, zero HTTP fetch
     from geo_optimizer.core.trust_stack import audit_trust_stack
 
     try:
@@ -1062,7 +1062,7 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         negative_signals=negative_signals_result,
     )
 
-    # Fix #97 + #104: usa _build_audit_result per logica comune e integrazione plugin
+    # Fix #97 + #104: use _build_audit_result for shared logic and plugin integration
     return _build_audit_result(
         base_url=base_url,
         robots=robots,
@@ -1154,7 +1154,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
         result.recommendations = [f"Unable to reach {base_url}: {err_home}"]
         return result
 
-    # Fix #337: se la homepage ritorna errore HTTP, segnala e non analizzare la pagina di errore
+    # Fix #337: if homepage returns HTTP error, report it and skip analysis of the error page
     if r_home.status_code not in (200, 203):
         result = AuditResult(
             url=base_url,
@@ -1170,7 +1170,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
 
     soup = BeautifulSoup(r_home.text, "html.parser")
 
-    # Fix #285: calcola soup_clean una volta sola per il path async
+    # Fix #285: compute soup_clean once for the async path
     soup_clean = copy.deepcopy(soup)
     for tag in soup_clean(["script", "style"]):
         tag.decompose()
@@ -1186,32 +1186,32 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
     meta = audit_meta_tags(soup, base_url)
     content = audit_content_quality(soup, base_url, soup_clean=soup_clean)
 
-    # v4.1: AI discovery da risposte pre-scaricate
+    # v4.1: AI discovery from pre-fetched responses
     ai_disc = _audit_ai_discovery_from_responses(r_ai_txt, r_ai_summary, r_ai_faq, r_ai_service)
 
     # v4.2: CDN AI Crawler check (#225) + JS Rendering check (#226)
-    # Fix: wrappa chiamate sincrone con asyncio.to_thread per non bloccare l'event loop
+    # Fix: wrap synchronous calls with asyncio.to_thread to avoid blocking the event loop
     cdn_result = await asyncio.to_thread(audit_cdn_ai_crawler, base_url)
     js_result = audit_js_rendering(soup, r_home.text)
 
-    # Fix #281: calcolo segnali tecnici (lang, RSS, freshness)
+    # Fix #281: compute technical signals (lang, RSS, freshness)
     signals = audit_signals(soup, schema)
 
-    # v4.3: Brand & Entity signals (zero richieste HTTP, solo dati già disponibili)
+    # v4.3: Brand & Entity signals (zero HTTP requests, uses pre-fetched data only)
     brand_entity_result = audit_brand_entity(soup, schema, meta, content)
 
-    # v4.3: WebMCP Readiness check (#233) — zero fetch HTTP
+    # v4.3: WebMCP Readiness check (#233) — zero HTTP fetch
     webmcp_result = audit_webmcp_readiness(soup, r_home.text, schema)
 
-    # v4.3: Negative Signals detection — zero fetch HTTP
+    # v4.3: Negative Signals detection — zero HTTP fetch
     negative_signals_result = audit_negative_signals(soup, r_home.text, content, meta, schema)
 
-    # v4.4: Prompt Injection Pattern Detection (#276) — zero fetch HTTP
+    # v4.4: Prompt Injection Pattern Detection (#276) — zero HTTP fetch
     from geo_optimizer.core.injection_detector import audit_prompt_injection
 
     prompt_injection_result = audit_prompt_injection(soup, r_home.text)
 
-    # v4.5: Trust Stack Score (#273) — aggregazione 5-layer, zero fetch HTTP
+    # v4.5: Trust Stack Score (#273) — 5-layer aggregation, zero HTTP fetch
     from geo_optimizer.core.trust_stack import audit_trust_stack
 
     try:
@@ -1229,7 +1229,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
         negative_signals=negative_signals_result,
     )
 
-    # Fix #97 + #104: usa _build_audit_result per logica comune e integrazione plugin
+    # Fix #97 + #104: use _build_audit_result for shared logic and plugin integration
     return _build_audit_result(
         base_url=base_url,
         robots=robots,
@@ -1321,23 +1321,23 @@ def _audit_llms_from_response(r, r_full=None) -> LlmsTxtResult:
 
     blockquotes = [line for line in lines if line.startswith("> ")]
     if blockquotes:
-        # Fix #317: sincronizza has_description (alias retrocompatibile) con has_blockquote
+        # Fix #317: sync has_description (backward-compat alias) with has_blockquote
         result.has_blockquote = True
         result.has_description = True
 
     h2_lines = [line for line in lines if line.startswith("## ")]
     if h2_lines:
         result.has_sections = True
-    # #247: conta sezioni H2 per Policy Intelligence
+    # #247: count H2 sections for Policy Intelligence
     result.sections_count = len(h2_lines)
 
     links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", content)
     if links:
         result.has_links = True
-    # #247: conta link per Policy Intelligence
+    # #247: count links for Policy Intelligence
     result.links_count = len(links)
 
-    # #39: validazione v2 — conformità spec completa
+    # #39: v2 validation — full spec compliance
     _validate_llms_content(result, content)
 
     # Check /llms-full.txt — fix #184: now works in the async path too
@@ -1408,14 +1408,14 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
     from geo_optimizer.utils.http import create_session_with_retry
     from geo_optimizer.utils.validators import resolve_and_validate_url
 
-    # Fix #283: validazione SSRF prima delle richieste CDN
-    # Fix #305: DNS pinning con sessione pinnata (elimina TOCTOU)
+    # Fix #283: SSRF validation before CDN requests
+    # Fix #305: DNS pinning with pinned session (eliminates TOCTOU)
     is_safe, reason, pinned_ips = resolve_and_validate_url(base_url)
     if not is_safe:
-        result.error = f"URL non sicura: {reason}"
+        result.error = f"Unsafe URL: {reason}"
         return result
 
-    # Sessione con DNS pinning — tutte le richieste usano gli IP già validati
+    # Session with DNS pinning — all requests use pre-validated IPs
     session = create_session_with_retry(total_retries=1, pinned_ips=pinned_ips)
 
     try:
@@ -1449,7 +1449,7 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
                 result.cdn_detected = "akamai"
 
         except Exception:
-            # Non raggiungibile nemmeno come browser — skip check
+            # Not reachable even as a browser — skip check
             return result
 
         # Step 2: AI bot requests
@@ -1541,8 +1541,8 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
         result.details = "No <body> tag found in raw HTML"
         return result
 
-    # Fix #24: usa deepcopy per non mutare il soup originale
-    # (audit_citability ha bisogno dei <script type="application/ld+json"> intatti)
+    # Fix #24: use deepcopy to avoid mutating the original soup
+    # (audit_citability needs <script type="application/ld+json"> tags intact)
     import copy
 
     body_clean = copy.deepcopy(body)
@@ -1552,7 +1552,7 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
     body_text = body_clean.get_text(separator=" ", strip=True)
     result.raw_word_count = len(body_text.split())
 
-    # Count headings in raw HTML (dal body pulito, fix #24)
+    # Count headings in raw HTML (from the cleaned body, fix #24)
     headings = body_clean.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
     result.raw_heading_count = len(headings)
 
@@ -1574,7 +1574,7 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
                 break
 
     # Check for <noscript> content
-    # Fix #27: usa soup originale (non mutato grazie a fix #24)
+    # Fix #27: use original soup (not mutated, thanks to fix #24)
     noscript_tags = soup.find_all("noscript")
     for ns in noscript_tags:
         ns_text = ns.get_text(strip=True)
@@ -1630,7 +1630,7 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
     return result
 
 
-# ─── Fix #281: Calcolo SignalsResult ─────────────────────────────────────────
+# ─── Fix #281: Compute SignalsResult ─────────────────────────────────────────
 
 
 def audit_signals(soup, schema_result) -> SignalsResult:
@@ -1645,7 +1645,7 @@ def audit_signals(soup, schema_result) -> SignalsResult:
     """
     signals = SignalsResult()
 
-    # 1. Controllo lang attribute su <html>
+    # 1. Check lang attribute on <html>
     html_tag = soup.find("html")
     if html_tag:
         lang_val = html_tag.get("lang", "").strip()
@@ -1653,14 +1653,14 @@ def audit_signals(soup, schema_result) -> SignalsResult:
             signals.has_lang = True
             signals.lang_value = lang_val
 
-    # 2. Controllo RSS/Atom feed
+    # 2. Check RSS/Atom feed
     rss_link = soup.find("link", attrs={"type": lambda t: t and ("rss" in t.lower() or "atom" in t.lower())})
     if rss_link:
         signals.has_rss = True
         signals.rss_url = rss_link.get("href", "")
 
-    # 3. Controllo freshness (dateModified nello schema o meta tag)
-    # Cerca dateModified negli schema JSON-LD
+    # 3. Check freshness (dateModified in schema or meta tag)
+    # Look for dateModified in JSON-LD schemas
     if schema_result and schema_result.raw_schemas:
         for s in schema_result.raw_schemas:
             date_mod = s.get("dateModified", "") or s.get("datePublished", "")
@@ -1669,7 +1669,7 @@ def audit_signals(soup, schema_result) -> SignalsResult:
                 signals.freshness_date = str(date_mod)
                 break
 
-    # Fallback: meta tag article:modified_time
+    # Fallback: article:modified_time meta tag
     if not signals.has_freshness:
         meta_mod = soup.find("meta", attrs={"property": "article:modified_time"})
         if meta_mod and meta_mod.get("content", "").strip():
@@ -1705,14 +1705,14 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
         return result
 
     # ── 1. Entity Coherence ──────────────────────────────────────
-    # Raccoglie nomi brand da varie fonti
+    # Collect brand names from various sources
     names = []
 
     # H1
     h1 = soup.find("h1")
     if h1 and h1.get_text(strip=True):
         h1_text = h1.get_text(strip=True)
-        # Prende la prima parte prima di separatori comuni
+        # Take the first part before common separators
         for sep in (" — ", " - ", " | ", " · "):
             if sep in h1_text:
                 h1_text = h1_text.split(sep)[0].strip()
@@ -1757,7 +1757,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
 
     result.names_found = names[:10]
 
-    # Fix #397: normalizza suffissi legali prima del confronto
+    # Fix #397: normalize legal suffixes before comparison
     _LEGAL_SUFFIXES = (" inc.", " inc", " ltd.", " ltd", " llc", " gmbh", " s.r.l.", " s.p.a.", " corp.", " corp")
 
     def _normalize_brand(name: str) -> str:
@@ -1767,7 +1767,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
                 n = n[: -len(suffix)].strip()
         return n
 
-    # Consistenza: almeno 2 nomi, e i più comuni sono uguali (case-insensitive, senza suffissi legali)
+    # Consistency: at least 2 names, and the most common ones match (case-insensitive, without legal suffixes)
     if len(names) >= 2:
         lower_names = [_normalize_brand(n) for n in names]
         freq = Counter(lower_names)
@@ -1788,7 +1788,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
                 schema_desc = s.get("description", "")
                 if schema_desc and isinstance(schema_desc, str):
                     schema_desc_lower = schema_desc.lower()[:100]
-                    # Overlap significativo: almeno 30 char in comune
+                    # Significant overlap: at least 30 chars in common
                     if meta_desc_lower[:30] in schema_desc_lower or schema_desc_lower[:30] in meta_desc_lower:
                         result.schema_desc_matches_meta = True
                         break
@@ -1818,14 +1818,14 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
     )
 
     # ── 3. About/Contact Signals ─────────────────────────────────
-    # Cerca link /about nella pagina
+    # Look for /about link in the page
     for a_tag in soup.find_all("a", href=True):
         href = a_tag["href"].lower()
         if any(pattern in href for pattern in ABOUT_LINK_PATTERNS):
             result.has_about_link = True
             break
 
-    # Cerca Organization con address/telephone/email o Person con jobTitle
+    # Look for Organization with address/telephone/email or Person with jobTitle
     for raw_schema in schema_result.raw_schemas:
         schemas_to_check = []
         if "@graph" in raw_schema:
@@ -1849,7 +1849,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
     result.hreflang_count = len(hreflang_tags)
     result.has_hreflang = result.hreflang_count > 0
 
-    # Schema geo (address, areaServed, LocalBusiness)
+    # Schema geo signals (address, areaServed, LocalBusiness)
     for raw_schema in schema_result.raw_schemas:
         schemas_to_check = []
         if "@graph" in raw_schema:
@@ -1865,7 +1865,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
                 break
 
     # ── 5. Topic Authority ───────────────────────────────────────
-    # FAQ depth dal FAQPage schema
+    # FAQ depth from the FAQPage schema
     for raw_schema in schema_result.raw_schemas:
         schemas_to_check = []
         if "@graph" in raw_schema:
@@ -1881,7 +1881,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
                 if isinstance(main_entity, list):
                     result.faq_depth += len(main_entity)
 
-    # Article/BlogPosting con dateModified
+    # Article/BlogPosting with dateModified
     result.has_recent_articles = schema_result.has_date_modified and (
         schema_result.has_article or any(t in ("BlogPosting", "NewsArticle") for t in schema_result.found_types)
     )
@@ -1949,11 +1949,11 @@ def audit_webmcp_readiness(soup, raw_html: str, schema_result) -> WebMcpResult:
     result.checked = True
 
     # ── 1. WebMCP Detection ──────────────────────────────────────
-    # API imperativa: navigator.modelContext.registerTool()
+    # Imperative API: navigator.modelContext.registerTool()
     if "modelContext" in raw_html and "registerTool" in raw_html:
         result.has_register_tool = True
 
-    # API dichiarativa: attributi toolname/tooldescription nei tag HTML
+    # Declarative API: toolname/tooldescription attributes on HTML elements
     tool_elements = soup.find_all(attrs={"toolname": True})
     if tool_elements:
         result.has_tool_attributes = True
@@ -1968,25 +1968,25 @@ def audit_webmcp_readiness(soup, raw_html: str, schema_result) -> WebMcpResult:
         result.has_potential_action = True
         result.potential_actions = sorted(action_types)
 
-    # ── 3. Form accessibili (agent-usable) ───────────────────────
+    # ── 3. Accessible forms (agent-usable) ───────────────────────
     forms = soup.find_all("form")
     labeled_count = 0
     for form in forms:
-        # Un form è "agent-usable" se ha:
-        # - almeno 1 input con label associata O aria-label O placeholder descrittivo
-        # - un action o method definito
+        # A form is "agent-usable" if it has:
+        # - at least 1 input with an associated label OR aria-label OR descriptive placeholder
+        # - a defined action or method
         inputs = form.find_all(["input", "select", "textarea"])
         has_labels = False
         for inp in inputs:
             inp_type = (inp.get("type") or "text").lower()
             if inp_type in ("hidden", "submit", "button"):
                 continue
-            # Label associata via for/id
+            # Label associated via for/id
             inp_id = inp.get("id")
             if inp_id and form.find("label", attrs={"for": inp_id}):
                 has_labels = True
                 break
-            # aria-label o placeholder
+            # aria-label or placeholder
             if inp.get("aria-label") or inp.get("placeholder"):
                 has_labels = True
                 break
@@ -2004,7 +2004,7 @@ def audit_webmcp_readiness(soup, raw_html: str, schema_result) -> WebMcpResult:
         if any(pattern in href for pattern in openapi_patterns):
             result.has_openapi = True
             break
-    # Anche nei link tag
+    # Also check link tags
     if not result.has_openapi:
         for link in soup.find_all("link", href=True):
             href = link["href"].lower()
@@ -2054,8 +2054,8 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
 
     result.checked = True
 
-    # ── 1. CTA density (auto-promozionale) ───────────────────────
-    # Pattern CTA aggressivi
+    # ── 1. CTA density (self-promotional) ────────────────────────
+    # Aggressive CTA patterns
     cta_patterns = re.compile(
         r"\b(buy now|sign up|subscribe|get started|free trial|order now|"
         r"act now|limited time|don.t miss|hurry|compra ora|iscriviti|"
@@ -2065,28 +2065,28 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
     text = soup.get_text(separator=" ", strip=True)
     cta_matches = cta_patterns.findall(text)
     result.cta_count = len(cta_matches)
-    # > 5 CTA in una pagina = eccessivo
+    # > 5 CTAs on a page = excessive
     word_count = content_result.word_count if content_result.word_count > 0 else max(len(text.split()), 1)
     if result.cta_count > 5 or (word_count > 0 and result.cta_count / word_count > 0.01):
         result.cta_density_high = True
 
-    # ── 2. Popup/interstitial nel DOM ────────────────────────────
+    # ── 2. Popup/interstitial in the DOM ─────────────────────────
     popup_classes = ["modal", "popup", "overlay", "interstitial", "lightbox", "cookie-banner"]
     for cls in popup_classes:
         elements = soup.find_all(attrs={"class": lambda c, _cls=cls: c and _cls in str(c).lower()})
         if elements:
             result.popup_indicators.append(cls)
-    # Anche data attributes
+    # Also data attributes
     for attr in ["data-modal", "data-popup", "data-overlay"]:
         if soup.find(attrs={attr: True}):
             result.popup_indicators.append(attr)
     result.has_popup_signals = len(result.popup_indicators) > 0
 
     # ── 3. Thin content ──────────────────────────────────────────
-    # < 300 parole E ha un H1 che promette contenuto sostanziale
+    # < 300 words AND an H1 that promises substantial content
     if content_result.word_count < 300:
         h1 = content_result.h1_text.lower() if content_result.h1_text else ""
-        # H1 che promette contenuto complesso
+        # H1 that promises complex content
         complex_patterns = [
             "guide",
             "guida",
@@ -2113,7 +2113,7 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
     result.has_broken_links = broken_count > 3
 
     # ── 5. Keyword stuffing ──────────────────────────────────────
-    # Calcola frequenza parole (escluse stop words e parole corte)
+    # Compute word frequency (excluding stop words and short words)
     stop_words = {
         "the",
         "a",
@@ -2176,15 +2176,15 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
         total = len(words)
         for word, count in freq.most_common(3):
             density = count / total
-            # > 3% density per una singola parola = stuffing
+            # > 3% density for a single word = stuffing
             if density > KEYWORD_STUFFING_THRESHOLD and count >= 5:
                 result.has_keyword_stuffing = True
                 result.stuffed_word = word
                 result.stuffed_density = round(density * 100, 1)
                 break
 
-    # ── 6. Assenza autore ────────────────────────────────────────
-    # Cerca Person schema
+    # ── 6. Missing author signal ─────────────────────────────────
+    # Look for Person schema
     for raw_schema in schema_result.raw_schemas:
         schemas_to_check = []
         if isinstance(raw_schema, dict) and "@graph" in raw_schema:
@@ -2205,21 +2205,21 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
         if result.has_author_signal:
             break
 
-    # Anche rel=author o class=author nel HTML
+    # Also check rel=author or class=author in HTML
     if not result.has_author_signal and (
         soup.find("a", rel="author") or soup.find(attrs={"class": lambda c: c and "author" in str(c).lower()})
     ):
         result.has_author_signal = True
 
     # ── 7. Boilerplate ratio ─────────────────────────────────────
-    # Contenuto in <main>, <article>, role="main" vs totale
+    # Content in <main>, <article>, role="main" vs total
     main_content = soup.find("main") or soup.find("article") or soup.find(attrs={"role": "main"})
     total_text_len = len(text)
     if main_content and total_text_len > 0:
         main_text_len = len(main_content.get_text(separator=" ", strip=True))
         result.boilerplate_ratio = round(1.0 - (main_text_len / total_text_len), 2)
     elif total_text_len > 0:
-        # No <main>/<article> — stima nav+footer
+        # No <main>/<article> — estimate nav+footer
         nav_footer_len = 0
         for tag in soup.find_all(["nav", "footer", "header"]):
             nav_footer_len += len(tag.get_text(separator=" ", strip=True))
@@ -2228,7 +2228,7 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
     result.boilerplate_high = result.boilerplate_ratio > 0.6
 
     # ── 8. Mixed signals ─────────────────────────────────────────
-    # H1 promette molto, contenuto poco
+    # H1 promises a lot, but content is thin
     h1 = content_result.h1_text.lower() if content_result.h1_text else ""
     big_promise_words = [
         "complete",
@@ -2252,7 +2252,7 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
         result.is_thin_content,
         result.has_broken_links,
         result.has_keyword_stuffing,
-        not result.has_author_signal,  # assenza autore = negativo
+        not result.has_author_signal,  # missing author = negative signal
         result.boilerplate_high,
         result.has_mixed_signals,
     ]

@@ -66,8 +66,8 @@ def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
         )
 
     # robots.txt exists but some bots are missing or blocked
-    # Fix #211: include anche bots_blocked — un bot bloccato con Disallow
-    # necessita ugualmente di una regola Allow per essere accessibile
+    # Fix #211: also include bots_blocked — a bot blocked with Disallow
+    # still needs an Allow rule to become accessible
     bots_to_fix = result.robots.bots_missing + result.robots.bots_blocked
     lines = [
         "",
@@ -125,7 +125,7 @@ def generate_llms_fix(result: AuditResult, base_url: str) -> FixItem | None:
     desc = "Create llms.txt" if not result.llms.found else "Regenerate llms.txt with complete structure"
 
     if urls:
-        desc += f" ({len(urls)} URL dal sitemap)"
+        desc += f" ({len(urls)} URLs from sitemap)"
 
     return FixItem(
         category="llms",
@@ -246,13 +246,13 @@ def generate_meta_fix(result: AuditResult, base_url: str) -> FixItem | None:
 
 
 def generate_ai_discovery_fix(result: AuditResult, base_url: str) -> list[FixItem]:
-    """Genera template per endpoint AI discovery mancanti (geo-checklist.dev).
+    """Generate templates for missing AI discovery endpoints (geo-checklist.dev).
 
-    Genera /ai/summary.json e /ai/faq.json se assenti.
-    NON genera /.well-known/ai.txt (troppo specifico per il server).
+    Generates /ai/summary.json and /ai/faq.json if absent.
+    Does NOT generate /.well-known/ai.txt (too server-specific).
 
     Returns:
-        Lista di FixItem (può essere vuota).
+        List of FixItem (may be empty).
     """
     fixes = []
     parsed = urlparse(base_url)
@@ -269,7 +269,7 @@ def generate_ai_discovery_fix(result: AuditResult, base_url: str) -> list[FixIte
         fixes.append(
             FixItem(
                 category="ai_discovery",
-                description="Genera /ai/summary.json con informazioni del sito per AI",
+                description="Generate /ai/summary.json with site information for AI",
                 content=json.dumps(summary_data, indent=2, ensure_ascii=False),
                 file_name="ai/summary.json",
                 action="create",
@@ -293,7 +293,7 @@ def generate_ai_discovery_fix(result: AuditResult, base_url: str) -> list[FixIte
         fixes.append(
             FixItem(
                 category="ai_discovery",
-                description="Genera /ai/faq.json con FAQ di esempio per AI",
+                description="Generate /ai/faq.json with example FAQ for AI",
                 content=json.dumps(faq_data, indent=2, ensure_ascii=False),
                 file_name="ai/faq.json",
                 action="create",
@@ -411,12 +411,12 @@ def run_all_fixes(
     else:
         skipped.append("schema: excluded by --only filter")
 
-    # AI Discovery fix (v4.1: genera template per endpoint AI discovery)
+    # AI Discovery fix (v4.1: generate templates for AI discovery endpoints)
     if "ai_discovery" in active:
         ai_fixes = generate_ai_discovery_fix(audit_result, base_url)
         fixes.extend(ai_fixes)
         if not ai_fixes:
-            skipped.append("ai_discovery: tutti gli endpoint AI discovery sono presenti")
+            skipped.append("ai_discovery: all AI discovery endpoints are already present")
     else:
         skipped.append("ai_discovery: excluded by --only filter")
 

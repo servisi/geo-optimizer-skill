@@ -1,8 +1,8 @@
 """
-GEO scoring engine — calcola il punteggio 0-100 dai pesi SCORING.
+GEO scoring engine — computes the 0-100 score from SCORING weights.
 
-Separato da audit.py per abilitare estensibilità, override dello scoring
-e breakdown per categoria (v4.0).
+Separated from audit.py to enable extensibility, scoring override
+and per-category breakdown (v4.0).
 """
 
 from __future__ import annotations
@@ -22,19 +22,19 @@ _logger = logging.getLogger(__name__)
 
 
 def compute_geo_score(robots, llms, schema, meta, content, signals=None, ai_discovery=None, brand_entity=None) -> int:
-    """Calcola il punteggio GEO 0-100 dai pesi SCORING (v4.0)."""
+    """Compute the GEO score 0-100 from SCORING weights (v4.0)."""
     breakdown = compute_score_breakdown(robots, llms, schema, meta, content, signals, ai_discovery, brand_entity)
     total = sum(breakdown.values())
-    # Fix #316: segnala overflow per rilevare disallineamenti nei pesi SCORING
+    # Fix #316: report overflow to detect misalignments in SCORING weights
     if total > 100:
-        _logger.warning("Score overflow: %d > 100 (verificare pesi SCORING)", total)
+        _logger.warning("Score overflow: %d > 100 (check SCORING weights)", total)
     return min(total, 100)
 
 
 def compute_score_breakdown(
     robots, llms, schema, meta, content, signals=None, ai_discovery=None, brand_entity=None
 ) -> dict[str, int]:
-    """Ritorna il breakdown del punteggio per categoria."""
+    """Return the score breakdown by category."""
     return {
         "robots": _score_robots(robots),
         "llms": _score_llms(llms),
@@ -48,7 +48,7 @@ def compute_score_breakdown(
 
 
 def get_score_band(score: int) -> str:
-    """Ritorna il nome della banda di punteggio da SCORE_BANDS."""
+    """Return the score band name from SCORE_BANDS."""
     for band_name, (low, high) in SCORE_BANDS.items():
         if low <= score <= high:
             return band_name
@@ -56,16 +56,16 @@ def get_score_band(score: int) -> str:
 
 
 def _score_robots(robots) -> int:
-    """Calcola il punteggio robots.txt."""
+    """Compute the robots.txt score."""
     if not robots.found:
         return 0
     s = SCORING["robots_found"]
     if robots.citation_bots_ok:
         if robots.citation_bots_explicit:
-            # Punteggio pieno: bot di citazione esplicitamente permessi
+            # Full score: citation bots explicitly allowed
             s += SCORING["robots_citation_ok"]
         else:
-            # Permesso solo via wildcard: punteggio parziale
+            # Allowed only via wildcard: partial score
             s += ROBOTS_PARTIAL_SCORE
     elif robots.bots_allowed:
         s += ROBOTS_PARTIAL_SCORE
@@ -73,16 +73,16 @@ def _score_robots(robots) -> int:
 
 
 def _score_llms(llms) -> int:
-    """Calcola il punteggio llms.txt con qualità graduata."""
+    """Compute the llms.txt score with graduated quality."""
     if not llms.found:
         return 0
     s = SCORING["llms_found"]
     s += SCORING["llms_h1"] if llms.has_h1 else 0
-    # #39: bonus blockquote (1 punto dal budget llms_found ridotto)
+    # #39: blockquote bonus (1 point from reduced llms_found budget)
     s += SCORING.get("llms_blockquote", 1) if getattr(llms, "has_blockquote", False) else 0
     s += SCORING["llms_sections"] if llms.has_sections else 0
     s += SCORING["llms_links"] if llms.has_links else 0
-    # Profondità contenuto: bonus per file più ricchi
+    # Content depth: bonus for richer files
     s += SCORING["llms_depth"] if llms.word_count >= LLMS_DEPTH_WORDS else 0
     s += SCORING["llms_depth_high"] if llms.word_count >= LLMS_DEPTH_HIGH_WORDS else 0
     s += SCORING["llms_full"] if llms.has_full else 0
@@ -90,14 +90,14 @@ def _score_llms(llms) -> int:
 
 
 def _score_schema(schema) -> int:
-    """Calcola il punteggio schema JSON-LD.
+    """Compute the JSON-LD schema score.
 
-    Schema richness (Growth Marshal Feb 2026): schema con solo @type + name + url
-    è generico e non aiuta. Schema con 5+ attributi rilevanti → punti pieni.
+    Schema richness (Growth Marshal Feb 2026): a schema with only @type + name + url
+    is generic and unhelpful. A schema with 5+ relevant attributes → full points.
     """
     s = SCORING["schema_any_valid"] if schema.any_schema_found else 0
-    # Schema richness: premia schema con attributi ricchi, penalizza quelli generici
-    # Fix #394: gradino intermedio per richness (avg >= 4 → 2pt)
+    # Schema richness: rewards rich attribute schemas, penalizes generic ones
+    # Fix #394: intermediate step for richness (avg >= 4 → 2pt)
     s += min(schema.schema_richness_score, SCORING["schema_richness"])
     s += SCORING["schema_faq"] if schema.has_faq else 0
     s += SCORING["schema_article"] if schema.has_article else 0
@@ -108,7 +108,7 @@ def _score_schema(schema) -> int:
 
 
 def _score_meta(meta) -> int:
-    """Calcola il punteggio meta tag."""
+    """Compute the meta tag score."""
     s = SCORING["meta_title"] if meta.has_title else 0
     s += SCORING["meta_description"] if meta.has_description else 0
     s += SCORING["meta_canonical"] if meta.has_canonical else 0
@@ -117,7 +117,7 @@ def _score_meta(meta) -> int:
 
 
 def _score_content(content) -> int:
-    """Calcola il punteggio qualità contenuto."""
+    """Compute the content quality score."""
     s = SCORING["content_h1"] if content.has_h1 else 0
     s += SCORING["content_numbers"] if content.has_numbers else 0
     s += SCORING["content_links"] if content.has_links else 0
@@ -129,7 +129,7 @@ def _score_content(content) -> int:
 
 
 def _score_signals(signals) -> int:
-    """Calcola il punteggio segnali tecnici (v4.0)."""
+    """Compute the technical signals score (v4.0)."""
     if signals is None:
         return 0
     s = SCORING["signals_lang"] if signals.has_lang else 0
@@ -139,7 +139,7 @@ def _score_signals(signals) -> int:
 
 
 def _score_ai_discovery(ai_discovery) -> int:
-    """Calcola il punteggio AI discovery (geo-checklist.dev standard)."""
+    """Compute the AI discovery score (geo-checklist.dev standard)."""
     if ai_discovery is None:
         return 0
     s = SCORING["ai_discovery_well_known"] if ai_discovery.has_well_known_ai else 0
@@ -150,16 +150,16 @@ def _score_ai_discovery(ai_discovery) -> int:
 
 
 def _score_brand_entity(brand_entity) -> int:
-    """Calcola il punteggio Brand & Entity (v4.3)."""
+    """Compute the Brand & Entity score (v4.3)."""
     if brand_entity is None:
         return 0
     s = 0
-    # Entity Coherence (3 punti)
+    # Entity Coherence (3 points)
     if brand_entity.brand_name_consistent:
-        s += SCORING["brand_entity_coherence"] - 1  # 2pt per nomi coerenti
+        s += SCORING["brand_entity_coherence"] - 1  # 2pt for consistent names
     if brand_entity.schema_desc_matches_meta:
-        s += 1  # 1pt per description match
-    # Knowledge Graph Readiness (3 punti)
+        s += 1  # 1pt for description match
+    # Knowledge Graph Readiness (3 points)
     pillars = brand_entity.kg_pillar_count
     if pillars >= 3:
         s += SCORING["brand_kg_readiness"]  # 3pt
@@ -167,15 +167,15 @@ def _score_brand_entity(brand_entity) -> int:
         s += 2
     elif pillars >= 1:
         s += 1
-    # About/Contact (2 punti)
+    # About/Contact (2 points)
     if brand_entity.has_about_link:
         s += 1
     if brand_entity.has_contact_info:
         s += 1
-    # Geographic Identity (1 punto)
+    # Geographic Identity (1 point)
     if brand_entity.has_geo_schema or brand_entity.has_hreflang:
         s += SCORING["brand_geo_identity"]
-    # Topic Authority (1 punto)
+    # Topic Authority (1 point)
     if brand_entity.faq_depth >= 3 or brand_entity.has_recent_articles:
         s += SCORING["brand_topic_authority"]
     return s

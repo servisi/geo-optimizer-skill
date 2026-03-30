@@ -1,14 +1,14 @@
 """
-Trust Stack Score — aggregazione 5-layer trust signals (#273).
+Trust Stack Score — 5-layer trust signal aggregation (#273).
 
-Aggrega segnali di fiducia da sub-audit già eseguiti. Zero fetch HTTP.
+Aggregates trust signals from already-executed sub-audits. Zero HTTP fetches.
 
-Layer:
+Layers:
 1. Technical Trust  — HTTPS, security headers (HSTS, CSP, X-Frame-Options)
 2. Identity Trust   — authorship, Organization schema, about/contact
-3. Social Trust     — sameAs, recensioni, profili social
-4. Academic Trust   — citazioni, statistiche, fonti autorevoli
-5. Consistency Trust — coerenza brand, no mixed signals, date
+3. Social Trust     — sameAs, reviews, social profiles
+4. Academic Trust   — citations, statistics, authoritative sources
+5. Consistency Trust — brand consistency, no mixed signals, dates
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from geo_optimizer.models.results import (
     TrustStackResult,
 )
 
-# Regex per statistiche originali nel testo
+# Regex for original statistics in text
 _STATISTICS_RE = re.compile(
     r"\d+[\.,]?\d*\s*(?:%|percent|percentuale|studio|ricerca|survey|report|according to|secondo)",
     re.IGNORECASE,
@@ -43,11 +43,11 @@ _STATISTICS_RE = re.compile(
 
 
 def _score_technical(base_url: str, response_headers: dict[str, str]) -> TrustLayerScore:
-    """Valuta fiducia tecnica: HTTPS + security headers."""
+    """Evaluate technical trust: HTTPS + security headers."""
     layer = TrustLayerScore(name="technical", label="Technical Trust")
     headers = {k.lower(): v for k, v in response_headers.items()}
 
-    # HTTPS (+2 punti — fondamentale per trust)
+    # HTTPS (+2 points — fundamental for trust)
     if base_url.startswith("https://"):
         layer.score += 2
         layer.signals_found.append("HTTPS")
@@ -88,10 +88,10 @@ def _score_identity(
     schema: SchemaResult,
     negative_signals: NegativeSignalsResult,
 ) -> TrustLayerScore:
-    """Valuta fiducia identitaria: chi c'è dietro al sito."""
+    """Evaluate identity trust: who is behind the site."""
     layer = TrustLayerScore(name="identity", label="Identity Trust")
 
-    # Brand coerente (+1)
+    # Consistent brand (+1)
     if brand_entity.brand_name_consistent:
         layer.score += 1
         layer.signals_found.append("Brand name consistent")
@@ -119,7 +119,7 @@ def _score_identity(
     else:
         layer.signals_missing.append("No Organization JSON-LD schema")
 
-    # Autore identificabile (+1)
+    # Identifiable author (+1)
     if negative_signals.has_author_signal or schema.has_person:
         layer.score += 1
         layer.signals_found.append("Author identified")
@@ -134,15 +134,15 @@ def _score_identity(
 
 
 def _detect_testimonials(soup) -> bool:
-    """Rileva review/testimonial nel DOM."""
-    # Cerca classi CSS comuni per testimonial/review
+    """Detect reviews/testimonials in the DOM."""
+    # Look for common CSS classes for testimonials/reviews
     for cls_name in ["review", "testimonial", "testimony", "recensione"]:
         if soup.find(attrs={"class": lambda c, _cn=cls_name: c and _cn in str(c).lower()}):
             return True
     # Schema itemprop review
     if soup.find(attrs={"itemprop": "review"}):
         return True
-    # Blockquote con testo sostanziale (possibile testimonial)
+    # Blockquote with substantial text (possible testimonial)
     for bq in soup.find_all("blockquote"):
         text = bq.get_text(strip=True)
         if len(text.split()) >= 20:
@@ -151,7 +151,7 @@ def _detect_testimonials(soup) -> bool:
 
 
 def _detect_social_links(soup) -> list[str]:
-    """Rileva link a profili social nel DOM."""
+    """Detect links to social profiles in the DOM."""
     found_domains: list[str] = []
     for a_tag in soup.find_all("a", href=True):
         href = a_tag["href"].lower()
@@ -166,17 +166,17 @@ def _score_social(
     brand_entity: BrandEntityResult,
     soup,
 ) -> TrustLayerScore:
-    """Valuta fiducia sociale: presenza e reputazione esterna."""
+    """Evaluate social trust: external presence and reputation."""
     layer = TrustLayerScore(name="social", label="Social Trust")
 
-    # sameAs presenti (+1)
+    # sameAs present (+1)
     if schema.has_sameas and len(schema.sameas_urls) >= 1:
         layer.score += 1
         layer.signals_found.append(f"sameAs links ({len(schema.sameas_urls)})")
     else:
         layer.signals_missing.append("No sameAs links in schema")
 
-    # sameAs multipli 3+ (+1)
+    # Multiple sameAs 3+ (+1)
     if len(schema.sameas_urls) >= 3:
         layer.score += 1
         layer.signals_found.append("Multiple sameAs (3+)")
@@ -188,14 +188,14 @@ def _score_social(
     else:
         layer.signals_missing.append("No Knowledge Graph pillar links")
 
-    # Testimonial/review nel DOM (+1)
+    # Testimonials/reviews in the DOM (+1)
     if _detect_testimonials(soup):
         layer.score += 1
         layer.signals_found.append("Reviews/testimonials")
     else:
         layer.signals_missing.append("No reviews or testimonials found")
 
-    # Link a profili social (+1)
+    # Social profile links (+1)
     social_links = _detect_social_links(soup)
     if social_links:
         layer.score += 1
@@ -211,7 +211,7 @@ def _score_social(
 
 
 def _detect_authoritative_links(soup) -> list[str]:
-    """Rileva link a fonti accademiche autorevoli."""
+    """Detect links to authoritative academic sources."""
     found: list[str] = []
     for a_tag in soup.find_all("a", href=True):
         href = a_tag["href"].lower()
@@ -222,7 +222,7 @@ def _detect_authoritative_links(soup) -> list[str]:
 
 
 def _detect_references_section(soup) -> bool:
-    """Rileva sezione References/Fonti tramite heading."""
+    """Detect a References/Sources section via headings."""
     for tag in soup.find_all(["h2", "h3", "h4"]):
         heading_text = tag.get_text(strip=True).lower()
         if any(pattern in heading_text for pattern in REFERENCES_HEADING_PATTERNS):
@@ -231,7 +231,7 @@ def _detect_references_section(soup) -> bool:
 
 
 def _count_statistics(soup) -> int:
-    """Conta pattern statistici nel testo della pagina."""
+    """Count statistical patterns in the page text."""
     body = soup.find("body")
     if not body:
         return 0
@@ -240,18 +240,18 @@ def _count_statistics(soup) -> int:
 
 
 def _score_academic(content: ContentResult, soup) -> TrustLayerScore:
-    """Valuta fiducia accademica: dati, citazioni, fonti."""
+    """Evaluate academic trust: data, citations, sources."""
     layer = TrustLayerScore(name="academic", label="Academic Trust")
 
-    # Dati/numeri citati (+1)
+    # Cited data/numbers (+1)
     if content.has_numbers and content.numbers_count >= 3:
         layer.score += 1
         layer.signals_found.append(f"Statistics cited ({content.numbers_count})")
     else:
         layer.signals_missing.append("Few or no statistics/numbers in content")
 
-    # Link a fonti esterne (+1) — fix #390: escludi link social dal conteggio
-    # I link social vanno nel Social Trust, non nell'Academic Trust
+    # External source links (+1) — fix #390: exclude social links from the count
+    # Social links belong in Social Trust, not Academic Trust
     social_link_count = len(_detect_social_links(soup)) if soup else 0
     academic_external_count = max(content.external_links_count - social_link_count, 0)
     if academic_external_count >= 2:
@@ -260,7 +260,7 @@ def _score_academic(content: ContentResult, soup) -> TrustLayerScore:
     else:
         layer.signals_missing.append("Few external source links")
 
-    # Link a fonti autorevoli (+1)
+    # Links to authoritative sources (+1)
     auth_links = _detect_authoritative_links(soup)
     if auth_links:
         layer.score += 1
@@ -268,14 +268,14 @@ def _score_academic(content: ContentResult, soup) -> TrustLayerScore:
     else:
         layer.signals_missing.append("No links to authoritative sources (DOI, PubMed, Scholar)")
 
-    # Sezione References/Fonti (+1)
+    # References/Sources section (+1)
     if _detect_references_section(soup):
         layer.score += 1
         layer.signals_found.append("References section")
     else:
         layer.signals_missing.append("No References/Sources section")
 
-    # Statistiche originali (+1)
+    # Original statistics (+1)
     stats_count = _count_statistics(soup)
     if stats_count >= ACADEMIC_STATISTICS_MIN_MATCHES:
         layer.score += 1
@@ -297,10 +297,10 @@ def _score_consistency(
     negative_signals: NegativeSignalsResult,
     schema: SchemaResult,
 ) -> TrustLayerScore:
-    """Valuta coerenza: nessuna contraddizione tra segnali."""
+    """Evaluate consistency: no contradictions between signals."""
     layer = TrustLayerScore(name="consistency", label="Consistency Trust")
 
-    # Brand coerente (+2 — segnale più importante)
+    # Consistent brand (+2 — most important signal)
     if brand_entity.brand_name_consistent:
         layer.score += 2
         layer.signals_found.append("Brand name consistent across title/H1/schema")
@@ -332,18 +332,18 @@ def _score_consistency(
     return layer
 
 
-# ─── Grading composito ───────────────────────────────────────────────────────
+# ─── Composite grading ───────────────────────────────────────────────────────
 
 
 def _compute_grade(composite_score: int) -> tuple[str, str]:
-    """Calcola grade e trust_level dal punteggio composito (0-25)."""
+    """Compute grade and trust_level from the composite score (0-25)."""
     for threshold, grade, level in TRUST_STACK_GRADE_BANDS:
         if composite_score >= threshold:
             return grade, level
     return "F", "low"
 
 
-# ─── Orchestratore ────────────────────────────────────────────────────────────
+# ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 
 def audit_trust_stack(
@@ -356,33 +356,33 @@ def audit_trust_stack(
     content: ContentResult,
     negative_signals: NegativeSignalsResult,
 ) -> TrustStackResult:
-    """Aggrega segnali di fiducia su 5 layer.
+    """Aggregate trust signals across 5 layers.
 
-    Zero fetch HTTP — lavora esclusivamente su dati già disponibili dai sub-audit.
+    Zero HTTP fetches — works exclusively on data already available from sub-audits.
 
     Args:
-        soup: BeautifulSoup del documento HTML.
-        base_url: URL normalizzato del sito.
-        response_headers: headers HTTP della risposta homepage.
-        brand_entity: risultato audit brand & entity.
-        schema: risultato audit schema JSON-LD.
-        meta: risultato audit meta tags.
-        content: risultato audit contenuto.
-        negative_signals: risultato audit segnali negativi.
+        soup: BeautifulSoup of the HTML document.
+        base_url: Normalized site URL.
+        response_headers: HTTP headers from the homepage response.
+        brand_entity: brand & entity audit result.
+        schema: JSON-LD schema audit result.
+        meta: meta tags audit result.
+        content: content audit result.
+        negative_signals: negative signals audit result.
 
     Returns:
-        TrustStackResult con score per layer e composito.
+        TrustStackResult with per-layer and composite scores.
     """
     result = TrustStackResult(checked=True)
 
-    # Calcola i 5 layer
+    # Compute the 5 layers
     result.technical = _score_technical(base_url, response_headers)
     result.identity = _score_identity(brand_entity, schema, negative_signals)
     result.social = _score_social(schema, brand_entity, soup)
     result.academic = _score_academic(content, soup)
     result.consistency = _score_consistency(brand_entity, negative_signals, schema)
 
-    # Composito
+    # Composite score
     result.composite_score = sum(
         layer.score for layer in [result.technical, result.identity, result.social, result.academic, result.consistency]
     )
