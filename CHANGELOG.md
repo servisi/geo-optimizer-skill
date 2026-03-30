@@ -5,6 +5,65 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.18.8] — 2026-03-30
+
+### Fixed
+
+- **29 bug critici e alti** risolti in batch (#324–#352):
+  - Cache web SchemaResult incompleta — punteggi schema errati dopo cache (#324)
+  - Max score hardcoded errati in html/github formatter (#325)
+  - `_extract_dates_from_soup` non gestisce `@graph` JSON-LD — falsi negativi WordPress (#326)
+  - `detect_stale_data` semantica `detected` invertita (#327)
+  - Badge endpoint ritorna 200 su errore → ora 503 (#328)
+  - MCP `geo_llms_generate` esponeva eccezioni interne (#329)
+  - DNS pinning serializzava tutti i fetch via lock globale → thread-local (#330)
+  - CTA density inconsistente tra citability e negative_signals (#331)
+  - SCORING dict sommava a 110 → `robots_some_allowed` estratto (#332)
+  - Template JS CATEGORIES max errati + Brand & Entity assente (#334)
+  - CSP bloccava Google Fonts (#335)
+  - FAQPage JSON-LD con 7 categorie e punteggi errati (#336)
+  - `run_full_audit` non controllava HTTP status homepage 403/500 (#337)
+  - `UnicodeDecodeError` su encoding errato in `fetch_url` (#338)
+  - `brand_entity` dichiarato valido in `geo_fix` ma non implementato (#339)
+  - Soglie GitHub Actions non allineate a SCORE_BANDS (#340)
+  - 3 categorie mancanti in html/github formatter (#341)
+  - CLAUDE.md Gotcha #7 massimi errati (#342)
+  - Report `/report/{id}` non verificava TTL (#343)
+  - `lastModified` hardcoded in `/ai/summary.json` (#344)
+  - Compare `Promise.all` bloccava su errore parziale → `Promise.allSettled` (#345)
+  - Resource `geo://score-bands` con bande errate (#346)
+  - Inconsistenza `faqs` vs `questions` nella resource spec (#347)
+  - `audit_cdn_ai_crawler` senza size check (#348)
+  - Stats API senza anti-SSRF completo (#349)
+  - Sezione 8 duplicata nel text formatter (#350)
+  - `rich_formatter._build_signals_card` crash su signals=None (#351)
+
+### Changed
+
+- Documentazione aggiornata: v3.18.x, 944+ test, 24 AI bots, 8 categorie (#352)
+- 944 tests passing (+20 nuovi per brand_entity, signals, negative_signals severity)
+
+### Deps
+
+- `actions/checkout` v4 → v6
+- `actions/setup-python` v5 → v6
+- `actions/configure-pages` v5 → v6
+- `codecov/codecov-action` v5 → v6
+- `github/codeql-action` v3 → v4
+
+---
+
+## [3.18.5–3.18.7] — 2026-03-27 → 2026-03-30
+
+### Added
+
+- **Manifesto page** — `/manifesto` con schema JSON-LD completo
+- **Navbar redesign** — logo, hamburger mobile, GitHub stars badge
+- **Homepage teaser** del manifesto con pill tags
+- llms.txt arricchito con sezioni Reference, Research Foundation, Optional
+
+---
+
 ## [3.18.4] — 2026-03-27
 
 ### Added
