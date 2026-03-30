@@ -1757,9 +1757,19 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
 
     result.names_found = names[:10]
 
-    # Consistenza: almeno 2 nomi, e i più comuni sono uguali (case-insensitive)
+    # Fix #397: normalizza suffissi legali prima del confronto
+    _LEGAL_SUFFIXES = (" inc.", " inc", " ltd.", " ltd", " llc", " gmbh", " s.r.l.", " s.p.a.", " corp.", " corp")
+
+    def _normalize_brand(name: str) -> str:
+        n = name.lower().strip()
+        for suffix in _LEGAL_SUFFIXES:
+            if n.endswith(suffix):
+                n = n[: -len(suffix)].strip()
+        return n
+
+    # Consistenza: almeno 2 nomi, e i più comuni sono uguali (case-insensitive, senza suffissi legali)
     if len(names) >= 2:
-        lower_names = [n.lower().strip() for n in names]
+        lower_names = [_normalize_brand(n) for n in names]
         freq = Counter(lower_names)
         most_common_name, most_common_count = freq.most_common(1)[0]
         if most_common_count >= 2:

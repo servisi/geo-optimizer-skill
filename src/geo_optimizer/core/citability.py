@@ -665,12 +665,12 @@ def detect_answer_first(soup) -> MethodScore:
 
     answer_first_count = 0
     for h2 in h2_tags:
-        # Trova il primo paragrafo dopo l'H2
-        next_p = h2.find_next("p")
-        if not next_p:
+        # Fix #400: cerca il primo testo dopo H2 in p, div, li (WordPress/Elementor)
+        next_el = h2.find_next(["p", "div", "li"])
+        if not next_el:
             continue
         # Controlla solo i primi 150 caratteri
-        first_text = next_p.get_text(strip=True)[:150]
+        first_text = next_el.get_text(strip=True)[:150]
         if _FACT_RE.search(first_text):
             answer_first_count += 1
 
@@ -991,7 +991,9 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
             parsed = datetime.strptime(clean_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             diff = now - parsed
             months_old = diff.days / 30
-            if months_old <= 6:
+            if months_old <= 3:  # fix #401: < 3 mesi = very fresh
+                is_fresh = True
+            elif months_old <= 6:  # 3-6 mesi = fresh
                 is_fresh = True
             break
         except (ValueError, TypeError):
@@ -1010,11 +1012,14 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
     score = 0
     warnings = []
 
-    if is_fresh:
-        score += 4
+    # Fix #401: differenziare score per freschezza
+    if is_fresh and months_old is not None and months_old <= 3:
+        score += 4  # very fresh: < 3 mesi
+    elif is_fresh:
+        score += 3  # fresh: 3-6 mesi
     elif has_date_signal and months_old is not None:
         if months_old <= 12:
-            score += 2
+            score += 2  # aging: 6-12 mesi
         else:
             warnings.append(f"Contenuto aggiornato {int(months_old)} mesi fa")
     elif not has_date_signal:

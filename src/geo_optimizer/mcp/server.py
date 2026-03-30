@@ -8,7 +8,7 @@ Available tools:
     geo_audit            — Full GEO audit (score 0-100)
     geo_fix              — Generate automatic fixes (robots, llms, schema, meta)
     geo_llms_generate    — Generate llms.txt content from sitemap
-    geo_citability       — Citability score (42 Princeton + AutoGEO methods)
+    geo_citability       — Citability score (42 research-backed methods)
     geo_schema_validate  — Validate JSON-LD schema
     geo_compare          — Compare GEO scores across multiple sites
     geo_ai_discovery     — Check AI discovery endpoints (.well-known/ai.txt, etc.)
@@ -413,12 +413,90 @@ def geo_check_bots(url: str) -> str:
         return json.dumps({"error": "Errore interno durante l'operazione", "url": url})
 
 
+# ─── Tool 9: geo_trust_score (fix #396) ──────────────────────────────────────
+
+
+@mcp.tool()
+def geo_trust_score(url: str) -> str:
+    """Get the Trust Stack Score for a website — 5-layer trust signal aggregation.
+
+    Layers: Technical (HTTPS, headers), Identity (author, org), Social (sameAs, reviews),
+    Academic (citations, references), Consistency (brand coherence, dates). Grade A-F.
+
+    Args:
+        url: URL to audit (e.g. https://example.com)
+    """
+    from geo_optimizer.utils.validators import validate_public_url
+
+    url = _normalize_url(url)
+    safe, reason = validate_public_url(url)
+    if not safe:
+        return json.dumps({"error": f"URL non sicura: {reason}"})
+
+    try:
+        from geo_optimizer.core.audit import run_full_audit
+
+        result = run_full_audit(url, use_cache=True)
+        ts = result.trust_stack
+        return json.dumps(
+            {
+                "url": url,
+                "composite_score": ts.composite_score,
+                "grade": ts.grade,
+                "trust_level": ts.trust_level,
+                "layers": {
+                    layer.name: {
+                        "score": layer.score,
+                        "max": layer.max_score,
+                        "signals": layer.signals_found,
+                        "missing": layer.signals_missing,
+                    }
+                    for layer in [ts.technical, ts.identity, ts.social, ts.academic, ts.consistency]
+                },
+            },
+            indent=2,
+        )
+    except Exception as e:
+        logger.error("Errore geo_trust_score per %s: %s", url, e)
+        return json.dumps({"error": "Errore interno durante l'operazione", "url": url})
+
+
+# ─── Tool 10: geo_negative_signals (fix #396) ────────────────────────────────
+
+
+@mcp.tool()
+def geo_negative_signals(url: str) -> str:
+    """Check negative signals that reduce AI citation probability.
+
+    Detects: CTA overload, popups, thin content, broken links, keyword stuffing,
+    missing author, high boilerplate, mixed signals. Severity: clean/low/medium/high.
+
+    Args:
+        url: URL to check (e.g. https://example.com)
+    """
+    from geo_optimizer.utils.validators import validate_public_url
+
+    url = _normalize_url(url)
+    safe, reason = validate_public_url(url)
+    if not safe:
+        return json.dumps({"error": f"URL non sicura: {reason}"})
+
+    try:
+        from geo_optimizer.core.audit import run_full_audit
+
+        result = run_full_audit(url, use_cache=True)
+        return _to_json(result.negative_signals)
+    except Exception as e:
+        logger.error("Errore geo_negative_signals per %s: %s", url, e)
+        return json.dumps({"error": "Errore interno durante l'operazione", "url": url})
+
+
 # ─── Resource: AI Bots ────────────────────────────────────────────────────────
 
 
 @mcp.resource("geo://ai-bots")
 def get_ai_bots() -> str:
-    """List of 16 AI bots tracked by GEO Optimizer with 3-tier classification."""
+    """List of AI bots tracked by GEO Optimizer with 3-tier classification."""
     from geo_optimizer.models.config import AI_BOTS, BOT_TIERS, CITATION_BOTS
 
     return json.dumps(
