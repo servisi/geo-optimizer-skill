@@ -12,7 +12,7 @@ Basato su Princeton KDD 2024, AutoGEO ICLR 2026, SE Ranking 2025, Growth Marshal
 
 ```bash
 pip install -e ".[dev]"              # Installazione editable
-pytest tests/ -v                     # 976+ test (tutti mockati, no rete)
+pytest tests/ -v                     # 1007+ test (tutti mockati, no rete)
 pytest tests/ -v --cov=geo_optimizer # Con coverage
 ruff check src/geo_optimizer/        # Lint
 ruff format src/geo_optimizer/       # Format
@@ -61,7 +61,7 @@ i18n/         → Traduzioni it/en (parziale)
 3. **Streaming con size check** — `MAX_RESPONSE_SIZE` (10 MB), `_stream_response()` in chunks
 4. **Costanti in config.py** — AI_BOTS, SCORING, SCHEMA_TEMPLATES. MAI hardcodare valori
 5. **Python 3.9 compat** — `from __future__ import annotations` in tutti i file. `entry_points()` ha API diversa pre-3.10
-6. **Test senza rete** — 976+ test tutti con `unittest.mock.patch`, zero HTTP reali
+6. **Test senza rete** — 1007+ test tutti con `unittest.mock.patch`, zero HTTP reali
 7. **Plugin via CheckRegistry** — `entry_points("geo_optimizer.checks")`, Protocol `AuditCheck`, `run_all()` passa `deepcopy(soup)` ai plugin
 8. **JSON-LD @graph** — il parser supporta sia `@type` diretto che `@graph: [{...}]` (Yoast/RankMath)
 9. **Ruff** — line-length 120, target py39, regole E/F/W/I/UP/B/C4/SIM

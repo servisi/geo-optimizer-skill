@@ -5,6 +5,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.19.1] — 2026-03-30
+
+### Added
+
+- **Trust Stack Score** (#273) — aggregazione 5-layer trust signals:
+  1. Technical Trust (0-5): HTTPS, HSTS, CSP, X-Frame-Options
+  2. Identity Trust (0-5): brand coerente, about page, contact, Organization schema, autore
+  3. Social Trust (0-5): sameAs, KG pillars, testimonial/review, profili social
+  4. Academic Trust (0-5): statistiche, fonti esterne, link autorevoli (DOI, PubMed, Scholar), sezione References
+  5. Consistency Trust (0-5): coerenza brand naming, no mixed signals, schema ≈ meta, dateModified
+- Composite score 0-25 con grading A/B/C/D/F e trust level (low/medium/high/excellent)
+- Nuove costanti: `TRUST_STACK_GRADE_BANDS`, `ACADEMIC_AUTHORITY_DOMAINS`, `SOCIAL_PROOF_DOMAINS`, `REFERENCES_HEADING_PATTERNS`
+- 31 test dedicati
+
+### Changed
+
+- 1007 tests passing (up from 976)
+- Informativo: non impatta il GEO score 0-100
+
+---
+
 ## [3.19.0] — 2026-03-30
 
 ### Added
