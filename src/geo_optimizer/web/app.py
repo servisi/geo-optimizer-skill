@@ -20,6 +20,7 @@ import os
 import re
 import secrets
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -98,8 +99,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # tag <style> in ogni template — complessità alta per rischio nullo.
         response.headers["Content-Security-Policy"] = (
             f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
-            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-            "frame-ancestors 'none'"
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data:; frame-ancestors 'none'"
         )
         return response
 
@@ -656,8 +658,11 @@ async def report(report_id: str):
         raise HTTPException(status_code=400, detail="Invalid report ID format")
 
     # Fix #286: accesso alla cache protetto da lock per evitare race condition
+    # Fix #343: verifica TTL — report scaduti non vengono più serviti
     async with _audit_cache_lock:
         entry = _audit_cache.get(report_id)
+        if entry and (time.time() - entry.get("cached_at", 0)) >= _CACHE_TTL:
+            entry = None
     if not entry:
         raise HTTPException(status_code=404, detail="Report not found or expired")
 
@@ -890,6 +895,7 @@ async def badge_endpoint(
         except (asyncio.TimeoutError, Exception):
             return JSONResponse(
                 {"schemaVersion": 1, "label": "GEO Score", "message": "error", "color": "lightgrey"},
+                status_code=503,
             )
 
     # Colore basato sulla banda
@@ -1017,6 +1023,11 @@ def _audit_result_to_dict(result) -> dict:
             "has_website": result.schema.has_website,
             "has_faq": result.schema.has_faq,
             "has_webapp": result.schema.has_webapp,
+            "has_article": result.schema.has_article,
+            "has_organization": result.schema.has_organization,
+            "has_sameas": result.schema.has_sameas,
+            "any_schema_found": result.schema.any_schema_found,
+            "schema_richness_score": result.schema.schema_richness_score,
             "raw_schemas": result.schema.raw_schemas[:5],  # fix #41: limita a 5 per evitare memory bloat
         },
         "meta_tags": {
@@ -1091,6 +1102,11 @@ def _dict_to_audit_result(data: dict):
             has_website=s.get("has_website", False),
             has_faq=s.get("has_faq", False),
             has_webapp=s.get("has_webapp", False),
+            has_article=s.get("has_article", False),
+            has_organization=s.get("has_organization", False),
+            has_sameas=s.get("has_sameas", False),
+            any_schema_found=s.get("any_schema_found", False),
+            schema_richness_score=s.get("schema_richness_score", 0),
             raw_schemas=s.get("raw_schemas", []),
         ),
         meta=MetaResult(
@@ -1343,7 +1359,7 @@ async def llms_txt():
         "- [CI/CD](https://auriti-labs.github.io/geo-optimizer-skill/ci-cd/): GitHub Actions integration\n"
         "- [GEO Methods](https://auriti-labs.github.io/geo-optimizer-skill/geo-methods/): 42 research-backed methods\n\n"
         "## Reference\n\n"
-        "- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 22 AI crawlers documented\n"
+        "- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 24 AI crawlers documented\n"
         "- [Troubleshooting](https://auriti-labs.github.io/geo-optimizer-skill/troubleshooting/): Common issues\n"
         "- [Changelog](https://github.com/Auriti-Labs/geo-optimizer-skill/blob/main/CHANGELOG.md): Full release history\n"
         "- [PyPI](https://pypi.org/project/geo-optimizer-skill/): Package and version history\n\n"
@@ -1377,7 +1393,7 @@ async def ai_summary():
         "name": "GEO Optimizer",
         "description": "Open-source toolkit to audit and optimize websites for AI search engine visibility. Scores 0-100 based on 42 research-backed methods.",
         "url": "https://geo-optimizer-web.onrender.com",
-        "lastModified": "2026-03-27",
+        "lastModified": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
     }
 
 

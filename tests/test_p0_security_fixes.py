@@ -24,7 +24,7 @@ from geo_optimizer.cli.formatters import (
 )
 from geo_optimizer.core.audit import audit_schema
 from geo_optimizer.core.schema_injector import fill_template, schema_to_html_tag
-from geo_optimizer.models.config import SCORING
+from geo_optimizer.models.config import ROBOTS_PARTIAL_SCORE, SCORING
 from geo_optimizer.models.results import AuditResult
 from geo_optimizer.utils.validators import (
     url_belongs_to_domain,
@@ -300,7 +300,7 @@ class TestScoringConsistency:
                 "robots.bots_allowed": ["GPTBot"],
             }
         )
-        expected = SCORING["robots_found"] + SCORING["robots_some_allowed"]
+        expected = SCORING["robots_found"] + ROBOTS_PARTIAL_SCORE
         assert _robots_score(r) == expected
 
     def test_robots_score_found_only(self):

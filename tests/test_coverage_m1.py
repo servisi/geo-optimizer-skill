@@ -270,14 +270,14 @@ class TestHtmlFormatter:
     def test_robots_score_alcuni_bot_consentiti(self):
         """Punteggio robots medio con alcuni bot consentiti."""
         from geo_optimizer.cli.html_formatter import _robots_score
-        from geo_optimizer.models.config import SCORING
+        from geo_optimizer.models.config import ROBOTS_PARTIAL_SCORE, SCORING
 
         r = AuditResult(url="https://example.com")
         r.robots.found = True
         r.robots.bots_allowed = ["GPTBot"]
         r.robots.citation_bots_ok = False
 
-        expected = SCORING["robots_found"] + SCORING["robots_some_allowed"]
+        expected = SCORING["robots_found"] + ROBOTS_PARTIAL_SCORE
         assert _robots_score(r) == expected
 
     def test_robots_score_solo_trovato(self):

@@ -301,7 +301,7 @@ def format_audit_text(result: AuditResult) -> str:
     # CDN Check
     if result.cdn_check and result.cdn_check.checked:
         lines.append("")
-        lines.append(_section_header("8. CDN AI CRAWLER ACCESS"))
+        lines.append(_section_header("9. CDN AI CRAWLER ACCESS"))
         if result.cdn_check.any_blocked:
             lines.append("  ❌ AI crawlers blocked by CDN/WAF")
             for bot in result.cdn_check.bot_results:
@@ -313,7 +313,7 @@ def format_audit_text(result: AuditResult) -> str:
     # JS Rendering
     if result.js_rendering and result.js_rendering.checked:
         lines.append("")
-        lines.append(_section_header("9. JS RENDERING CHECK"))
+        lines.append(_section_header("10. JS RENDERING CHECK"))
         if result.js_rendering.js_dependent:
             lines.append(f"  ❌ {result.js_rendering.details}")
         else:

@@ -562,6 +562,8 @@ def _build_content_card(result: AuditResult, score: int, max_score: int) -> Pane
 
 def _build_signals_card(result: AuditResult, score: int, max_score: int) -> Panel:
     """Card compatta per Signals + AI Discovery combinati."""
+    if not result.signals:
+        return Panel(Text("No signals data"), title="Signals", border_style="dim")
     content_parts = []
 
     bar = _micro_bar(score, max_score)

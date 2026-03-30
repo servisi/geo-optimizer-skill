@@ -2,7 +2,7 @@
 
 ## Panoramica
 
-**GEO Optimizer** (v3.17.x) è un toolkit Python open-source per Generative Engine Optimization: rende i siti web visibili e citabili dai motori di ricerca AI (ChatGPT, Perplexity, Claude, Gemini).
+**GEO Optimizer** (v3.18.x) è un toolkit Python open-source per Generative Engine Optimization: rende i siti web visibili e citabili dai motori di ricerca AI (ChatGPT, Perplexity, Claude, Gemini).
 
 Basato su Princeton KDD 2024, AutoGEO ICLR 2026, SE Ranking 2025, Growth Marshal 2026.
 
@@ -12,7 +12,7 @@ Basato su Princeton KDD 2024, AutoGEO ICLR 2026, SE Ranking 2025, Growth Marshal
 
 ```bash
 pip install -e ".[dev]"              # Installazione editable
-pytest tests/ -v                     # 812+ test (tutti mockati, no rete)
+pytest tests/ -v                     # 924+ test (tutti mockati, no rete)
 pytest tests/ -v --cov=geo_optimizer # Con coverage
 ruff check src/geo_optimizer/        # Lint
 ruff format src/geo_optimizer/       # Format
@@ -26,7 +26,7 @@ geo-web                              # Web demo FastAPI
 ```
 cli/          → Click commands + 7 formatter (text, json, rich, html, sarif, junit, github)
 core/         → Business logic (ritorna dataclasses, MAI stampa)
-  audit.py    → run_full_audit() + run_full_audit_async() — 7 categorie scoring
+  audit.py    → run_full_audit() + run_full_audit_async() — 8 categorie scoring
   citability.py → 42 metodi citability (3200 righe)
   fixer.py    → Generazione fix (robots, llms, schema, meta, ai_discovery)
   scoring.py  → Engine scoring separato (pesi da config.py)
@@ -60,7 +60,7 @@ i18n/         → Traduzioni it/en (parziale)
 3. **Streaming con size check** — `MAX_RESPONSE_SIZE` (10 MB), `_stream_response()` in chunks
 4. **Costanti in config.py** — AI_BOTS, SCORING, SCHEMA_TEMPLATES. MAI hardcodare valori
 5. **Python 3.9 compat** — `from __future__ import annotations` in tutti i file. `entry_points()` ha API diversa pre-3.10
-6. **Test senza rete** — 897+ test tutti con `unittest.mock.patch`, zero HTTP reali
+6. **Test senza rete** — 924+ test tutti con `unittest.mock.patch`, zero HTTP reali
 7. **Plugin via CheckRegistry** — `entry_points("geo_optimizer.checks")`, Protocol `AuditCheck`, `run_all()` passa `deepcopy(soup)` ai plugin
 8. **JSON-LD @graph** — il parser supporta sia `@type` diretto che `@graph: [{...}]` (Yoast/RankMath)
 9. **Ruff** — line-length 120, target py39, regole E/F/W/I/UP/B/C4/SIM
@@ -85,7 +85,7 @@ i18n/         → Traduzioni it/en (parziale)
 | `GET /badge` | Badge SVG dinamico |
 | `GET /badge/endpoint` | Shields.io compatible endpoint |
 | `GET /compare` | Pagina confronto |
-| `GET /robots.txt` | Robots.txt con 22 AI bot |
+| `GET /robots.txt` | Robots.txt con 24 AI bot |
 | `GET /llms.txt` | llms.txt per AI discovery |
 | `GET /.well-known/ai.txt` | AI crawler permissions |
 | `GET /ai/summary.json` | Site summary per AI |
@@ -97,7 +97,7 @@ i18n/         → Traduzioni it/en (parziale)
 
 | Variabile | Default | Descrizione |
 |-----------|---------|-------------|
-| `PORT` | 8000 | Porta web server |
+| `PORT` | 8000 | Porta web server (solo Dockerfile.web, non geo-web CLI) |
 | `GEO_API_TOKEN` | — | Bearer token per autenticazione API |
 | `GEO_LANG` | it | Lingua output CLI (it/en) |
 | `ALLOWED_ORIGINS` | * | CORS origins (CSV) |
@@ -113,4 +113,4 @@ i18n/         → Traduzioni it/en (parziale)
 4. **`audit_js_rendering` non deve mutare soup** — usa `copy.deepcopy(body)` prima di `.decompose()`
 5. **`_CTA_RE` vs `_CTA_FUNNEL_RE`** in citability.py — sono due regex separate, non rinominarle
 6. **`_compute_grade` citability** usa le stesse bande di `SCORE_BANDS` in config.py
-7. **Max score nei formatter** — devono corrispondere ai pesi in SCORING (18/18/22/14/14/8/6)
+7. **Max score nei formatter** — devono corrispondere ai pesi in SCORING (18/18/16/14/12/6/6/10)

@@ -425,6 +425,7 @@ class TestExceptionPaths:
         # Act
         result = geo_llms_generate("https://example.com")
 
-        # Assert: ritorna stringa con "Error:" (non JSON)
-        assert "Error" in result
-        assert "Sitemap parse error" in result
+        # Assert: fix #329 — ritorna JSON con errore generico (no info leak)
+        parsed = json.loads(result)
+        assert "error" in parsed
+        assert "Sitemap parse error" not in result  # l'eccezione interna NON viene esposta

@@ -306,7 +306,7 @@ SCORING = {
     # robots.txt — 18 punti (era 20)
     "robots_found": 5,
     "robots_citation_ok": 13,  # era 15
-    "robots_some_allowed": 10,  # era 8 — wildcard Allow ora vale di più
+    # robots_some_allowed: rimosso dal dict, ora in ROBOTS_PARTIAL_SCORE (fix #332)
     # llms.txt — 18 punti (era 20) — qualità graduata + blockquote v2
     "llms_found": 5,  # era 6 — 1 punto spostato a llms_blockquote (#39)
     "llms_h1": 2,  # era 3
@@ -316,7 +316,7 @@ SCORING = {
     "llms_depth": 2,  # NUOVO: word_count >= 1000
     "llms_depth_high": 2,  # NUOVO: word_count >= 5000
     "llms_full": 2,  # NUOVO: has llms-full.txt
-    # Schema JSON-LD — 22 punti (era 25) — qualsiasi tipo valido + sameAs + richness
+    # Schema JSON-LD — 16 punti (era 25) — qualsiasi tipo valido + sameAs + richness
     "schema_any_valid": 2,  # qualsiasi JSON-LD schema valido trovato (era 5, ridotto per richness)
     "schema_richness": 3,  # NUOVO: schema con 5+ attributi rilevanti (Growth Marshal 2026)
     "schema_faq": 3,  # era 5 — ridotto, migrato a brand_topic_authority
@@ -329,7 +329,7 @@ SCORING = {
     "meta_description": 2,
     "meta_canonical": 3,
     "meta_og": 4,
-    # Content quality — 14 punti (era 15) — controlli struttura
+    # Content quality — 12 punti (era 15) — controlli struttura
     "content_h1": 2,  # era 3
     "content_numbers": 1,  # era 2
     "content_links": 1,  # era 2
@@ -337,7 +337,7 @@ SCORING = {
     "content_heading_hierarchy": 2,  # NUOVO: ha H2 + H3 in gerarchia corretta
     "content_lists_or_tables": 2,  # NUOVO: ha <ul>/<ol>/<table>
     "content_front_loading": 2,  # NUOVO: info chiave nel primo 30% del contenuto
-    # Signals — 8 punti (NUOVA categoria)
+    # Signals — 6 punti (NUOVA categoria)
     "signals_lang": 3,  # NUOVO: <html lang="...">
     "signals_rss": 2,  # era 3
     "signals_freshness": 1,  # era 2
@@ -353,6 +353,10 @@ SCORING = {
     "brand_geo_identity": 1,  # hreflang + schema geo (address, areaServed)
     "brand_topic_authority": 1,  # FAQ depth + Article con dateModified
 }
+
+# Punteggio parziale robots.txt: wildcard Allow senza permesso esplicito ai citation bot
+# Separato dal dict SCORING perché alternativo (non additivo) a robots_citation_ok (fix #332)
+ROBOTS_PARTIAL_SCORE = 10
 
 # Minimum word threshold for content_word_count (300 parole = contenuto sostanziale)
 CONTENT_MIN_WORDS = 300

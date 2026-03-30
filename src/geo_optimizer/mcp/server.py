@@ -8,7 +8,7 @@ Available tools:
     geo_audit            — Full GEO audit (score 0-100)
     geo_fix              — Generate automatic fixes (robots, llms, schema, meta)
     geo_llms_generate    — Generate llms.txt content from sitemap
-    geo_citability       — Citability score (11 Princeton + AutoGEO methods)
+    geo_citability       — Citability score (42 Princeton + AutoGEO methods)
     geo_schema_validate  — Validate JSON-LD schema
     geo_compare          — Compare GEO scores across multiple sites
     geo_ai_discovery     — Check AI discovery endpoints (.well-known/ai.txt, etc.)
@@ -121,7 +121,7 @@ def geo_fix(url: str, only: str = "") -> str:
     only_set = None
     if only:
         only_set = {c.strip().lower() for c in only.split(",")}
-        valid = {"robots", "llms", "schema", "meta", "ai_discovery", "brand_entity"}
+        valid = {"robots", "llms", "schema", "meta", "ai_discovery"}
         invalid = only_set - valid
         if invalid:
             return json.dumps(
@@ -159,7 +159,7 @@ def geo_llms_generate(url: str) -> str:
 
     safe, reason = validate_public_url(url)
     if not safe:
-        return f"Error: Unsafe URL — {reason}"
+        return json.dumps({"error": f"Unsafe URL: {reason}", "url": url})
 
     try:
         from geo_optimizer.core.llms_generator import (
@@ -186,7 +186,9 @@ def geo_llms_generate(url: str) -> str:
         )
         return content
     except Exception as e:
-        return f"Error: {e}"
+        # Fix #329: non esporre str(e) al client — logga internamente
+        logger.error("Errore geo_llms_generate per %s: %s", url, e)
+        return json.dumps({"error": "Errore interno nella generazione llms.txt", "url": url})
 
 
 # ─── Tool 4: geo_citability ───────────────────────────────────────────────────
@@ -435,7 +437,7 @@ def get_ai_bots() -> str:
 
 @mcp.resource("geo://score-bands")
 def get_score_bands() -> str:
-    """GEO score bands (critical 0-40, foundation 41-70, good 71-90, excellent 91-100)."""
+    """GEO score bands (critical 0-35, foundation 36-67, good 68-85, excellent 86-100)."""
     from geo_optimizer.models.config import SCORE_BANDS
 
     return json.dumps(SCORE_BANDS, indent=2)
@@ -525,8 +527,8 @@ def get_ai_discovery_spec() -> str:
                 "path": "/ai/faq.json",
                 "description": "Structured FAQ for AI systems",
                 "content_type": "application/json",
-                "required_fields": ["questions"],
-                "schema": {"questions": [{"question": "string", "answer": "string"}]},
+                "required_fields": ["faqs"],
+                "schema": {"faqs": [{"question": "string", "answer": "string"}]},
             },
             {
                 "path": "/ai/service.json",

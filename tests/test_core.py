@@ -66,6 +66,7 @@ from geo_optimizer.models.config import (
     CITATION_BOTS,
     HEADERS,
     OPTIONAL_CATEGORIES,
+    ROBOTS_PARTIAL_SCORE,
     SCHEMA_ORG_REQUIRED,
     SCHEMA_TEMPLATES,
     SCORE_BANDS,
@@ -550,7 +551,6 @@ class TestConfig:
         expected_keys = [
             "robots_found",
             "robots_citation_ok",
-            "robots_some_allowed",
             "llms_found",
             "llms_h1",
             "llms_sections",
@@ -1230,7 +1230,7 @@ class TestComputeGeoScore:
             MetaResult(),
             ContentResult(),
         )
-        assert score == SCORING["robots_found"] + SCORING["robots_some_allowed"]
+        assert score == SCORING["robots_found"] + ROBOTS_PARTIAL_SCORE
 
     def test_robots_some_allowed(self):
         robots = RobotsResult(found=True, bots_allowed=["GPTBot"], citation_bots_ok=False)
@@ -1241,7 +1241,7 @@ class TestComputeGeoScore:
             MetaResult(),
             ContentResult(),
         )
-        assert score == SCORING["robots_found"] + SCORING["robots_some_allowed"]
+        assert score == SCORING["robots_found"] + ROBOTS_PARTIAL_SCORE
 
     def test_full_llms_score(self):
         llms = LlmsTxtResult(found=True, has_h1=True, has_sections=True, has_links=True)

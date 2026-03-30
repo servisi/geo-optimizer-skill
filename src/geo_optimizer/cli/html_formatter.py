@@ -10,6 +10,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from geo_optimizer.cli.scoring_helpers import (
+    brand_entity_score as _brand_entity_score,
+)
+from geo_optimizer.cli.scoring_helpers import (
     content_score as _content_score,
 )
 from geo_optimizer.cli.scoring_helpers import (
@@ -24,7 +27,18 @@ from geo_optimizer.cli.scoring_helpers import (
 from geo_optimizer.cli.scoring_helpers import (
     schema_score as _schema_score,
 )
+from geo_optimizer.cli.scoring_helpers import (
+    signals_score as _signals_score,
+)
+from geo_optimizer.models.config import SCORING
 from geo_optimizer.models.results import AuditResult
+
+# Massimi calcolati dinamicamente da SCORING (fix #325)
+_MAX_SCHEMA = sum(v for k, v in SCORING.items() if k.startswith("schema_"))
+_MAX_CONTENT = sum(v for k, v in SCORING.items() if k.startswith("content_"))
+_MAX_SIGNALS = sum(v for k, v in SCORING.items() if k.startswith("signals_"))
+_MAX_AI_DISC = sum(v for k, v in SCORING.items() if k.startswith("ai_discovery_"))
+_MAX_BRAND = sum(v for k, v in SCORING.items() if k.startswith("brand_"))
 
 
 def format_audit_html(result: AuditResult) -> str:
@@ -44,13 +58,16 @@ def format_audit_html(result: AuditResult) -> str:
     color = band_colors.get(result.band, "#888")
     band_label = band_labels.get(result.band, result.band.upper())
 
-    # Build check table rows
+    # Build check table rows (fix #325, #341: max dinamici + 3 categorie mancanti)
     checks = [
         ("Robots.txt", _robots_score(result), 18, result.robots.citation_bots_ok),
         ("llms.txt", _llms_score(result), 18, result.llms.found and result.llms.has_h1),
-        ("Schema JSON-LD", _schema_score(result), 22, result.schema.has_website),
+        ("Schema JSON-LD", _schema_score(result), _MAX_SCHEMA, result.schema.has_website),
         ("Meta Tags", _meta_score(result), 14, result.meta.has_title and result.meta.has_description),
-        ("Content Quality", _content_score(result), 14, result.content.has_h1),
+        ("Content Quality", _content_score(result), _MAX_CONTENT, result.content.has_h1),
+        ("Signals", _signals_score(result), _MAX_SIGNALS, bool(result.signals and result.signals.has_lang)),
+        ("AI Discovery", result.score_breakdown.get("ai_discovery", 0), _MAX_AI_DISC, bool(result.ai_discovery and result.ai_discovery.has_well_known_ai)),
+        ("Brand & Entity", _brand_entity_score(result), _MAX_BRAND, bool(result.brand_entity and result.brand_entity.brand_name_consistent)),
     ]
 
     check_rows = ""

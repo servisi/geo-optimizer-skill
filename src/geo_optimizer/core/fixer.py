@@ -309,7 +309,7 @@ def _estimate_score_after(result: AuditResult, fixes: list[FixItem]) -> int:
     Calculates the delta as the difference between the maximum achievable score
     and the current score for each fixed category (fix #187).
     """
-    from geo_optimizer.models.config import SCORING
+    from geo_optimizer.models.config import ROBOTS_PARTIAL_SCORE, SCORING
 
     bonus = 0
     categories_fixed = {f.category for f in fixes}
@@ -324,10 +324,10 @@ def _estimate_score_after(result: AuditResult, fixes: list[FixItem]) -> int:
                 current_robots += (
                     SCORING["robots_citation_ok"]
                     if result.robots.citation_bots_explicit
-                    else SCORING["robots_some_allowed"]
+                    else ROBOTS_PARTIAL_SCORE
                 )
             elif result.robots.bots_allowed:
-                current_robots += SCORING["robots_some_allowed"]
+                current_robots += ROBOTS_PARTIAL_SCORE
         bonus += max_robots - current_robots
 
     if "llms" in categories_fixed and not result.llms.found:

@@ -13,6 +13,7 @@ from geo_optimizer.models.config import (
     CONTENT_MIN_WORDS,
     LLMS_DEPTH_HIGH_WORDS,
     LLMS_DEPTH_WORDS,
+    ROBOTS_PARTIAL_SCORE,
     SCORE_BANDS,
     SCORING,
 )
@@ -65,9 +66,9 @@ def _score_robots(robots) -> int:
             s += SCORING["robots_citation_ok"]
         else:
             # Permesso solo via wildcard: punteggio parziale
-            s += SCORING["robots_some_allowed"]
+            s += ROBOTS_PARTIAL_SCORE
     elif robots.bots_allowed:
-        s += SCORING["robots_some_allowed"]
+        s += ROBOTS_PARTIAL_SCORE
     return s
 
 
