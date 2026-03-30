@@ -31,7 +31,7 @@ geo fix --url https://yoursite.com --apply
 
 | Command | What it does |
 |---------|-------------|
-| [`geo audit`](geo-audit/) | Full audit — score 0-100, 7 categories, 7 output formats |
+| [`geo audit`](geo-audit/) | Full audit — score 0-100, 8 categories, 7 output formats |
 | [`geo fix`](geo-fix/) | Auto-generate robots.txt, llms.txt, schema, meta tags |
 | [`geo llms`](llms-txt/) | Generate `/llms.txt` from your sitemap |
 | [`geo schema`](schema-injector/) | Generate and inject JSON-LD structured data |
@@ -52,9 +52,9 @@ geo fix --url https://yoursite.com --apply
 
 | Page | Description |
 |------|-------------|
-| [AI Bots](ai-bots-reference/) | 22 AI crawlers across 3 tiers — training, search, user |
+| [AI Bots](ai-bots-reference/) | 24 AI crawlers across 3 tiers — training, search, user |
 | [42 GEO Methods](geo-methods/) | Research-backed citability methods with measured impact |
-| [Scoring Rubric](scoring-rubric/) | How the score is calculated: 7 categories, 100 points total |
+| [Scoring Rubric](scoring-rubric/) | How the score is calculated: 8 categories, 100 points total |
 | [Troubleshooting](troubleshooting/) | Solutions to common issues |
 
 ---

@@ -2,7 +2,7 @@
 
 ## Panoramica
 
-**GEO Optimizer** (v3.18.x) è un toolkit Python open-source per Generative Engine Optimization: rende i siti web visibili e citabili dai motori di ricerca AI (ChatGPT, Perplexity, Claude, Gemini).
+**GEO Optimizer** (v3.19.x) è un toolkit Python open-source per Generative Engine Optimization: rende i siti web visibili e citabili dai motori di ricerca AI (ChatGPT, Perplexity, Claude, Gemini).
 
 Basato su Princeton KDD 2024, AutoGEO ICLR 2026, SE Ranking 2025, Growth Marshal 2026.
 
@@ -12,7 +12,7 @@ Basato su Princeton KDD 2024, AutoGEO ICLR 2026, SE Ranking 2025, Growth Marshal
 
 ```bash
 pip install -e ".[dev]"              # Installazione editable
-pytest tests/ -v                     # 924+ test (tutti mockati, no rete)
+pytest tests/ -v                     # 976+ test (tutti mockati, no rete)
 pytest tests/ -v --cov=geo_optimizer # Con coverage
 ruff check src/geo_optimizer/        # Lint
 ruff format src/geo_optimizer/       # Format
@@ -30,6 +30,7 @@ core/         → Business logic (ritorna dataclasses, MAI stampa)
   citability.py → 42 metodi citability (3200 righe)
   fixer.py    → Generazione fix (robots, llms, schema, meta, ai_discovery)
   scoring.py  → Engine scoring separato (pesi da config.py)
+  injection_detector.py → Prompt Injection Detection (8 categorie, #276)
   registry.py → Plugin system via entry_points
 models/       → config.py (costanti, pesi SCORING) + results.py (dataclass)
 utils/        → http.py (anti-SSRF + DNS pinning), validators.py, cache.py, http_async.py
@@ -60,7 +61,7 @@ i18n/         → Traduzioni it/en (parziale)
 3. **Streaming con size check** — `MAX_RESPONSE_SIZE` (10 MB), `_stream_response()` in chunks
 4. **Costanti in config.py** — AI_BOTS, SCORING, SCHEMA_TEMPLATES. MAI hardcodare valori
 5. **Python 3.9 compat** — `from __future__ import annotations` in tutti i file. `entry_points()` ha API diversa pre-3.10
-6. **Test senza rete** — 924+ test tutti con `unittest.mock.patch`, zero HTTP reali
+6. **Test senza rete** — 976+ test tutti con `unittest.mock.patch`, zero HTTP reali
 7. **Plugin via CheckRegistry** — `entry_points("geo_optimizer.checks")`, Protocol `AuditCheck`, `run_all()` passa `deepcopy(soup)` ai plugin
 8. **JSON-LD @graph** — il parser supporta sia `@type` diretto che `@graph: [{...}]` (Yoast/RankMath)
 9. **Ruff** — line-length 120, target py39, regole E/F/W/I/UP/B/C4/SIM

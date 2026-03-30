@@ -5,6 +5,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [3.19.0] — 2026-03-30
+
+### Added
+
+- **Prompt Injection Pattern Detection** (#276) — 8 categorie di manipolazione AI:
+  1. Testo nascosto CSS (display:none, visibility:hidden, font-size:0, opacity:0)
+  2. Caratteri Unicode invisibili (zero-width spaces, RTL marks)
+  3. Istruzioni dirette a LLM ("ignore previous instructions", token [INST]/[SYS])
+  4. Prompt nei commenti HTML (keyword sospette, pattern LLM)
+  5. Testo monocromatico (colore = sfondo, rgba alpha 0)
+  6. Micro-font injection (font-size < 2px)
+  7. Data attribute injection (data-ai-*, data-prompt-*, data-llm-*)
+  8. aria-hidden con contenuto istruttivo (> 50 parole o pattern LLM)
+- Severity 3 livelli: clean → suspicious → critical
+- Risk level 4 livelli: none → low → medium → high
+- Nuovo modulo `core/injection_detector.py` con 8 detector indipendenti
+- Sezione "11. PROMPT INJECTION DETECTION" nel text formatter
+- Raccomandazioni automatiche per istruzioni LLM e commenti con prompt
+- Cache serialization/deserialization nella web app
+- 32 test dedicati (anti-falsi-positivi inclusi)
+- Basato su UC Berkeley EMNLP 2024 research
+
+### Changed
+
+- 976 tests passing (up from 944)
+- Informativo: non impatta il GEO score 0-100
+
+---
+
 ## [3.18.8] — 2026-03-30
 
 ### Fixed
