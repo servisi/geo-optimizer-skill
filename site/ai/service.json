@@ -2,7 +2,7 @@
   "name": "GEO Optimizer",
   "description": "Open-source AI search visibility audit and optimization toolkit",
   "capabilities": [
-    "Audit website GEO score (0-100) across 7 categories",
+    "Audit website GEO score (0-100) across 8 categories",
     "Auto-generate fix files (robots.txt, llms.txt, schema, meta)",
     "Content citability analysis with 42 research-backed methods",
     "MCP server for Claude Code, Cursor, Windsurf",

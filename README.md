@@ -240,3 +240,13 @@ If this saved you time, a star helps others find it.
 [![Star on GitHub](https://img.shields.io/github/stars/auriti-labs/geo-optimizer-skill?style=for-the-badge&color=facc15&logo=github&label=Star)](https://github.com/auriti-labs/geo-optimizer-skill/stargazers)
 
 </div>
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=Auriti-Labs%2Fgeo-optimizer-skill&type=timeline&logscale=&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Auriti-Labs/geo-optimizer-skill&type=timeline&theme=dark&logscale&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Auriti-Labs/geo-optimizer-skill&type=timeline&logscale&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Auriti-Labs/geo-optimizer-skill&type=timeline&logscale&legend=bottom-right" />
+ </picture>
+</a>

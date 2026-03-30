@@ -1,13 +1,13 @@
 # GEO Optimizer
 
-> Open-source toolkit to audit, fix, and optimize websites for AI search engine visibility. Based on Princeton KDD 2024 and AutoGEO ICLR 2026 research. Scores websites 0-100 across 7 categories with 42 citability methods.
+> Open-source toolkit to audit, fix, and optimize websites for AI search engine visibility. Based on Princeton KDD 2024 and AutoGEO ICLR 2026 research. Scores websites 0-100 across 8 categories with 42 citability methods.
 
 The main documentation is available at: [GEO Optimizer Docs](https://auriti-labs.github.io/geo-optimizer-skill/)
 
 ## Getting Started
 
 - [Getting Started](https://auriti-labs.github.io/geo-optimizer-skill/getting-started/): Install the toolkit and run your first GEO audit in 5 minutes
-- [Scoring Rubric](https://auriti-labs.github.io/geo-optimizer-skill/scoring-rubric/): How the 0-100 score is calculated across 7 categories (robots, llms, schema, meta, content, signals, AI discovery)
+- [Scoring Rubric](https://auriti-labs.github.io/geo-optimizer-skill/scoring-rubric/): How the 0-100 score is calculated across 8 categories (robots, llms, schema, meta, content, signals, AI discovery)
 
 ## CLI Commands
 
@@ -24,7 +24,7 @@ The main documentation is available at: [GEO Optimizer Docs](https://auriti-labs
 
 ## Reference
 
-- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 22 AI crawlers with 3-tier classification (training, search, user)
+- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 24 AI crawlers with 3-tier classification (training, search, user)
 - [42 GEO Methods](https://auriti-labs.github.io/geo-optimizer-skill/geo-methods/): Research-backed citability methods — Quotation +41%, Statistics +33%, Fluency +29%, Cite Sources +27%
 - [Troubleshooting](https://auriti-labs.github.io/geo-optimizer-skill/troubleshooting/): Solutions to common installation and runtime problems
 

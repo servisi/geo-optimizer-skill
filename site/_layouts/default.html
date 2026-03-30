@@ -7,6 +7,7 @@
 <link rel="canonical" href="{{ page.url | absolute_url }}">
 <link rel="sitemap" type="application/xml" href="{{ '/sitemap.xml' | relative_url }}">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+<link rel="alternate" type="application/rss+xml" title="GEO Optimizer Releases" href="https://github.com/Auriti-Labs/geo-optimizer-skill/releases.atom">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ═══ Design Tokens ═══ */
@@ -126,7 +127,7 @@ border:1px solid var(--c-border);padding:.25rem .6rem;border-radius:20px;transit
 
 <!-- Schema.org JSON-LD -->
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"{{ site.title }}","url":"{{ site.url }}{{ site.baseurl }}/","description":"{{ site.description }}","author":{"@type":"Organization","name":"{{ site.author.name }}","url":"{{ site.author.url }}"},"sameAs":["https://github.com/Auriti-Labs","https://pypi.org/project/geo-optimizer-skill/"]}
+{"@context":"https://schema.org","@type":"WebSite","name":"{{ site.title }}","url":"{{ site.url }}{{ site.baseurl }}/","description":"{{ site.description }}","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://geo-optimizer-web.onrender.com/?url={search_term_string}"},"query-input":"required name=search_term_string"},"author":{"@type":"Organization","name":"{{ site.author.name }}","url":"{{ site.author.url }}","sameAs":["https://github.com/Auriti-Labs","https://pypi.org/project/geo-optimizer-skill/","https://www.linkedin.com/company/auriti-labs"],"contactPoint":{"@type":"ContactPoint","contactType":"technical support","url":"https://github.com/Auriti-Labs/geo-optimizer-skill/issues"}}}
 </script>
 {% if page.title and page.title != "Documentation" %}
 <script type="application/ld+json">
@@ -138,7 +139,7 @@ border:1px solid var(--c-border);padding:.25rem .6rem;border-radius:20px;transit
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"What is GEO Optimizer?","acceptedAnswer":{"@type":"Answer","text":"GEO Optimizer is an open-source Python toolkit that scores websites 0-100 for AI search visibility based on 42 research-backed methods. Install with pip install geo-optimizer-skill."}},
-{"@type":"Question","name":"How is the GEO score calculated?","acceptedAnswer":{"@type":"Answer","text":"The score is calculated across 7 categories: robots.txt (18pt), llms.txt (18pt), schema (22pt), meta (14pt), content (14pt), signals (8pt), AI discovery (6pt). Bands: 86-100 excellent, 68-85 good, 36-67 foundation, 0-35 critical."}},
+{"@type":"Question","name":"How is the GEO score calculated?","acceptedAnswer":{"@type":"Answer","text":"The score is calculated across 8 categories: robots.txt (18pt), llms.txt (18pt), JSON-LD schema (16pt), meta tags (14pt), content quality (12pt), signals (6pt), AI discovery (6pt), brand & entity (10pt). Bands: 86-100 excellent, 68-85 good, 36-67 foundation, 0-35 critical."}},
 {"@type":"Question","name":"Is GEO Optimizer free?","acceptedAnswer":{"@type":"Answer","text":"Yes, fully free and open-source under MIT License. No API keys required."}}
 ]}
 </script>
@@ -200,6 +201,7 @@ border:1px solid var(--c-border);padding:.25rem .6rem;border-radius:20px;transit
       <div class="footer-links">
         <a href="https://github.com/{{ site.repository }}">GitHub</a>
         <a href="https://pypi.org/project/geo-optimizer-skill/">PyPI</a>
+        <a href="https://github.com/Auriti-Labs">About Auriti Labs</a>
         <a href="https://github.com/{{ site.repository }}/blob/main/site/{{ page.path }}">Edit page</a>
       </div>
     </div>

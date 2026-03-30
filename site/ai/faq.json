@@ -6,7 +6,7 @@
     },
     {
       "question": "How is the GEO score calculated?",
-      "answer": "The GEO score (0-100) is calculated across 7 categories: robots.txt AI bot access (18 points), llms.txt presence and quality (18), JSON-LD schema richness (22), meta tags (14), content quality (14), technical signals like lang and RSS (8), and AI discovery endpoints (6). Bands: 86-100 excellent, 68-85 good, 36-67 foundation, 0-35 critical."
+      "answer": "The GEO score (0-100) is calculated across 8 categories: robots.txt AI bot access (18 points), llms.txt presence and quality (18), JSON-LD schema richness (16), meta tags (14), content quality (12), technical signals like lang and RSS (6), AI discovery endpoints (6), and brand & entity signals (10). Bands: 86-100 excellent, 68-85 good, 36-67 foundation, 0-35 critical."
     },
     {
       "question": "What are the 42 GEO methods?",
@@ -22,7 +22,7 @@
     },
     {
       "question": "What AI bots does GEO Optimizer track?",
-      "answer": "GEO Optimizer tracks 22 AI bots across 3 tiers: training (GPTBot, anthropic-ai, Google-Extended), search/citation (OAI-SearchBot, ClaudeBot, PerplexityBot, Bingbot), and user-fetch (ChatGPT-User, Perplexity-User). Critical citation bots: OAI-SearchBot, ClaudeBot, Claude-SearchBot, PerplexityBot."
+      "answer": "GEO Optimizer tracks 24 AI bots across 3 tiers: training (GPTBot, anthropic-ai, Google-Extended), search/citation (OAI-SearchBot, ClaudeBot, Claude-SearchBot, PerplexityBot, Bingbot), and user-fetch (ChatGPT-User, Perplexity-User). Critical citation bots: OAI-SearchBot, ClaudeBot, Claude-SearchBot, PerplexityBot."
     }
   ]
 }
