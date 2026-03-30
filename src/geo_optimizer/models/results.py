@@ -90,6 +90,8 @@ class SchemaResult:
     avg_attributes_per_schema: float = 0.0
     # #232: E-commerce GEO Profile — analisi ricchezza Product schema
     ecommerce_signals: dict = field(default_factory=dict)
+    # Fix #399: conteggio errori di parsing JSON-LD
+    json_parse_errors: int = 0
 
 
 # ─── Meta tags ───────────────────────────────────────────────────────────────

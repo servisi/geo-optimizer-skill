@@ -19,9 +19,11 @@ from geo_optimizer.core.scoring import (  # noqa: F401 (re-esportato per retroco
     get_score_band,
 )
 from geo_optimizer.models.config import (  # noqa: F401 (VALUABLE_SCHEMAS re-exported)
+    ABOUT_LINK_PATTERNS,
     AI_BOTS,
     CITATION_BOTS,
     CONTENT_MIN_WORDS,
+    KEYWORD_STUFFING_THRESHOLD,
     SCORE_BANDS,
     SCORING,
     VALUABLE_SCHEMAS,
@@ -266,7 +268,7 @@ def audit_schema(soup, url: str) -> SchemaResult:
                         result.has_webapp = True
                     elif t == "FAQPage":
                         result.has_faq = True
-                    elif t in ("Article", "BlogPosting", "NewsArticle"):
+                    elif t in ("Article", "BlogPosting", "NewsArticle", "TechArticle", "ScholarlyArticle"):
                         result.has_article = True
                     elif t == "Organization":
                         result.has_organization = True
@@ -296,6 +298,7 @@ def audit_schema(soup, url: str) -> SchemaResult:
         except json.JSONDecodeError as exc:
             # Parsing failed: log at debug (not critical, third-party scripts) — fix #81
             logging.debug("Invalid JSON schema ignored: %s", exc)
+            result.json_parse_errors += 1  # fix #399: traccia errori per raccomandazioni
 
     # Schema richness (Growth Marshal Feb 2026): conta attributi per ogni schema
     # Schema generico (@type + name + url = 3 attributi) performa PEGGIO di nessuno schema
@@ -311,8 +314,11 @@ def audit_schema(soup, url: str) -> SchemaResult:
         result.avg_attributes_per_schema = round(sum(attr_counts) / len(attr_counts), 1)
         # Score: 0 se media < 3 (generico), 1 se 3-4, 3 se 5+ (ricco)
         avg = result.avg_attributes_per_schema
+        # Fix #394: gradino intermedio (4+ attributi = 2pt)
         if avg >= 5:
             result.schema_richness_score = 3
+        elif avg >= 4:
+            result.schema_richness_score = 2
         elif avg >= 3:
             result.schema_richness_score = 1
         else:
@@ -493,8 +499,12 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
             data = json.loads(r.text)
             result.has_summary = True
             result.endpoints_found += 1
-            # Valida campi richiesti: name e description
-            if isinstance(data, dict) and data.get("name") and data.get("description"):
+            # Fix #389: validazione più rigorosa — name >= 2 char, description >= 20 char
+            if (
+                isinstance(data, dict)
+                and len(str(data.get("name", ""))) >= 2
+                and len(str(data.get("description", ""))) >= 20
+            ):
                 result.summary_valid = True
         except (json.JSONDecodeError, ValueError):
             pass
@@ -507,11 +517,13 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
             data = json.loads(r.text)
             result.has_faq = True
             result.endpoints_found += 1
-            # Conta FAQ: supporta lista di oggetti o dict con chiave "faqs"
-            if isinstance(data, list):
-                result.faq_count = len(data)
-            elif isinstance(data, dict) and isinstance(data.get("faqs"), list):
-                result.faq_count = len(data["faqs"])
+            # Fix #389: valida struttura FAQ — ogni item deve avere question + answer >= 20 char
+            faqs = data if isinstance(data, list) else data.get("faqs", []) if isinstance(data, dict) else []
+            if isinstance(faqs, list):
+                valid = [
+                    f for f in faqs if isinstance(f, dict) and f.get("question") and len(str(f.get("answer", ""))) >= 20
+                ]
+                result.faq_count = len(valid)
         except (json.JSONDecodeError, ValueError):
             pass
 
@@ -520,9 +532,11 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
     r, err = fetch_url(service_url)
     if r and not err and r.status_code == 200:
         try:
-            json.loads(r.text)
-            result.has_service = True
-            result.endpoints_found += 1
+            data = json.loads(r.text)
+            # Fix #389: valida campi richiesti — name + capabilities list
+            if isinstance(data, dict) and data.get("name") and isinstance(data.get("capabilities"), list):
+                result.has_service = True
+                result.endpoints_found += 1
         except (json.JSONDecodeError, ValueError):
             pass
 
@@ -638,6 +652,11 @@ def build_recommendations(
         if hasattr(llms, "validation_warnings"):
             for warning in llms.validation_warnings:
                 recommendations.append(warning)
+    # Fix #399: segnala errori JSON-LD
+    if schema.json_parse_errors > 0:
+        recommendations.append(
+            f"Found {schema.json_parse_errors} JSON-LD script(s) with parse errors — validate at schema.org/validator"
+        )
     if not schema.has_website:
         recommendations.append("Add WebSite JSON-LD schema to homepage")
     if not schema.has_faq:
@@ -1792,7 +1811,7 @@ def audit_brand_entity(soup, schema_result, meta_result, content_result) -> Bran
     # Cerca link /about nella pagina
     for a_tag in soup.find_all("a", href=True):
         href = a_tag["href"].lower()
-        if "/about" in href or "/chi-siamo" in href or "/team" in href:
+        if any(pattern in href for pattern in ABOUT_LINK_PATTERNS):
             result.has_about_link = True
             break
 
@@ -2148,7 +2167,7 @@ def audit_negative_signals(soup, raw_html, content_result, meta_result, schema_r
         for word, count in freq.most_common(3):
             density = count / total
             # > 3% density per una singola parola = stuffing
-            if density > 0.03 and count >= 5:
+            if density > KEYWORD_STUFFING_THRESHOLD and count >= 5:
                 result.has_keyword_stuffing = True
                 result.stuffed_word = word
                 result.stuffed_density = round(density * 100, 1)

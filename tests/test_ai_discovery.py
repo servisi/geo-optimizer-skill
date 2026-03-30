@@ -49,9 +49,9 @@ class TestAuditAiDiscovery:
     @patch("geo_optimizer.core.audit.fetch_url")
     def test_tutti_endpoint_presenti(self, mock_fetch):
         """Verifica che tutti e 4 gli endpoint vengano rilevati."""
-        summary = json.dumps({"name": "Test Site", "description": "A test site", "url": "https://example.com"})
-        faq = json.dumps([{"question": "Q1?", "answer": "A1"}, {"question": "Q2?", "answer": "A2"}])
-        service = json.dumps({"capabilities": ["search", "chat"]})
+        summary = json.dumps({"name": "Test Site", "description": "A test site with enough description length for validation", "url": "https://example.com"})
+        faq = json.dumps([{"question": "Q1?", "answer": "This is a valid answer with enough text"}, {"question": "Q2?", "answer": "Another answer that meets the minimum length"}])
+        service = json.dumps({"name": "Test Service", "capabilities": ["search", "chat"]})
 
         # Mappa URL → risposta
         responses = {
@@ -126,7 +126,11 @@ class TestAuditAiDiscovery:
     @patch("geo_optimizer.core.audit.fetch_url")
     def test_faq_formato_dict_con_faqs(self, mock_fetch):
         """faq.json con formato {faqs: [...]} conta correttamente."""
-        faq_data = json.dumps({"faqs": [{"q": "Q1", "a": "A1"}, {"q": "Q2", "a": "A2"}, {"q": "Q3", "a": "A3"}]})
+        faq_data = json.dumps({"faqs": [
+            {"question": "Q1?", "answer": "A valid answer with enough text for the check"},
+            {"question": "Q2?", "answer": "Another answer meeting minimum length requirement"},
+            {"question": "Q3?", "answer": "Third answer also meeting the validation threshold"},
+        ]})
 
         responses = {
             "https://example.com/.well-known/ai.txt": (_mock_response(404), None),

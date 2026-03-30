@@ -97,6 +97,7 @@ def _score_schema(schema) -> int:
     """
     s = SCORING["schema_any_valid"] if schema.any_schema_found else 0
     # Schema richness: premia schema con attributi ricchi, penalizza quelli generici
+    # Fix #394: gradino intermedio per richness (avg >= 4 → 2pt)
     s += min(schema.schema_richness_score, SCORING["schema_richness"])
     s += SCORING["schema_faq"] if schema.has_faq else 0
     s += SCORING["schema_article"] if schema.has_article else 0

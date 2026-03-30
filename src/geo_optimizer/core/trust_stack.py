@@ -68,8 +68,9 @@ def _score_technical(base_url: str, response_headers: dict[str, str]) -> TrustLa
     else:
         layer.signals_missing.append("Content-Security-Policy header missing")
 
-    # X-Frame-Options (+1)
-    if "x-frame-options" in headers:
+    # X-Frame-Options o CSP frame-ancestors (+1) — fix #395
+    csp_value = headers.get("content-security-policy", "")
+    if "x-frame-options" in headers or "frame-ancestors" in csp_value.lower():
         layer.score += 1
         layer.signals_found.append("X-Frame-Options")
     else:
@@ -249,10 +250,13 @@ def _score_academic(content: ContentResult, soup) -> TrustLayerScore:
     else:
         layer.signals_missing.append("Few or no statistics/numbers in content")
 
-    # Link a fonti esterne (+1)
-    if content.external_links_count >= 2:
+    # Link a fonti esterne (+1) — fix #390: escludi link social dal conteggio
+    # I link social vanno nel Social Trust, non nell'Academic Trust
+    social_link_count = len(_detect_social_links(soup)) if soup else 0
+    academic_external_count = max(content.external_links_count - social_link_count, 0)
+    if academic_external_count >= 2:
         layer.score += 1
-        layer.signals_found.append(f"External sources ({content.external_links_count} links)")
+        layer.signals_found.append(f"External sources ({academic_external_count} non-social links)")
     else:
         layer.signals_missing.append("Few external source links")
 

@@ -60,6 +60,12 @@ AI_BOTS = {
     # ── Allen Institute ─────────────────────────────────────────────────────
     "AI2Bot": "Allen Institute (AI research)",
     "AI2Bot-Dolma": "Allen Institute (Dolma dataset)",
+    # ── xAI ────────────────────────────────────────────────────────────────
+    "xAI-Bot": "xAI (Grok search citations)",
+    # ── Apple (general) ────────────────────────────────────────────────────
+    "Applebot": "Apple (general web crawl + Siri AI)",
+    # ── Huawei ─────────────────────────────────────────────────────────────
+    "PetalBot": "Huawei (PetalSearch AI, EU/Asia)",
     # ── You.com ─────────────────────────────────────────────────────────────
     "YouBot": "You.com AI search",
     # ── Common Crawl ────────────────────────────────────────────────────────
@@ -75,9 +81,11 @@ BOT_TIERS = {
         "Google-Extended",
         "Google-CloudVertexBot",
         "Applebot-Extended",
+        "Applebot",
         "cohere-ai",
         "Bytespider",
         "meta-externalagent",
+        "PetalBot",
         "AI2Bot",
         "AI2Bot-Dolma",
         "CCBot",
@@ -91,6 +99,7 @@ BOT_TIERS = {
         "DuckAssistBot",
         "YouBot",
         "Amazonbot",
+        "xAI-Bot",
     },
     "user": {
         "ChatGPT-User",
@@ -402,6 +411,13 @@ PROMPT_INJECTION_LLM_PATTERNS = [
     r"\[INST\]|\[SYS\]|<\|system\|>|<\|user\|>",
     r"###\s*(?:System|Human|Assistant)\s*:",
     r"<\s*system\s*>",
+    # fix #387: token Llama 3 / Gemma / Mistral
+    r"<\|start_header_id\|>|<\|end_header_id\|>|<\|eot_id\|>|<\|begin_of_text\|>",
+    r"<start_of_turn>|<end_of_turn>",
+    # fix #387: pattern jailbreak comuni
+    r"\bDAN\s+mode\b|\bdeveloper\s+mode\b",
+    r"pretend\s+(?:you\s+have\s+no|there\s+are\s+no)\s+restrictions?",
+    r"(?:reveal|repeat|show|tell)\s+(?:me\s+)?(?:your|the)\s+(?:system\s+)?(?:prompt|instructions?)",
 ]
 
 # Parole chiave sospette nei commenti HTML
@@ -413,6 +429,25 @@ PROMPT_INJECTION_SAMPLE_MAX_LEN = 150
 PROMPT_INJECTION_UNICODE_THRESHOLD = 5
 PROMPT_INJECTION_COMMENT_MAX_LEN = 500
 MICROFONT_SIZE_THRESHOLD_PX = 2.0
+
+# ─── Soglie condivise (fix #388) ─────────────────────────────────────────────
+
+# Soglia keyword stuffing: densità parola singola sopra la quale è spam
+# Ricerca SEMrush 2025: > 2.5% è segnale di manipolazione per AI engine
+KEYWORD_STUFFING_THRESHOLD = 0.025
+
+# Pattern URL per pagine "about" (fix #391)
+ABOUT_LINK_PATTERNS = [
+    "/about",
+    "/chi-siamo",
+    "/team",
+    "/company",
+    "/mission",
+    "/our-story",
+    "/who-we-are",
+    "/storia",
+    "/azienda",
+]
 
 # ─── Trust Stack Score (#273) ─────────────────────────────────────────────────
 
