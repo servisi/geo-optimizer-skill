@@ -29,42 +29,42 @@ from geo_optimizer.utils.http import fetch_url
 class TestStatusCodeValidation:
     """Solo risposte HTTP 200 vengono parsate come contenuto valido."""
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_403_non_parsato(self, mock_fetch):
         """robots.txt con status 403 non viene trattato come trovato."""
         mock_fetch.return_value = (Mock(status_code=403, text="Forbidden"), None)
         result = audit_robots_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_500_non_parsato(self, mock_fetch):
         """robots.txt con status 500 non viene trattato come trovato."""
         mock_fetch.return_value = (Mock(status_code=500, text="Error"), None)
         result = audit_robots_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_200_parsato(self, mock_fetch):
         """robots.txt con status 200 viene parsato normalmente."""
         mock_fetch.return_value = (Mock(status_code=200, text="User-agent: *\nAllow: /"), None)
         result = audit_robots_txt("https://example.com")
         assert result.found is True
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_403_non_parsato(self, mock_fetch):
         """llms.txt con status 403 non viene trattato come trovato."""
         mock_fetch.return_value = (Mock(status_code=403, text="Forbidden"), None)
         result = audit_llms_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_301_non_parsato(self, mock_fetch):
         """llms.txt con redirect 301 non viene trattato come trovato."""
         mock_fetch.return_value = (Mock(status_code=301, text="Moved"), None)
         result = audit_llms_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_200_parsato(self, mock_fetch):
         """llms.txt con status 200 viene parsato normalmente."""
         content = "# Site\n\n> Description\n\n## Pages\n\n- [Home](https://example.com)"

@@ -274,7 +274,7 @@ class TestLlmsScoringV2:
 class TestAuditLlmsTxtV2Integration:
     """Test integrazione: audit_llms_txt popola i nuovi campi v2."""
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_full_spec_via_audit(self, mock_fetch):
         """audit_llms_txt con contenuto conforme popola tutti i campi v2."""
         # Mock: prima chiamata = llms.txt, seconda = llms-full.txt
@@ -299,7 +299,7 @@ class TestAuditLlmsTxtV2Integration:
         assert result.companion_files_hint is False
         assert result.validation_warnings == []
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_no_blockquote_via_audit(self, mock_fetch):
         """audit_llms_txt senza blockquote genera warning."""
         mock_response = MagicMock()

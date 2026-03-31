@@ -392,7 +392,7 @@ class TestRobotsParserRFC9309:
         mock_response.status_code = 200
         mock_response.text = robots_content
 
-        with patch("geo_optimizer.core.audit.fetch_url", return_value=(mock_response, None)):
+        with patch("geo_optimizer.core.audit_robots.fetch_url", return_value=(mock_response, None)):
             from geo_optimizer.core.audit import audit_robots_txt
 
             result = audit_robots_txt("https://example.com")
@@ -409,7 +409,7 @@ class TestRobotsParserRFC9309:
         mock_response.status_code = 200
         mock_response.text = robots_content
 
-        with patch("geo_optimizer.core.audit.fetch_url", return_value=(mock_response, None)):
+        with patch("geo_optimizer.core.audit_robots.fetch_url", return_value=(mock_response, None)):
             from geo_optimizer.core.audit import audit_robots_txt
 
             result = audit_robots_txt("https://example.com")
@@ -913,7 +913,7 @@ class TestGetRequiredFields:
 class TestAuditRobotsTxt:
     """Tests for audit_robots_txt()."""
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_found_with_bots(self, mock_fetch):
         content = "User-agent: GPTBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n"
         mock_resp = Mock(status_code=200, text=content)
@@ -924,7 +924,7 @@ class TestAuditRobotsTxt:
         assert "GPTBot" in result.bots_allowed
         assert "ClaudeBot" in result.bots_allowed
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_not_found(self, mock_fetch):
         mock_resp = Mock(status_code=404)
         mock_fetch.return_value = (mock_resp, None)
@@ -932,14 +932,14 @@ class TestAuditRobotsTxt:
         result = audit_robots_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_fetch_error(self, mock_fetch):
         mock_fetch.return_value = (None, "Connection error")
 
         result = audit_robots_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_robots_blocks_all_bots(self, mock_fetch):
         content = "User-agent: *\nDisallow: /\n"
         mock_resp = Mock(status_code=200, text=content)
@@ -950,7 +950,7 @@ class TestAuditRobotsTxt:
         assert len(result.bots_blocked) > 0
         assert result.citation_bots_ok is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_robots.fetch_url")
     def test_citation_bots_ok(self, mock_fetch):
         """When all CITATION_BOTS are allowed, citation_bots_ok is True."""
         lines = []
@@ -967,7 +967,7 @@ class TestAuditRobotsTxt:
 class TestAuditLlmsTxt:
     """Tests for audit_llms_txt()."""
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_found_full(self, mock_fetch):
         content = "# My Site\n\n> A description\n\n## Section\n\n- [Link](https://example.com)\n"
         mock_resp = Mock(status_code=200, text=content)
@@ -981,7 +981,7 @@ class TestAuditLlmsTxt:
         assert result.has_links is True
         assert result.word_count > 0
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_not_found(self, mock_fetch):
         mock_resp = Mock(status_code=404)
         mock_fetch.return_value = (mock_resp, None)
@@ -989,7 +989,7 @@ class TestAuditLlmsTxt:
         result = audit_llms_txt("https://example.com")
         assert result.found is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_minimal(self, mock_fetch):
         content = "Just some text without headers or links"
         mock_resp = Mock(status_code=200, text=content)
@@ -1000,7 +1000,7 @@ class TestAuditLlmsTxt:
         assert result.has_h1 is False
         assert result.has_links is False
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_llms.fetch_url")
     def test_llms_fetch_error(self, mock_fetch):
         mock_fetch.return_value = (None, "Network error")
 

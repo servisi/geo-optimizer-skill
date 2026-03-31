@@ -46,7 +46,7 @@ def _mock_response(status_code: int, text: str = ""):
 class TestAuditAiDiscovery:
     """Test per audit_ai_discovery con mock HTTP."""
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_tutti_endpoint_presenti(self, mock_fetch):
         """Verifica che tutti e 4 gli endpoint vengano rilevati."""
         summary = json.dumps({"name": "Test Site", "description": "A test site with enough description length for validation", "url": "https://example.com"})
@@ -72,7 +72,7 @@ class TestAuditAiDiscovery:
         assert result.faq_count == 2
         assert result.endpoints_found == 4
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_nessun_endpoint_presente(self, mock_fetch):
         """Verifica risultato quando tutti gli endpoint sono 404."""
         mock_fetch.return_value = (_mock_response(404), None)
@@ -85,7 +85,7 @@ class TestAuditAiDiscovery:
         assert result.has_service is False
         assert result.endpoints_found == 0
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_summary_senza_campi_richiesti(self, mock_fetch):
         """summary.json presente ma senza name/description → summary_valid=False."""
         # JSON valido ma senza i campi richiesti
@@ -105,7 +105,7 @@ class TestAuditAiDiscovery:
         assert result.summary_valid is False
         assert result.endpoints_found == 1
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_summary_con_campi_validi(self, mock_fetch):
         """summary.json con name e description → summary_valid=True."""
         summary_valid = json.dumps({"name": "MySite", "description": "Descrizione del sito"})
@@ -123,7 +123,7 @@ class TestAuditAiDiscovery:
         assert result.has_summary is True
         assert result.summary_valid is True
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_faq_formato_dict_con_faqs(self, mock_fetch):
         """faq.json con formato {faqs: [...]} conta correttamente."""
         faq_data = json.dumps({"faqs": [
@@ -145,7 +145,7 @@ class TestAuditAiDiscovery:
         assert result.has_faq is True
         assert result.faq_count == 3
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_json_invalido_non_conta(self, mock_fetch):
         """Endpoint con JSON invalido → non viene contato."""
         responses = {
@@ -163,7 +163,7 @@ class TestAuditAiDiscovery:
         assert result.has_service is False
         assert result.endpoints_found == 0
 
-    @patch("geo_optimizer.core.audit.fetch_url")
+    @patch("geo_optimizer.core.audit_ai_discovery.fetch_url")
     def test_errore_connessione(self, mock_fetch):
         """Errore di connessione → risultato vuoto."""
         mock_fetch.return_value = (None, "Connection refused")
