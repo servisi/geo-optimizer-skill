@@ -20,9 +20,9 @@ _BLOCKED_NETWORKS = [
     # ── IPv4 ──────────────────────────────────────────────────────────────────
     ipaddress.ip_network("0.0.0.0/8"),  # "this network" RFC 1122
     ipaddress.ip_network("127.0.0.0/8"),  # loopback IPv4
-    ipaddress.ip_network("10.0.0.0/8"),  # privato RFC 1918
-    ipaddress.ip_network("172.16.0.0/12"),  # privato RFC 1918
-    ipaddress.ip_network("192.168.0.0/16"),  # privato RFC 1918
+    ipaddress.ip_network("10.0.0.0/8"),  # private RFC 1918
+    ipaddress.ip_network("172.16.0.0/12"),  # private RFC 1918
+    ipaddress.ip_network("192.168.0.0/16"),  # private RFC 1918
     ipaddress.ip_network("100.64.0.0/10"),  # CGNAT RFC 6598
     ipaddress.ip_network("192.0.0.0/24"),  # IETF Protocol Assignments
     ipaddress.ip_network("198.18.0.0/15"),  # benchmark testing RFC 2544
@@ -31,12 +31,12 @@ _BLOCKED_NETWORKS = [
     ipaddress.ip_network("::1/128"),  # loopback IPv6
     ipaddress.ip_network("fc00::/7"),  # unique local (ULA) RFC 4193: fc00:: - fdff::
     ipaddress.ip_network("fe80::/10"),  # link-local IPv6 RFC 4291
-    # IPv4-mapped IPv6 (::ffff:0:0/96 copre tutti i sotto-range, elencati per chiarezza)
-    ipaddress.ip_network("::ffff:0:0/96"),  # intero spazio IPv4-mapped (bypass comune)
+    # IPv4-mapped IPv6 (::ffff:0:0/96 covers all sub-ranges, listed explicitly for clarity)
+    ipaddress.ip_network("::ffff:0:0/96"),  # entire IPv4-mapped space (common bypass)
     ipaddress.ip_network("::ffff:127.0.0.0/104"),  # loopback IPv4-mapped
-    ipaddress.ip_network("::ffff:10.0.0.0/104"),  # RFC 1918 privato IPv4-mapped
-    ipaddress.ip_network("::ffff:172.16.0.0/108"),  # RFC 1918 privato IPv4-mapped
-    ipaddress.ip_network("::ffff:192.168.0.0/112"),  # RFC 1918 privato IPv4-mapped
+    ipaddress.ip_network("::ffff:10.0.0.0/104"),  # RFC 1918 private IPv4-mapped
+    ipaddress.ip_network("::ffff:172.16.0.0/108"),  # RFC 1918 private IPv4-mapped
+    ipaddress.ip_network("::ffff:192.168.0.0/112"),  # RFC 1918 private IPv4-mapped
 ]
 
 _ALLOWED_SCHEMES = {"https", "http"}

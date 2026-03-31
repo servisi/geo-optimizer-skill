@@ -348,22 +348,22 @@ class PromptInjectionResult:
 
 @dataclass
 class NegativeSignalsResult:
-    """Segnali negativi che riducono la probabilità di citazione AI."""
+    """Negative signals that reduce the probability of AI citation."""
 
     checked: bool = False
 
-    # 1. CTA density eccessiva (auto-promozionale)
+    # 1. Excessive CTA density (self-promotional)
     cta_density_high: bool = False
     cta_count: int = 0
 
-    # 2. Popup/interstitial nel DOM
+    # 2. Popup/interstitial in the DOM
     has_popup_signals: bool = False
     popup_indicators: list[str] = field(default_factory=list)
 
     # 3. Thin content
-    is_thin_content: bool = False  # < 300 parole con H1 complesso
+    is_thin_content: bool = False  # < 300 words with complex H1
 
-    # 4. Broken/empty links interni
+    # 4. Broken/empty internal links
     broken_links_count: int = 0
     has_broken_links: bool = False
 
@@ -372,19 +372,19 @@ class NegativeSignalsResult:
     stuffed_word: str = ""
     stuffed_density: float = 0.0
 
-    # 6. Assenza autore
+    # 6. Missing author signal
     has_author_signal: bool = False  # Person schema, rel=author, class=author
 
     # 7. Boilerplate ratio
-    boilerplate_ratio: float = 0.0  # 0.0-1.0 (nav+footer+sidebar / totale)
+    boilerplate_ratio: float = 0.0  # 0.0-1.0 (nav+footer+sidebar / total)
     boilerplate_high: bool = False  # ratio > 0.6
 
-    # 8. Mixed signals (promessa vs contenuto)
+    # 8. Mixed signals (promise vs content)
     has_mixed_signals: bool = False
     mixed_signal_detail: str = ""
 
     # Summary
-    signals_found: int = 0  # conteggio segnali negativi trovati
+    signals_found: int = 0  # count of negative signals found
     severity: str = "clean"  # "clean", "low", "medium", "high"
 
 
@@ -393,7 +393,7 @@ class NegativeSignalsResult:
 
 @dataclass
 class TrustLayerScore:
-    """Score per un singolo layer del Trust Stack."""
+    """Score for a single Trust Stack layer."""
 
     name: str  # "technical", "identity", "social", "academic", "consistency"
     label: str  # "Technical Trust"
@@ -405,13 +405,13 @@ class TrustLayerScore:
 
 
 def _make_layer(name: str, label: str) -> TrustLayerScore:
-    """Factory per creare un TrustLayerScore con default puliti."""
+    """Factory to create a TrustLayerScore with clean defaults."""
     return TrustLayerScore(name=name, label=label)
 
 
 @dataclass
 class TrustStackResult:
-    """Aggregazione 5-layer trust signals (v4.5, #273). Informativo — non impatta GEO score."""
+    """5-layer trust signal aggregation (v4.5, #273). Informational — does not affect GEO score."""
 
     checked: bool = False
     technical: TrustLayerScore = field(default_factory=lambda: _make_layer("technical", "Technical Trust"))
@@ -445,13 +445,13 @@ class AuditResult:
     citability: CitabilityResult = field(default_factory=CitabilityResult)
     # Fix #104: CheckRegistry plugin results (do not affect the base score)
     extra_checks: dict[str, Any] = field(default_factory=dict)
-    # v4.0: segnali tecnici (lang, RSS, freshness)
+    # v4.0: technical signals (lang, RSS, freshness)
     signals: SignalsResult = field(default_factory=SignalsResult)
     # v4.1: AI discovery endpoints (geo-checklist.dev)
     ai_discovery: AiDiscoveryResult = field(default_factory=AiDiscoveryResult)
-    # v4.0: breakdown score per categoria
+    # v4.0: score breakdown per category
     score_breakdown: dict[str, int] = field(default_factory=dict)
-    # v4.0: messaggio di errore connessione (None = successo)
+    # v4.0: connection error message (None = success)
     error: str | None = None
     # v4.2: CDN AI Crawler check (#225)
     cdn_check: CdnAiCrawlerResult = field(default_factory=CdnAiCrawlerResult)
@@ -465,7 +465,7 @@ class AuditResult:
     negative_signals: NegativeSignalsResult = field(default_factory=NegativeSignalsResult)
     # v4.4: Prompt Injection Pattern Detection (#276)
     prompt_injection: PromptInjectionResult = field(default_factory=PromptInjectionResult)
-    # v4.5: Trust Stack Score — informativo, non impatta GEO score (#273)
+    # v4.5: Trust Stack Score — informational, does not affect GEO score (#273)
     trust_stack: TrustStackResult = field(default_factory=TrustStackResult)
 
 

@@ -103,7 +103,7 @@ def format_audit_json(result: AuditResult) -> str:
         "recommendations": result.recommendations,
     }
 
-    # WebMCP Readiness (#233) — sezione informativa separata
+    # WebMCP Readiness (#233) — separate informational section
     if hasattr(result, "webmcp") and result.webmcp.checked:
         data["webmcp"] = {
             "readiness_level": result.webmcp.readiness_level,
@@ -118,7 +118,7 @@ def format_audit_json(result: AuditResult) -> str:
             "has_openapi": result.webmcp.has_openapi,
         }
 
-    # Negative Signals (v4.3) — sezione informativa separata
+    # Negative Signals (v4.3) — separate informational section
     if hasattr(result, "negative_signals") and result.negative_signals.checked:
         data["negative_signals"] = {
             "severity": result.negative_signals.severity,

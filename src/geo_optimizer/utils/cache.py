@@ -70,7 +70,7 @@ class FileCache:
         )
 
     def put(self, url: str, status_code: int, text: str, headers: dict) -> None:
-        """Salva risposta nella cache. Evicts oldest if over disk limit (fix #192)."""
+        """Save response to cache. Evicts oldest if over disk limit (fix #192)."""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Evict oldest entries if cache exceeds disk limit
@@ -98,9 +98,9 @@ class FileCache:
         while total_size > MAX_CACHE_SIZE_BYTES and files:
             oldest = files.pop(0)
             try:
-                # Fix TOCTOU #212: legge la dimensione prima di unlink;
-                # se il file sparisce tra stat() e unlink() l'eccezione viene
-                # gestita senza sottrarre una dimensione errata da total_size
+                # Fix TOCTOU #212: reads the size before unlink;
+                # if the file disappears between stat() and unlink(), the exception
+                # is handled without subtracting an incorrect size from total_size
                 file_size = oldest.stat().st_size
                 oldest.unlink(missing_ok=True)
                 total_size -= file_size

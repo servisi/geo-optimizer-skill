@@ -66,8 +66,8 @@ async def fetch_url_async(
     own_client = client is None
 
     try:
-        # Fix #8: usa il client passato se disponibile (connection pooling)
-        # Fix #196: crea nuovo client solo se non ne abbiamo uno
+        # Fix #8: use the provided client if available (connection pooling)
+        # Fix #196: create a new client only if we do not have one
         if own_client:
             client = httpx.AsyncClient(
                 headers=HEADERS,

@@ -84,15 +84,15 @@ def create_session_with_retry(
     return session
 
 
-# Fix #330: DNS pinning via thread-local invece di lock globale.
-# Ogni thread configura i propri IP pinnati, il getaddrinfo patchato li legge
-# senza serializzare le connessioni HTTP concorrenti.
+# Fix #330: DNS pinning via thread-local instead of a global lock.
+# Each thread configures its own pinned IPs; the patched getaddrinfo reads them
+# without serializing concurrent HTTP connections.
 _original_getaddrinfo = socket.getaddrinfo
 _pinning_local = threading.local()
 
 
 def _pinned_getaddrinfo(host, port, *args, **kwargs):
-    """getaddrinfo patchato: usa IP pinnati dal thread-local se disponibili."""
+    """Patched getaddrinfo: uses pinned IPs from thread-local if available."""
     pin = getattr(_pinning_local, "pin", None)
     if pin and host == pin["host"]:
         pinned_ip = pin["ip"]
@@ -101,17 +101,17 @@ def _pinned_getaddrinfo(host, port, *args, **kwargs):
     return _original_getaddrinfo(host, port, *args, **kwargs)
 
 
-# Installa il patch una sola volta all'import (no race condition, no lock necessario)
+# Install the patch once at import time (no race condition, no lock needed)
 socket.getaddrinfo = _pinned_getaddrinfo
 
 
 class _PinnedIPAdapter(HTTPAdapter):
-    """HTTPAdapter che forza la connessione a un IP pre-validato.
+    """HTTPAdapter that forces the connection to a pre-validated IP.
 
-    Previene attacchi TOCTOU DNS rebinding: dopo la validazione URL,
-    l'IP è fisso e usato direttamente senza una seconda risoluzione DNS.
+    Prevents TOCTOU DNS rebinding attacks: after URL validation,
+    the IP is fixed and used directly without a second DNS resolution.
 
-    Thread-safe via threading.local() — nessun lock globale (fix #330).
+    Thread-safe via threading.local() — no global lock (fix #330).
     """
 
     def __init__(self, pinned_ips: list[str], *args, **kwargs):
@@ -119,7 +119,7 @@ class _PinnedIPAdapter(HTTPAdapter):
         super().__init__(*args, **kwargs)
 
     def send(self, request, *args, **kwargs):
-        """Override send: configura il thread-local con l'IP pinnati."""
+        """Override send: sets the thread-local with the pinned IP."""
         if self._pinned_ip:
             parsed = urlparse(request.url)
             target_port = parsed.port or (443 if parsed.scheme == "https" else 80)
@@ -315,8 +315,8 @@ def _fetch_with_manual_redirects(
         r._content = content  # noqa: SLF001
         r._content_consumed = True  # noqa: SLF001
 
-        # Fix #338: imposta encoding esplicito per evitare UnicodeDecodeError su r.text
-        # Se il server dichiara un charset errato o assente, usiamo apparent_encoding come fallback
+        # Fix #338: set explicit encoding to avoid UnicodeDecodeError on r.text
+        # If the server declares an incorrect or absent charset, use apparent_encoding as fallback
         if not r.encoding or r.encoding == "ISO-8859-1":
             r.encoding = r.apparent_encoding or "utf-8"
 

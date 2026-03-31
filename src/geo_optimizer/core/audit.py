@@ -324,7 +324,7 @@ def audit_schema(soup, url: str) -> SchemaResult:
         else:
             result.schema_richness_score = 0
 
-    # #232: E-commerce GEO Profile — analizza ricchezza Product schema
+    # #232: E-commerce GEO Profile — analyze Product schema richness
     if result.has_product:
         for schema_obj in result.raw_schemas:
             schema_type = schema_obj.get("@type", "")
@@ -1428,7 +1428,7 @@ def audit_cdn_ai_crawler(base_url: str) -> CdnAiCrawlerResult:
                 allow_redirects=False,
             )
             result.browser_status = browser_r.status_code
-            # Fix #348: size check per evitare OOM su risposte enormi
+            # Fix #348: size check to avoid OOM on oversized responses
             if len(browser_r.content) > 5 * 1024 * 1024:  # 5 MB
                 result.error = "Response too large for CDN check"
                 return result

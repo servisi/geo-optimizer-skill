@@ -1,12 +1,12 @@
 """
-Rich formatter per output CLI premium — design v2.
+Rich formatter for premium CLI output — design v2.
 
-Richiede ``rich`` come dipendenza opzionale:
+Requires ``rich`` as an optional dependency:
     pip install geo-optimizer-skill[rich]
 
-Design: dashboard immersivo con gradient, gauge gigante, barra stacked
-per breakdown categorie, card dettagliate con micro-bar, e footer motivazionale.
-Fallback automatico via :func:`is_rich_available`.
+Design: immersive dashboard with gradient, large gauge, stacked bar
+for category breakdown, detailed cards with micro-bar, and motivational footer.
+Automatic fallback via :func:`is_rich_available`.
 """
 
 from __future__ import annotations
@@ -51,17 +51,17 @@ except ImportError:
     RICH_AVAILABLE = False
 
 
-# ── Helpers pubblici ──────────────────────────────────────────────────────────
+# ── Public helpers ────────────────────────────────────────────────────────────
 
 
 def is_rich_available() -> bool:
-    """Verifica se la libreria rich è disponibile."""
+    """Check whether the rich library is available."""
     return RICH_AVAILABLE
 
 
-# ── Palette colori moderna ────────────────────────────────────────────────────
+# ── Modern color palette ──────────────────────────────────────────────────────
 
-# Colori accessibili WCAG AA su sfondo scuro
+# WCAG AA accessible colors on dark background
 _COLORS = {
     "excellent": "#22c55e",  # verde brillante
     "good": "#06b6d4",  # ciano
@@ -69,8 +69,8 @@ _COLORS = {
     "critical": "#ef4444",  # rosso
     "accent": "#8b5cf6",  # viola
     "muted": "#64748b",  # grigio ardesia
-    "surface": "#1e293b",  # sfondo card
-    "dim": "#475569",  # testo secondario
+    "surface": "#1e293b",  # card background
+    "dim": "#475569",  # secondary text
     "brand_1": "#3b82f6",  # blu brand
     "brand_2": "#06b6d4",  # ciano brand
     "brand_3": "#8b5cf6",  # viola brand
@@ -87,7 +87,7 @@ _CATEGORY_ICONS = {
     "ai_discovery": "🔍",
 }
 
-# Bande con descrizioni e icone
+# Score bands with descriptions and icons
 _BAND_CONFIG = {
     "excellent": {"icon": "🏆", "label": "EXCELLENT", "desc": "AI-ready — ottimizzazione completa"},
     "good": {"icon": "✅", "label": "GOOD", "desc": "Buona base — pochi miglioramenti"},
@@ -97,12 +97,12 @@ _BAND_CONFIG = {
 
 
 def _band_color(band: str) -> str:
-    """Restituisce il colore per la banda."""
+    """Return the color for the given band."""
     return _COLORS.get(band, _COLORS["critical"])
 
 
 def _score_color(score: int, max_score: int = 100) -> str:
-    """Colore Rich basato sulla percentuale di score."""
+    """Rich color based on score percentage."""
     pct = score / max_score if max_score > 0 else 0
     if pct >= 0.85:
         return _COLORS["excellent"]
@@ -114,7 +114,7 @@ def _score_color(score: int, max_score: int = 100) -> str:
 
 
 def _pct_color(pct: float) -> str:
-    """Colore per percentuale (0.0 - 1.0)."""
+    """Color for a percentage value (0.0 - 1.0)."""
     if pct >= 0.85:
         return _COLORS["excellent"]
     if pct >= 0.60:
@@ -124,9 +124,9 @@ def _pct_color(pct: float) -> str:
     return _COLORS["critical"]
 
 
-# ── ASCII Art grande per lo score ─────────────────────────────────────────────
+# ── Large ASCII Art for the score ────────────────────────────────────────────
 
-# Cifre 5 righe alte — stile sottile e moderno
+# 5-row tall digits — thin and modern style
 _DIGITS = {
     "0": ["╭━╮", "┃ ┃", "┃ ┃", "┃ ┃", "╰━╯"],
     "1": [" ╻ ", "╺┃ ", " ┃ ", " ┃ ", "╺┻╸"],
@@ -142,7 +142,7 @@ _DIGITS = {
 
 
 def _render_big_number(number: int, color: str) -> list[Text]:
-    """Renderizza un numero grande in ASCII art (5 righe)."""
+    """Render a large number in ASCII art (5 rows)."""
     digits = str(number)
     lines = []
     for row in range(5):
@@ -155,25 +155,25 @@ def _render_big_number(number: int, color: str) -> list[Text]:
     return lines
 
 
-# ── Barra stacked orizzontale (breakdown categorie) ──────────────────────────
+# ── Horizontal stacked bar (category breakdown) ───────────────────────────────
 
 
 def _render_stacked_bar(categories: list[tuple[str, int, int]], width: int = 68) -> Text:
-    """Barra stacked colorata che mostra il contributo di ogni categoria.
+    """Colored stacked bar showing the contribution of each category.
 
-    Ogni segmento è proporzionale al punteggio ottenuto sul totale.
+    Each segment is proportional to the score obtained relative to the total.
     """
     total_score = sum(score for _, score, _ in categories)
     bar = Text()
 
-    # Colori per segmento
+    # Colors per segment
     segment_colors = [
-        _COLORS["brand_1"],  # robots - blu
-        _COLORS["brand_2"],  # llms - ciano
-        _COLORS["accent"],  # schema - viola
-        _COLORS["excellent"],  # meta - verde
-        _COLORS["foundation"],  # content - ambra
-        _COLORS["good"],  # signals - ciano chiaro
+        _COLORS["brand_1"],  # robots - blue
+        _COLORS["brand_2"],  # llms - cyan
+        _COLORS["accent"],  # schema - purple
+        _COLORS["excellent"],  # meta - green
+        _COLORS["foundation"],  # content - amber
+        _COLORS["good"],  # signals - light cyan
         _COLORS["brand_3"],  # ai_discovery - viola chiaro
     ]
 

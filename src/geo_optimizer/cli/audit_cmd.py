@@ -187,7 +187,7 @@ def audit(url, output_format, output_file, verbose, cache, clear_cache, config_f
             f.write(pdf_bytes)
         click.echo(f"✅ PDF report written to: {pdf_path}")
 
-        # Controlla threshold anche per PDF
+        # Check threshold for PDF output as well
         if min_score > 0 and result.score < min_score:
             click.echo(
                 f"\n❌ Score {result.score}/100 below minimum required ({min_score})",

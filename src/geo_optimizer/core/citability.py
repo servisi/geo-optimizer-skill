@@ -641,13 +641,13 @@ def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
 # ─── 10. Answer-First Structure (+25%) — AutoGEO ICLR 2026 ───────────────────
 
 
-# Pattern per fatti concreti: numeri, percentuali, statement assertivi
+# Pattern for concrete facts: numbers, percentages, assertive statements
 _FACT_RE = re.compile(
-    r"\b\d+(?:\.\d+)?%"  # percentuali
-    r"|\$\d+"  # valute
-    r"|\b\d{2,}\b"  # numeri a 2+ cifre
+    r"\b\d+(?:\.\d+)?%"  # percentages
+    r"|\$\d+"  # currency
+    r"|\b\d{2,}\b"  # numbers with 2+ digits
     r"|\b(?:is|are|was|were|has|have|can|will|must|should"
-    r"|è|sono|ha|hanno|può|deve)\b",  # verbi assertivi EN+IT
+    r"|è|sono|ha|hanno|può|deve)\b",  # assertive verbs EN+IT
     re.IGNORECASE,
 )
 
@@ -975,7 +975,7 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
     date_modified = _dates["dateModified"]
     date_published = _dates["datePublished"]
 
-    # Analizza le date trovate
+    # Analyze the dates found
     is_fresh = False
     months_old = None
     has_date_signal = False
@@ -1368,7 +1368,7 @@ def detect_comparison_content(soup, clean_text: str | None = None) -> MethodScor
     """Detect comparison content: tables, pro/con sections, X vs Y headings."""
     score = 0
 
-    # 1. Pattern "X vs Y" nei heading
+    # 1. "X vs Y" pattern in headings
     vs_headings = 0
     for h in soup.find_all(["h1", "h2", "h3", "h4"]):
         h_text = h.get_text(strip=True)
@@ -1740,7 +1740,7 @@ def detect_snippet_ready(soup) -> MethodScore:
             continue
         p_text = next_p.get_text(strip=True)
 
-        # Pattern 1: heading con "?" → risposta diretta sotto 60 parole
+        # Pattern 1: heading with "?" → direct answer under 60 words
         if heading_text.endswith("?"):
             word_count = len(p_text.split())
             if 5 <= word_count <= 60:
@@ -1888,7 +1888,7 @@ def detect_blog_structure(soup) -> MethodScore:
         or article_schema.get("keywords")
         or soup.find("meta", attrs={"property": "article:tag"})
     )
-    # Cerca author bio nel DOM
+    # Look for author bio in the DOM
     author_bio = soup.find_all(
         ["div", "section", "aside"],
         class_=re.compile(r"author|bio|about-author|byline", re.I),
@@ -1959,7 +1959,7 @@ def detect_shopping_readiness(soup) -> MethodScore:
         )
 
     score = 0
-    # Verifica price + availability nell'offerta
+    # Verify price + availability in the offer
     offers = product_schema.get("offers") or product_schema.get("offer", {})
     if isinstance(offers, list):
         offers = offers[0] if offers else {}
@@ -2034,7 +2034,7 @@ def detect_chatgpt_shopping(soup) -> MethodScore:
             details={"has_product_schema": False},
         )
 
-    # Campi richiesti per ChatGPT Shopping
+    # Required fields for ChatGPT Shopping
     has_name = bool(product_schema.get("name"))
     has_image = bool(product_schema.get("image"))
     has_brand = bool(product_schema.get("brand"))
@@ -2045,7 +2045,7 @@ def detect_chatgpt_shopping(soup) -> MethodScore:
     has_price = bool(offers.get("price") or offers.get("lowPrice"))
     has_availability = bool(offers.get("availability"))
 
-    # Conta campi presenti su 5 richiesti
+    # Count fields present out of 5 required
     fields_present = sum([has_name, has_image, has_brand, has_price, has_availability])
 
     if fields_present >= 5:
@@ -2079,7 +2079,7 @@ def detect_chatgpt_shopping(soup) -> MethodScore:
 
 # ─── Voice/Conversational Search (+5%) — Batch A v3.16.0 ─────────────────────
 
-# Pattern per heading in formato domanda naturale (EN + IT)
+# Pattern for headings in natural question format (EN + IT)
 _QUESTION_HEADING_RE = re.compile(
     r"^(?:how\s+(?:do|can|to|does)|what\s+is|what\s+are|why\s+(?:do|is|are|does)"
     r"|when\s+(?:do|is|should)|where\s+(?:do|can|is)|which\s+(?:is|are)"
@@ -2096,13 +2096,13 @@ def detect_voice_search(soup) -> MethodScore:
     concise_answers = 0
     has_speakable = False
 
-    # 1. Cerca heading in formato domanda naturale
+    # 1. Look for headings in natural question format
     headings = soup.find_all(re.compile(r"^h[1-6]$", re.I))
     for h in headings:
         text = h.get_text(strip=True)
         if "?" in text or _QUESTION_HEADING_RE.search(text):
             question_headings += 1
-            # Cerca risposta concisa dopo heading con "?"
+            # Look for a concise answer after a "?" heading
             if "?" in text:
                 next_p = h.find_next("p")
                 if next_p:
@@ -2115,7 +2115,7 @@ def detect_voice_search(soup) -> MethodScore:
     if concise_answers >= 1:
         score += 1
 
-    # 2. Cerca speakable schema in qualsiasi JSON-LD
+    # 2. Look for speakable schema in any JSON-LD
     for script in soup.find_all("script", type="application/ld+json"):
         try:
             data = json.loads(script.string or "")
@@ -2149,7 +2149,7 @@ def detect_voice_search(soup) -> MethodScore:
 
 # ─── Multi-Platform Presence (+10%) — Batch A v3.16.0 ────────────────────────
 
-# Piattaforme riconosciute per multi-platform presence
+# Recognized platforms for multi-platform presence
 _PLATFORM_DOMAINS = {
     "github.com": "GitHub",
     "linkedin.com": "LinkedIn",
@@ -2167,7 +2167,7 @@ def detect_multi_platform(soup) -> MethodScore:
     """Detect multi-platform presence via sameAs URLs in schema."""
     platforms_found: set[str] = set()
 
-    # Estrai sameAs da tutti gli schema JSON-LD
+    # Extract sameAs from all JSON-LD schemas
     for script in soup.find_all("script", type="application/ld+json"):
         try:
             data = json.loads(script.string or "")
@@ -2218,11 +2218,11 @@ def detect_entity_disambiguation(soup) -> MethodScore:
     """Detect entity disambiguation signals: consistent naming and explicit definitions."""
     score = 0
 
-    # 1. Raccogli nomi dal title, og:title, schema name
+    # 1. Collect names from title, og:title, schema name
     names: list[str] = []
     title_tag = soup.find("title")
     if title_tag and title_tag.string:
-        # Prendi la parte prima di separatori comuni
+        # Take the part before common separators
         raw = title_tag.string.strip()
         parts = re.split(r"\s*[|\-–—]\s*", raw)
         if parts:
@@ -2234,7 +2234,7 @@ def detect_entity_disambiguation(soup) -> MethodScore:
         if parts:
             names.append(parts[0].strip().lower())
 
-    # Nome dallo schema JSON-LD
+    # Name from JSON-LD schema
     schema_name = None
     sameas_count = 0
     for script in soup.find_all("script", type="application/ld+json"):
@@ -2254,16 +2254,16 @@ def detect_entity_disambiguation(soup) -> MethodScore:
         except (json.JSONDecodeError, TypeError):
             continue
 
-    # Verifica consistenza: almeno 2 nomi e tutti uguali
+    # Check consistency: at least 2 names and all matching
     if len(names) >= 2:
         unique_names = set(names)
         if len(unique_names) == 1:
             score += 1
 
-    # 2. Prima frase contiene definizione esplicita del brand/sito
+    # 2. First sentence contains an explicit definition of the brand/site
     body = soup.find("body")
     if body:
-        # Cerca il primo paragrafo significativo
+        # Find the first meaningful paragraph
         first_p = body.find("p")
         if first_p:
             first_text = first_p.get_text(strip=True)
@@ -2271,7 +2271,7 @@ def detect_entity_disambiguation(soup) -> MethodScore:
             if re.search(r"\b(?:is|are|è|sono)\s+(?:a|an|the|un|una|il|la|lo)\b", first_text, re.I):
                 score += 1
 
-    # 3. sameAs con > 3 link (bonus disambiguazione)
+    # 3. sameAs with > 3 links (disambiguation bonus)
     if sameas_count > 3:
         score += 1
 
@@ -2292,7 +2292,7 @@ def detect_entity_disambiguation(soup) -> MethodScore:
 
 # ─── First-Party Data (+12%) — Batch A v3.16.0 ──────────────────────────────
 
-# Pattern per dati di prima parte
+# Pattern for first-party data signals
 _FIRST_PARTY_PATTERNS = re.compile(
     r"\b(?:our\s+research|we\s+analyzed|our\s+data\s+shows?"
     r"|our\s+study|we\s+found|our\s+analysis|we\s+discovered"
@@ -2301,7 +2301,7 @@ _FIRST_PARTY_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-# Pattern per numeri specifici attribuiti al sito (non citazioni esterne)
+# Pattern for specific numbers attributed to the site itself (not external citations)
 _OWN_DATA_RE = re.compile(
     r"\b(?:we|our\s+team|our\s+company)\s+\w+\s+\d+",
     re.IGNORECASE,
@@ -2313,19 +2313,19 @@ def detect_first_party_data(soup, clean_text: str | None = None) -> MethodScore:
     body_text = clean_text or _get_clean_text(soup)
     score = 0
 
-    # 1. Pattern di ricerca propria
+    # 1. Original research patterns
     first_party_matches = _FIRST_PARTY_PATTERNS.findall(body_text)
     if len(first_party_matches) >= 2:
         score += 2
     elif len(first_party_matches) >= 1:
         score += 1
 
-    # 2. Numeri specifici attribuiti al sito stesso
+    # 2. Specific numbers attributed to the site itself
     own_data_matches = _OWN_DATA_RE.findall(body_text)
     if own_data_matches:
         score += 1
 
-    # 3. Sezione "Methodology" o "Methods"
+    # 3. "Methodology" or "Methods" section
     has_methodology = False
     for h in soup.find_all(re.compile(r"^h[1-6]$", re.I)):
         h_text = h.get_text(strip=True).lower()
@@ -2368,7 +2368,7 @@ def detect_stale_data(soup, clean_text: str | None = None) -> MethodScore:
     current_year = now.year
     penalties = 0
 
-    # 1. Copyright anno vecchio nel footer
+    # 1. Old copyright year in the footer
     footer = soup.find("footer")
     old_copyright = False
     if footer:
@@ -2381,7 +2381,7 @@ def detect_stale_data(soup, clean_text: str | None = None) -> MethodScore:
                 penalties += 2
                 break
 
-    # 2. Pattern "as of YYYY" o "in YYYY" con anno stale nel testo
+    # 2. Pattern "as of YYYY" or "in YYYY" with a stale year in the text
     stale_refs = re.findall(
         r"\b(?:as\s+of|in|nel|del|aggiornato\s+al?)\s+(20[12]\d)\b",
         body_text,
@@ -2393,13 +2393,13 @@ def detect_stale_data(soup, clean_text: str | None = None) -> MethodScore:
     elif len(stale_year_refs) >= 1:
         penalties += 1
 
-    # Score inverso: 4 se pulito, 0 se molto stale
+    # Inverted score: 4 if clean, 0 if very stale
     score = max(4 - penalties, 0)
 
     return MethodScore(
         name="no_stale_data",
         label="No Stale Data",
-        detected=penalties >= 1,  # fix #327: detected=True quando il problema esiste
+        detected=penalties >= 1,  # fix #327: detected=True when the problem is present
         score=min(score, 4),
         max_score=4,
         impact="-10%",
@@ -2418,7 +2418,7 @@ def detect_social_proof(soup, clean_text: str | None = None) -> MethodScore:
     """Detect social proof signals: testimonials, ratings, trust badges."""
     score = 0
 
-    # 1. Testimonial: class="testimonial", blockquote con nome, "as seen in"
+    # 1. Testimonial: class="testimonial", blockquote with attribution, "as seen in"
     has_testimonial = False
     testimonial_divs = soup.find_all(
         ["div", "section", "aside"],
@@ -2427,10 +2427,10 @@ def detect_social_proof(soup, clean_text: str | None = None) -> MethodScore:
     if testimonial_divs:
         has_testimonial = True
 
-    # Blockquote con attribuzione (nome persona)
+    # Blockquote with attribution (person's name)
     blockquotes = soup.find_all("blockquote")
     for bq in blockquotes:
-        # Cerca cite o footer dentro blockquote
+        # Look for cite or footer inside blockquote
         cite = bq.find(["cite", "footer", "figcaption"])
         if cite:
             has_testimonial = True
@@ -2444,7 +2444,7 @@ def detect_social_proof(soup, clean_text: str | None = None) -> MethodScore:
     if has_testimonial:
         score += 1
 
-    # 2. AggregateRating nel schema con reviewCount > 10
+    # 2. AggregateRating in schema with reviewCount > 10
     has_rating = False
     for script in soup.find_all("script", type="application/ld+json"):
         try:
@@ -2474,7 +2474,7 @@ def detect_social_proof(soup, clean_text: str | None = None) -> MethodScore:
     if badge_imgs:
         has_trust_badges = True
 
-    # Sezione trust/partner
+    # Trust/partner section
     trust_sections = soup.find_all(
         ["div", "section"],
         class_=re.compile(r"partner|trust|badge|certified|award|client-logo", re.I),
@@ -2534,7 +2534,7 @@ def detect_accessibility_signals(soup) -> MethodScore:
         if href in ("#main", "#content", "#main-content", "#maincontent"):
             has_skip_link = True
             break
-        # Cerca anche testo "skip to"
+        # Also check for "skip to" text
         link_text = a.get_text(strip=True).lower()
         if "skip to" in link_text or "vai al contenuto" in link_text:
             has_skip_link = True
@@ -2560,7 +2560,7 @@ def detect_accessibility_signals(soup) -> MethodScore:
 
 # ─── AI Conversion Funnel (+8%) — Batch A v3.16.0 ────────────────────────────
 
-# Pattern CTA positivi per conversion funnel (fix #25: rinominata per non sovrascrivere _CTA_RE aggressivi)
+# Positive CTA patterns for conversion funnel (fix #25: renamed to avoid overwriting aggressive _CTA_RE)
 _CTA_FUNNEL_RE = re.compile(
     r"\b(?:try\s+(?:it\s+)?(?:free|now)|start\s+(?:free|now|your)"
     r"|sign\s+up|get\s+started|request\s+(?:a\s+)?demo"
@@ -2574,7 +2574,7 @@ def detect_conversion_funnel(soup) -> MethodScore:
     """Detect AI conversion funnel signals: CTAs, pricing links, contact info."""
     score = 0
 
-    # 1. CTA visibile (bottone/link con pattern CTA)
+    # 1. Visible CTA (button/link with CTA pattern)
     has_cta = False
     for tag in soup.find_all(["a", "button"]):
         text = tag.get_text(strip=True)
@@ -2596,7 +2596,7 @@ def detect_conversion_funnel(soup) -> MethodScore:
     if has_pricing:
         score += 1
 
-    # 3. Contatto (href con "contact", "mailto:")
+    # 3. Contact info (href with "contact", "mailto:")
     has_contact = False
     for a in soup.find_all("a", href=True):
         href = a["href"].lower()
@@ -2624,7 +2624,7 @@ def detect_conversion_funnel(soup) -> MethodScore:
 
 # ─── Temporal Signal Coherence (+8%) — Batch B v3.16.0 ───────────────────────
 
-# Pattern per date nel testo: "Last updated: DATE", "Updated: DATE", etc.
+# Pattern for dates in text: "Last updated: DATE", "Updated: DATE", etc.
 _UPDATED_DATE_RE = re.compile(
     r"\b(?:last\s+updated|updated|aggiornato)\s*:?\s*"
     r"(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{4}"  # DD/MM/YYYY or similar
@@ -2638,16 +2638,16 @@ def _parse_date_flexible(date_str: str) -> datetime | None:
     """Try to parse a date string in common formats. Returns None on failure."""
     if not date_str:
         return None
-    # Prendi solo i primi 10 char per formato ISO
+    # Take only the first 10 chars for ISO format
     clean = str(date_str).strip()
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%d.%m.%Y"):
         try:
             return datetime.strptime(clean[:10], fmt).replace(tzinfo=timezone.utc)
         except (ValueError, TypeError):
             continue
-    # Prova formato "Month DD, YYYY"
+    # Try "Month DD, YYYY" format
     try:
-        # Rimuovi virgola e prova
+        # Remove comma and try
         clean_no_comma = clean.replace(",", "")
         return datetime.strptime(clean_no_comma[:20].strip(), "%B %d %Y").replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
@@ -2692,21 +2692,21 @@ def detect_temporal_coherence(soup, clean_text: str | None = None) -> MethodScor
             if parsed:
                 dates_found[label] = parsed
 
-    # 3. Pattern visibile nel testo: "Last updated: DATE", "Updated: DATE"
+    # 3. Visible pattern in text: "Last updated: DATE", "Updated: DATE"
     matches = _UPDATED_DATE_RE.findall(body_text)
     for i, match in enumerate(matches[:3]):  # Max 3 match
         parsed = _parse_date_flexible(match)
         if parsed:
             dates_found[f"visible_updated_{i}"] = parsed
 
-    # 4. Calcola coerenza
+    # 4. Calculate coherence
     date_values = list(dates_found.values())
     is_coherent = False
     is_incoherent = False
     max_diff_days = 0
 
     if len(date_values) >= 2:
-        # Calcola differenza massima tra tutte le coppie
+        # Calculate the maximum difference between all pairs
         for i in range(len(date_values)):
             for j in range(i + 1, len(date_values)):
                 diff = abs((date_values[i] - date_values[j]).days)
@@ -2720,12 +2720,12 @@ def detect_temporal_coherence(soup, clean_text: str | None = None) -> MethodScor
     # Score
     score = 0
     if len(date_values) >= 2 and is_coherent:
-        score = 4  # Punteggio pieno: date presenti e coerenti
+        score = 4  # Full score: dates present and coherent
     elif len(date_values) >= 2 and not is_incoherent:
-        score = 2  # Date presenti, differenza moderata (30-90 giorni)
+        score = 2  # Dates present, moderate difference (30-90 days)
     elif len(date_values) == 1:
-        score = 1  # Solo una data trovata
-    # Se incoerenti (> 90 giorni) o nessuna data: score = 0
+        score = 1  # Only one date found
+    # If incoherent (> 90 days) or no dates: score = 0
 
     return MethodScore(
         name="temporal_coherence",
@@ -2746,7 +2746,7 @@ def detect_temporal_coherence(soup, clean_text: str | None = None) -> MethodScor
 
 # ─── Internal Link Anchor Text (+5%) — Batch B v3.16.0 ──────────────────────
 
-# Anchor text generici da penalizzare
+# Generic anchor text to penalize
 _GENERIC_ANCHORS = {
     "click here",
     "read more",
@@ -2786,11 +2786,11 @@ def detect_anchor_text_quality(soup, base_url: str) -> MethodScore:
         if href.startswith("http"):
             link_domain = urlparse(href).netloc.replace("www.", "")
             if link_domain != base_domain:
-                continue  # Link esterno, skip
+                continue  # External link, skip
         elif href.startswith("#") or href.startswith("mailto:") or href.startswith("tel:"):
-            continue  # Ancora interna o mailto/tel, skip
+            continue  # Internal anchor or mailto/tel, skip
 
-        # È un link interno
+        # Internal link
         anchor_text = a.get_text(strip=True).lower()
         if not anchor_text:
             continue
@@ -2803,11 +2803,11 @@ def detect_anchor_text_quality(soup, base_url: str) -> MethodScore:
         elif len(anchor_text.split()) > 3:
             descriptive_count += 1
         else:
-            # Anchor corto (1-3 parole) ma non generico — conta come parziale
+            # Short anchor (1-3 words) but not generic — counts as partial
             descriptive_count += 1
 
     if total_internal == 0:
-        # Nessun link interno: score neutro
+        # No internal links: neutral score
         return MethodScore(
             name="anchor_text_quality",
             label="Anchor Text Quality",
@@ -2883,11 +2883,11 @@ def detect_international_geo(soup) -> MethodScore:
         if in_language:
             break
 
-    # Solo se il sito ha hreflang, assegna punteggio
+    # Only assign a score if the site has hreflang
     has_hreflang = len(hreflang_langs) > 0
 
     if not has_hreflang:
-        # Sito monolingua: score neutro (0), non penalizzare
+        # Monolingual site: neutral score (0), do not penalize
         return MethodScore(
             name="international_geo",
             label="International GEO",
@@ -2904,7 +2904,7 @@ def detect_international_geo(soup) -> MethodScore:
             },
         )
 
-    # Ha hreflang: assegna punteggio
+    # Has hreflang: assign score
     if len(hreflang_langs) >= 3:
         score += 2
     elif len(hreflang_langs) >= 1:
@@ -2942,7 +2942,7 @@ def detect_crawl_budget(soup) -> MethodScore:
     score = 3  # Full score by default, with penalties
     penalties = []
 
-    # 1. Controlla meta robots per noindex/nofollow
+    # 1. Check meta robots for noindex/nofollow
     meta_robots = soup.find("meta", attrs={"name": re.compile(r"^robots$", re.I)})
     has_noindex = False
     has_nofollow = False
@@ -2957,7 +2957,7 @@ def detect_crawl_budget(soup) -> MethodScore:
             penalties.append("meta robots nofollow")
             score -= 1
 
-    # 2. Controlla X-Robots-Tag meta (alternativa)
+    # 2. Check X-Robots-Tag meta (alternative)
     meta_x_robots = soup.find("meta", attrs={"http-equiv": re.compile(r"x-robots-tag", re.I)})
     if meta_x_robots:
         content = (meta_x_robots.get("content") or "").lower()
@@ -2970,7 +2970,7 @@ def detect_crawl_budget(soup) -> MethodScore:
             penalties.append("X-Robots-Tag nofollow")
             score -= 1
 
-    # 3. Cerca link rel="sitemap" nel <head>
+    # 3. Look for link rel="sitemap" in <head>
     has_sitemap_link = False
     sitemap_link = soup.find("link", attrs={"rel": "sitemap"})
     if sitemap_link and sitemap_link.get("href"):
@@ -2978,7 +2978,7 @@ def detect_crawl_budget(soup) -> MethodScore:
 
     # Bonus if sitemap is referenced in head (positive signal for AI crawlers)
     if not has_sitemap_link and score > 0:
-        # Non penalizzare, ma niente bonus
+        # No penalty, but no bonus either
         pass
 
     score = max(score, 0)
@@ -3001,7 +3001,7 @@ def detect_crawl_budget(soup) -> MethodScore:
 
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
-# Suggerimenti di miglioramento per ogni metodo non rilevato
+# Improvement suggestions for each undetected method
 _IMPROVEMENT_SUGGESTIONS = {
     "quotation_addition": "Add attributed quotes in <blockquote> (+41% AI visibility)",
     "statistics_addition": "Include quantitative data: percentages, figures, metrics (+33%)",
@@ -3127,11 +3127,11 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
     Returns:
         CitabilityResult with score 0-100 and per-method detail.
     """
-    # Fix #285: passa soup_clean a _get_clean_text per evitare re-parse
+    # Fix #285: pass soup_clean to _get_clean_text to avoid re-parsing
     clean_text = _get_clean_text(soup, soup_clean=soup_clean)
 
     methods = [
-        # Metodi Princeton GEO originali (ricalibrati)
+        # Original Princeton GEO methods (recalibrated)
         detect_quotations(soup, clean_text=clean_text),
         detect_statistics(soup, clean_text=clean_text),
         detect_fluency(soup, clean_text=clean_text),
@@ -3143,7 +3143,7 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
         detect_easy_to_understand(soup),
         detect_unique_words(soup, clean_text=clean_text),
         detect_keyword_stuffing(soup, clean_text=clean_text),
-        # Nuovi metodi content analysis v3.15
+        # New content analysis methods v3.15
         detect_readability(soup, clean_text=clean_text),
         detect_faq_in_content(soup),
         detect_image_alt_quality(soup),
@@ -3151,7 +3151,7 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
         detect_citability_density(soup, clean_text=clean_text),
         detect_definition_patterns(soup),
         detect_format_mix(soup),
-        # Quality Signals Batch 2 (bonus — cappati a 100 dal totale)
+        # Quality Signals Batch 2 (bonus — capped at 100 total)
         detect_attribution(soup, clean_text=clean_text),
         detect_negative_signals(soup, clean_text=clean_text),
         detect_comparison_content(soup, clean_text=clean_text),
@@ -3159,13 +3159,13 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
         detect_content_decay(soup, clean_text=clean_text),
         detect_boilerplate_ratio(soup),
         detect_nuance_signals(soup, clean_text=clean_text),
-        # Quality Signals Batch 3+4 (bonus — cappati a 100 dal totale)
+        # Quality Signals Batch 3+4 (bonus — capped at 100 total)
         detect_snippet_ready(soup),
         detect_chunk_quotability(soup),
         detect_blog_structure(soup),
         detect_shopping_readiness(soup),
         detect_chatgpt_shopping(soup),
-        # Quality Signals Batch A v3.16.0 (bonus — cappati a 100 dal totale)
+        # Quality Signals Batch A v3.16.0 (bonus — capped at 100 total)
         detect_voice_search(soup),
         detect_multi_platform(soup),
         detect_entity_disambiguation(soup),
@@ -3181,7 +3181,7 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
         detect_crawl_budget(soup),
     ]
 
-    # Somma score (max possibile = 100)
+    # Sum scores (max possible = 100)
     total = sum(m.score for m in methods)
     total = max(min(total, 100), 0)
 
