@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
 from bs4 import BeautifulSoup
 
 from geo_optimizer.core.audit import audit_brand_entity, audit_signals
+from geo_optimizer.models.config import ABOUT_LINK_PATTERNS
 from geo_optimizer.models.results import ContentResult, MetaResult, SchemaResult
 
 
@@ -171,6 +173,13 @@ class TestAuditBrandEntity:
         result = audit_brand_entity(_soup(html), SchemaResult(), MetaResult(), ContentResult())
         assert result.has_about_link is False
 
+    @pytest.mark.parametrize("pattern", ABOUT_LINK_PATTERNS)
+    def test_about_link_tutti_i_pattern(self, pattern: str):
+        """Ogni pattern in ABOUT_LINK_PATTERNS deve essere riconosciuto (#391)."""
+        html = _base_html(extra_body=f'<a href="{pattern}">Link</a>')
+        result = audit_brand_entity(_soup(html), SchemaResult(), MetaResult(), ContentResult())
+        assert result.has_about_link is True, f"Pattern non riconosciuto: {pattern}"
+
     def test_contact_info_da_schema(self):
         """Organization con telephone → has_contact_info = True."""
         schema = SchemaResult(
@@ -201,12 +210,18 @@ class TestAuditBrandEntity:
     def test_graph_spacchettamento(self):
         """Schema con @graph viene spacchettato per description match."""
         schema = SchemaResult(
-            raw_schemas=[{
-                "@graph": [
-                    {"@type": "Organization", "name": "Acme", "description": "Leading provider of widgets and solutions"},
-                    {"@type": "WebSite", "name": "Acme"},
-                ]
-            }],
+            raw_schemas=[
+                {
+                    "@graph": [
+                        {
+                            "@type": "Organization",
+                            "name": "Acme",
+                            "description": "Leading provider of widgets and solutions",
+                        },
+                        {"@type": "WebSite", "name": "Acme"},
+                    ]
+                }
+            ],
         )
         html = _base_html()
         meta = MetaResult(
@@ -234,7 +249,7 @@ class TestNegativeSignalsSeverity:
 
         # Testo vario senza autore → scatta almeno no_author
         words = " ".join(f"word{i}" for i in range(300))
-        html = f'<html><body><main><h1>Test Page</h1><p>{words}</p></main></body></html>'
+        html = f"<html><body><main><h1>Test Page</h1><p>{words}</p></main></body></html>"
         soup = _soup(html)
         content = ContentResult(word_count=300, has_h1=True, h1_text="Test Page", heading_count=1)
         meta = MetaResult(has_title=True, title_text="Test Page")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 
+from geo_optimizer.models.config import ARTICLE_TYPES
 from geo_optimizer.models.results import SchemaResult
 
 
@@ -55,7 +56,7 @@ def audit_schema(soup, url: str) -> SchemaResult:
                         result.has_webapp = True
                     elif t == "FAQPage":
                         result.has_faq = True
-                    elif t in ("Article", "BlogPosting", "NewsArticle", "TechArticle", "ScholarlyArticle"):
+                    elif t in ARTICLE_TYPES:
                         result.has_article = True
                     elif t == "Organization":
                         result.has_organization = True

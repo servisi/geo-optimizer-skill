@@ -15,6 +15,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+from geo_optimizer.models.config import KEYWORD_STUFFING_THRESHOLD
 from geo_optimizer.models.results import CitabilityResult, MethodScore
 
 # ─── Constants ────────────────────────────────────────────────────────────────
@@ -577,9 +578,9 @@ def detect_keyword_stuffing(soup, clean_text: str | None = None) -> MethodScore:
 
     word_freq = Counter(words)
     total = len(words)
-    threshold = 0.03
+    threshold = KEYWORD_STUFFING_THRESHOLD
 
-    # Words with abnormal frequency (>3%)
+    # Words with abnormal frequency (above threshold)
     suspicious = {w: c for w, c in word_freq.most_common(20) if c / total > threshold and w not in _STOP_WORDS}
 
     stuffing_count = len(suspicious)

@@ -67,6 +67,7 @@ from geo_optimizer.models.config import (
     HEADERS,
     OPTIONAL_CATEGORIES,
     ROBOTS_PARTIAL_SCORE,
+    ARTICLE_TYPES,
     SCHEMA_ORG_REQUIRED,
     SCHEMA_TEMPLATES,
     SCORE_BANDS,
@@ -1086,6 +1087,38 @@ class TestAuditSchema:
         result = audit_schema(soup, "https://example.com")
         assert result.has_website is True
         assert result.has_faq is True
+
+    def test_tech_article_detected_as_article(self):
+        """TechArticle is a valid Article subtype and must set has_article=True (#392)."""
+        html = """<html><head><script type="application/ld+json">
+        {"@context":"https://schema.org","@type":"TechArticle","headline":"H","author":{"@type":"Person","name":"A"}}
+        </script></head><body></body></html>"""
+        soup = BeautifulSoup(html, "html.parser")
+        result = audit_schema(soup, "https://example.com")
+        assert "TechArticle" in result.found_types
+        assert result.has_article is True
+
+    def test_scholarly_article_detected_as_article(self):
+        """ScholarlyArticle is a valid Article subtype and must set has_article=True (#392)."""
+        html = """<html><head><script type="application/ld+json">
+        {"@context":"https://schema.org","@type":"ScholarlyArticle","headline":"H","author":{"@type":"Person","name":"A"}}
+        </script></head><body></body></html>"""
+        soup = BeautifulSoup(html, "html.parser")
+        result = audit_schema(soup, "https://example.com")
+        assert "ScholarlyArticle" in result.found_types
+        assert result.has_article is True
+
+    def test_article_types_constant_contains_all_subtypes(self):
+        """ARTICLE_TYPES must include all recognised Article subtypes (#392)."""
+        assert isinstance(ARTICLE_TYPES, frozenset)
+        for expected in ("Article", "BlogPosting", "NewsArticle", "TechArticle", "ScholarlyArticle"):
+            assert expected in ARTICLE_TYPES
+
+    def test_valuable_schemas_includes_article_subtypes(self):
+        """VALUABLE_SCHEMAS must list TechArticle and ScholarlyArticle (#392)."""
+        assert "TechArticle" in VALUABLE_SCHEMAS
+        assert "ScholarlyArticle" in VALUABLE_SCHEMAS
+        assert "NewsArticle" in VALUABLE_SCHEMAS
 
 
 class TestAuditMetaTags:

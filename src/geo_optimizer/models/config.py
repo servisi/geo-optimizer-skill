@@ -114,12 +114,27 @@ CITATION_BOTS = {"OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "PerplexityBo
 
 # ─── Schema types ────────────────────────────────────────────────────────────
 
+# All schema.org Article subtypes that count as Article for GEO scoring
+# Includes direct subclasses per schema.org hierarchy (#392)
+ARTICLE_TYPES: frozenset[str] = frozenset(
+    {
+        "Article",
+        "BlogPosting",
+        "NewsArticle",
+        "TechArticle",
+        "ScholarlyArticle",
+    }
+)
+
 VALUABLE_SCHEMAS = [
     "WebSite",
     "WebApplication",
     "FAQPage",
     "Article",
     "BlogPosting",
+    "NewsArticle",
+    "TechArticle",
+    "ScholarlyArticle",
     "HowTo",
     "Recipe",
     "Product",

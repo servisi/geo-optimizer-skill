@@ -160,7 +160,7 @@ def audit_negative_signals(
         total = len(words)
         for word, count in freq.most_common(3):
             density = count / total
-            # > 3% densità per una singola parola = stuffing
+            # Single-word density above threshold (SEMrush 2025: > 2.5%) = stuffing
             if density > KEYWORD_STUFFING_THRESHOLD and count >= 5:
                 result.has_keyword_stuffing = True
                 result.stuffed_word = word
