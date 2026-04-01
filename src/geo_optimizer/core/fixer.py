@@ -18,7 +18,7 @@ import json
 import logging
 from urllib.parse import urlparse
 
-from geo_optimizer.models.config import AI_BOTS, SCHEMA_TEMPLATES
+from geo_optimizer.models.config import AI_BOTS, SAMEAS_AUTHORITATIVE_DOMAINS, SCHEMA_TEMPLATES
 from geo_optimizer.models.results import AuditResult, FixItem, FixPlan
 
 logger = logging.getLogger(__name__)
@@ -181,11 +181,17 @@ def generate_schema_fix(result: AuditResult, base_url: str) -> list[FixItem]:
             "description": result.meta.description_text or "",
             "logo_url": f"{base_url}/logo.png",
         }
+        # sameAs placeholder URLs are already embedded in the template (#398).
+        # They use authoritative domains from SAMEAS_AUTHORITATIVE_DOMAINS
+        # (linkedin.com, github.com, twitter.com) — the most important signal
+        # for brand_kg_readiness (3pt). The user must replace YOUR_COMPANY /
+        # YOUR_ORG / YOUR_HANDLE with real profile identifiers.
+        _ = SAMEAS_AUTHORITATIVE_DOMAINS  # imported for documentation clarity
         schema = fill_template(template, values)
         fixes.append(
             FixItem(
                 category="schema",
-                description="Generate Organization JSON-LD schema",
+                description="Generate Organization JSON-LD schema with sameAs placeholders",
                 content=json.dumps(schema, indent=2, ensure_ascii=False),
                 file_name="schema-organization.jsonld",
                 action="snippet",

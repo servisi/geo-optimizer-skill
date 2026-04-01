@@ -491,6 +491,73 @@ class TestContentFreshness:
         result = detect_content_freshness(_soup(html))
         assert result.details["date_modified"] is None
 
+    # ── Test freshness_level graduated (#401) ────────────────────────────────
+
+    def test_freshness_level_very_fresh_1_mese(self):
+        """Date 1 month ago → freshness_level = very_fresh, 4 citability points."""
+        html = """
+        <html><body>
+            <script type="application/ld+json">
+            {"@type": "Article", "dateModified": "2026-03-01"}
+            </script>
+        </body></html>
+        """
+        result = detect_content_freshness(_soup(html))
+        assert result.details["freshness_level"] == "very_fresh"
+        assert result.details["is_fresh"] is True
+
+    def test_freshness_level_fresh_4_mesi(self):
+        """Date 4 months ago → freshness_level = fresh, 3 citability points."""
+        html = """
+        <html><body>
+            <script type="application/ld+json">
+            {"@type": "Article", "dateModified": "2025-12-01"}
+            </script>
+        </body></html>
+        """
+        result = detect_content_freshness(_soup(html))
+        assert result.details["freshness_level"] == "fresh"
+        assert result.details["is_fresh"] is True
+
+    def test_freshness_level_aging_8_mesi(self):
+        """Date 8 months ago → freshness_level = aging, 2 citability points."""
+        html = """
+        <html><body>
+            <script type="application/ld+json">
+            {"@type": "Article", "dateModified": "2025-08-01"}
+            </script>
+        </body></html>
+        """
+        result = detect_content_freshness(_soup(html))
+        assert result.details["freshness_level"] == "aging"
+        assert result.details["is_fresh"] is False
+
+    def test_freshness_level_stale_14_mesi(self):
+        """Date 14 months ago → freshness_level = stale, 0 citability points."""
+        html = """
+        <html><body>
+            <script type="application/ld+json">
+            {"@type": "Article", "dateModified": "2025-02-01"}
+            </script>
+        </body></html>
+        """
+        result = detect_content_freshness(_soup(html))
+        assert result.details["freshness_level"] == "stale"
+        assert result.details["is_fresh"] is False
+
+    def test_freshness_level_stale_senza_data(self):
+        """No date signal → freshness_level = stale."""
+        html = "<html><body><p>Content without any date signals.</p></body></html>"
+        result = detect_content_freshness(_soup(html))
+        assert result.details["freshness_level"] == "stale"
+        assert result.details["is_fresh"] is False
+
+    def test_freshness_level_present_nel_details(self):
+        """freshness_level must always be present in details dict."""
+        html = "<html><body><p>Some content here.</p></body></html>"
+        result = detect_content_freshness(_soup(html))
+        assert "freshness_level" in result.details
+
 
 # ============================================================================
 # TEST: Citability Density (+15%)

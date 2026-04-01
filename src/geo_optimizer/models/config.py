@@ -112,6 +112,45 @@ BOT_TIERS = {
 # Critical citation bots (search-tier, directly cite sources in AI responses)
 CITATION_BOTS = {"OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "PerplexityBot"}
 
+# ─── Brand normalization ──────────────────────────────────────────────────────
+
+# Legal suffixes stripped from brand names before comparison (#397).
+# Only removed when they appear at the END of the name (after stripping punctuation/spaces).
+# Lowercase, matched against the lowercased trailing token(s).
+BRAND_LEGAL_SUFFIXES: frozenset = frozenset(
+    {
+        "inc",
+        "inc.",
+        "incorporated",
+        "ltd",
+        "ltd.",
+        "limited",
+        "llc",
+        "l.l.c.",
+        "corp",
+        "corp.",
+        "corporation",
+        "gmbh",
+        "g.m.b.h.",
+        "s.r.l.",
+        "srl",
+        "s.p.a.",
+        "spa",
+        "s.a.",
+        "sa",
+        "ag",
+        "co",
+        "co.",
+        "plc",
+        "pty",
+        "pty.",
+        "bv",
+        "b.v.",
+        "nv",
+        "n.v.",
+    }
+)
+
 # ─── Schema types ────────────────────────────────────────────────────────────
 
 # All schema.org Article subtypes that count as Article for GEO scoring
@@ -215,7 +254,13 @@ SCHEMA_TEMPLATES = {
         "description": "{{description}}",
         # logo must be ImageObject, not URL string (#113)
         "logo": {"@type": "ImageObject", "url": "{{logo_url}}"},
-        "sameAs": [],
+        # sameAs is the most important signal for brand_kg_readiness (3pt — #398)
+        # Placeholders use authoritative domains from SAMEAS_AUTHORITATIVE_DOMAINS
+        "sameAs": [
+            "https://www.linkedin.com/company/YOUR_COMPANY",
+            "https://github.com/YOUR_ORG",
+            "https://twitter.com/YOUR_HANDLE",
+        ],
     },
     "breadcrumb": {
         "@context": "https://schema.org",
@@ -382,8 +427,19 @@ SCORING = {
 # Separate from the SCORING dict because it is an alternative (not additive) to robots_citation_ok (fix #332)
 ROBOTS_PARTIAL_SCORE = 10
 
+# Schema richness thresholds — graduated scoring (#394)
+SCHEMA_RICHNESS_HIGH = 5     # avg >= 5 attrs → full points (3pt)
+SCHEMA_RICHNESS_MED = 4      # avg >= 4 attrs → 2pt
+SCHEMA_RICHNESS_LOW = 3      # avg >= 3 attrs → 1pt
+
 # Minimum word threshold for content_word_count (300 words = substantial content)
 CONTENT_MIN_WORDS = 300
+
+# Content freshness thresholds in days (#401)
+# AutoGEO ICLR 2026: tech content < 3 months strongly preferred by AI search engines
+FRESHNESS_VERY_FRESH_DAYS = 90    # < 3 months → very_fresh
+FRESHNESS_FRESH_DAYS = 180        # 3-6 months → fresh
+FRESHNESS_AGING_DAYS = 365        # 6-12 months → aging (> 12 months = stale)
 
 # Depth thresholds for llms.txt
 LLMS_DEPTH_WORDS = 1000

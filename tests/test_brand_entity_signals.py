@@ -6,6 +6,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from geo_optimizer.core.audit import audit_brand_entity, audit_signals
+from geo_optimizer.core.audit_brand import _normalize_brand_name
 from geo_optimizer.models.config import ABOUT_LINK_PATTERNS
 from geo_optimizer.models.results import ContentResult, MetaResult, SchemaResult
 
@@ -274,3 +275,119 @@ class TestNegativeSignalsSeverity:
         result = audit_negative_signals(soup, html, content, meta, SchemaResult())
         assert result.signals_found >= 2
         assert result.severity in ("medium", "high")
+
+
+# ============================================================================
+# TEST: _normalize_brand_name — legal suffix stripping (#397)
+# ============================================================================
+
+
+class TestNormalizeBrandName:
+    """Unit tests for _normalize_brand_name() — legal suffix normalization (#397)."""
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # Common English suffixes
+            ("Apple Inc.", "apple"),
+            ("Apple Inc", "apple"),
+            ("Acme Ltd.", "acme"),
+            ("Acme Ltd", "acme"),
+            ("Widget Corp.", "widget"),
+            ("Widget Corp", "widget"),
+            ("Holdings LLC", "holdings"),
+            # German suffix
+            ("Apple GmbH", "apple"),
+            # Italian suffixes
+            ("Auriti S.r.l.", "auriti"),
+            ("Auriti S.p.A.", "auriti"),
+            # No suffix — must remain unchanged
+            ("Apple", "apple"),
+            ("Microsoft", "microsoft"),
+            # Mixed case must be handled
+            ("ACME CORP.", "acme"),
+            ("Foo Bar Ltd.", "foo bar"),
+        ],
+    )
+    def test_suffix_stripped_at_end(self, raw: str, expected: str):
+        """Legal suffix at end of name is removed correctly."""
+        assert _normalize_brand_name(raw) == expected
+
+    def test_suffix_in_middle_not_removed(self):
+        """'Inc.' in the middle of a name must NOT be removed."""
+        # "The Inc. Company" → the word "Inc." is not at the trailing position
+        result = _normalize_brand_name("The Inc. Company")
+        assert "company" in result
+        assert result == "the inc. company"
+
+    def test_no_match_different_brands(self):
+        """Two completely different names must NOT match after normalization."""
+        assert _normalize_brand_name("Apple Inc.") != _normalize_brand_name("Microsoft Ltd.")
+
+    def test_whitespace_stripped(self):
+        """Leading/trailing whitespace is stripped."""
+        assert _normalize_brand_name("  Acme Ltd.  ") == "acme"
+
+    def test_empty_string_safe(self):
+        """Empty string does not crash."""
+        assert _normalize_brand_name("") == ""
+
+
+class TestBrandCoherenceWithLegalSuffixes:
+    """Integration tests: brand_name_consistent with mixed legal suffixes (#397)."""
+
+    def _build_inputs(self, title: str, h1: str, schema_name: str):
+        """Helper: build soup + SchemaResult + MetaResult + ContentResult."""
+        html = f"""<html><head>
+            <title>{title}</title>
+            <meta property="og:title" content="{title}">
+            <script type="application/ld+json">{{"@type":"Organization","name":"{schema_name}"}}</script>
+        </head><body><h1>{h1}</h1></body></html>"""
+        soup = _soup(html)
+        schema = SchemaResult(raw_schemas=[{"@type": "Organization", "name": schema_name}])
+        meta = MetaResult(has_title=True, title_text=title, has_og_title=True)
+        content = ContentResult(has_h1=True, h1_text=h1)
+        return soup, schema, meta, content
+
+    def test_inc_suffix_matches(self):
+        """Title 'Apple' vs schema 'Apple Inc.' → brand_name_consistent = True."""
+        soup, schema, meta, content = self._build_inputs("Apple", "Apple", "Apple Inc.")
+        result = audit_brand_entity(soup, schema, meta, content)
+        assert result.brand_name_consistent is True
+
+    def test_ltd_suffix_matches(self):
+        """Title 'Acme' vs schema 'Acme Ltd.' → brand_name_consistent = True."""
+        soup, schema, meta, content = self._build_inputs("Acme", "Acme", "Acme Ltd.")
+        result = audit_brand_entity(soup, schema, meta, content)
+        assert result.brand_name_consistent is True
+
+    def test_srl_suffix_matches(self):
+        """Title 'Auriti' vs schema 'Auriti S.r.l.' → brand_name_consistent = True."""
+        soup, schema, meta, content = self._build_inputs("Auriti", "Auriti", "Auriti S.r.l.")
+        result = audit_brand_entity(soup, schema, meta, content)
+        assert result.brand_name_consistent is True
+
+    def test_gmbh_suffix_matches(self):
+        """Title 'Apple' vs schema 'Apple GmbH' → brand_name_consistent = True."""
+        soup, schema, meta, content = self._build_inputs("Apple", "Apple", "Apple GmbH")
+        result = audit_brand_entity(soup, schema, meta, content)
+        assert result.brand_name_consistent is True
+
+    def test_different_brands_not_consistent(self):
+        """All sources with different brand names must stay inconsistent after normalization.
+
+        Uses four distinct base names so none appears >= 2 times even after suffix removal.
+        Legal suffix removal must NOT falsely unify different brands.
+        """
+        # Each source carries a different base name: h1=Alpha, title=Beta, og:title=Gamma, schema=Delta
+        html = """<html><head>
+            <title>Alpha Corp.</title>
+            <meta property="og:title" content="Gamma S.r.l.">
+            <script type="application/ld+json">{"@type":"Organization","name":"Delta GmbH"}</script>
+        </head><body><h1>Beta Ltd.</h1></body></html>"""
+        soup = _soup(html)
+        schema = SchemaResult(raw_schemas=[{"@type": "Organization", "name": "Delta GmbH"}])
+        meta = MetaResult(has_title=True, title_text="Alpha Corp.", has_og_title=True)
+        content = ContentResult(has_h1=True, h1_text="Beta Ltd.")
+        result = audit_brand_entity(soup, schema, meta, content)
+        assert result.brand_name_consistent is False

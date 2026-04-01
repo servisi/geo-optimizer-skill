@@ -8,8 +8,33 @@ from __future__ import annotations
 
 from collections import Counter
 
-from geo_optimizer.models.config import ABOUT_LINK_PATTERNS, KG_PILLAR_DOMAINS
+from geo_optimizer.models.config import ABOUT_LINK_PATTERNS, BRAND_LEGAL_SUFFIXES, KG_PILLAR_DOMAINS
 from geo_optimizer.models.results import BrandEntityResult, ContentResult, MetaResult, SchemaResult
+
+
+def _normalize_brand_name(name: str) -> str:
+    """Normalize a brand name for comparison by stripping legal suffixes (#397).
+
+    Strips leading/trailing whitespace, lowercases, then removes any legal suffix
+    (e.g. "Inc.", "Ltd.", "GmbH", "S.r.l.") from the END of the name.
+    The suffix must appear as a standalone trailing token — it is NOT removed
+    when it appears in the middle (e.g. "The Inc. Company" is unchanged).
+
+    Args:
+        name: Raw brand name (e.g. "Apple Inc.", "Auriti S.r.l.").
+
+    Returns:
+        Normalized name without trailing legal suffix (e.g. "apple", "auriti").
+    """
+    normalized = name.strip().lower()
+    # Strip trailing punctuation (comma, period not part of suffix) before matching
+    normalized = normalized.rstrip(",")
+    for suffix in BRAND_LEGAL_SUFFIXES:
+        # Match suffix at end, preceded by a space (to avoid mid-name removal)
+        if normalized.endswith(" " + suffix):
+            normalized = normalized[: -(len(suffix) + 1)].strip()
+            break
+    return normalized
 
 
 def audit_brand_entity(
@@ -85,19 +110,9 @@ def audit_brand_entity(
 
     result.names_found = names[:10]
 
-    # Fix #397: normalizza suffissi legali prima del confronto
-    _LEGAL_SUFFIXES = (" inc.", " inc", " ltd.", " ltd", " llc", " gmbh", " s.r.l.", " s.p.a.", " corp.", " corp")
-
-    def _normalize_brand(name: str) -> str:
-        n = name.lower().strip()
-        for suffix in _LEGAL_SUFFIXES:
-            if n.endswith(suffix):
-                n = n[: -len(suffix)].strip()
-        return n
-
-    # Consistenza: almeno 2 nomi, e i più comuni corrispondono (case-insensitive, senza suffissi legali)
+    # Consistency: at least 2 names, most-frequent one appears 2+ times after legal suffix removal (#397)
     if len(names) >= 2:
-        lower_names = [_normalize_brand(n) for n in names]
+        lower_names = [_normalize_brand_name(n) for n in names]
         freq = Counter(lower_names)
         most_common_name, most_common_count = freq.most_common(1)[0]
         if most_common_count >= 2:

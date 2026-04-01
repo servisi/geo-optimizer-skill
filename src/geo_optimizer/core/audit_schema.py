@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 
-from geo_optimizer.models.config import ARTICLE_TYPES
+from geo_optimizer.models.config import ARTICLE_TYPES, SCHEMA_RICHNESS_HIGH, SCHEMA_RICHNESS_LOW, SCHEMA_RICHNESS_MED
 from geo_optimizer.models.results import SchemaResult
 
 
@@ -100,14 +100,13 @@ def audit_schema(soup, url: str) -> SchemaResult:
 
     if attr_counts:
         result.avg_attributes_per_schema = round(sum(attr_counts) / len(attr_counts), 1)
-        # Score: 0 if avg < 3 (generic), 1 if 3-4, 3 if 5+ (rich)
+        # Graduated scoring: 0pt generic, 1pt minimal, 2pt medium, 3pt rich (#394)
         avg = result.avg_attributes_per_schema
-        # Fix #394: gradino intermedio (4+ attributi = 2pt)
-        if avg >= 5:
+        if avg >= SCHEMA_RICHNESS_HIGH:
             result.schema_richness_score = 3
-        elif avg >= 4:
+        elif avg >= SCHEMA_RICHNESS_MED:
             result.schema_richness_score = 2
-        elif avg >= 3:
+        elif avg >= SCHEMA_RICHNESS_LOW:
             result.schema_richness_score = 1
         else:
             result.schema_richness_score = 0

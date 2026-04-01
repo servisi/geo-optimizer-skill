@@ -15,7 +15,12 @@ from collections import Counter
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from geo_optimizer.models.config import KEYWORD_STUFFING_THRESHOLD
+from geo_optimizer.models.config import (
+    FRESHNESS_AGING_DAYS,
+    FRESHNESS_FRESH_DAYS,
+    FRESHNESS_VERY_FRESH_DAYS,
+    KEYWORD_STUFFING_THRESHOLD,
+)
 from geo_optimizer.models.results import CitabilityResult, MethodScore
 
 # ─── Constants ────────────────────────────────────────────────────────────────
@@ -969,8 +974,46 @@ def detect_image_alt_quality(soup) -> MethodScore:
 # ─── 15. Content Freshness Warning (+10%) ────────────────────────────────────
 
 
+def _compute_freshness_level(days_old: float) -> str:
+    """Map content age in days to a freshness level string (#401).
+
+    Levels (AutoGEO ICLR 2026):
+    - very_fresh: < 3 months (FRESHNESS_VERY_FRESH_DAYS)
+    - fresh:      3-6 months (FRESHNESS_FRESH_DAYS)
+    - aging:      6-12 months (FRESHNESS_AGING_DAYS)
+    - stale:      > 12 months
+    """
+    if days_old < FRESHNESS_VERY_FRESH_DAYS:
+        return "very_fresh"
+    if days_old < FRESHNESS_FRESH_DAYS:
+        return "fresh"
+    if days_old < FRESHNESS_AGING_DAYS:
+        return "aging"
+    return "stale"
+
+
+def _freshness_citability_score(freshness_level: str) -> int:
+    """Return citability score points for a given freshness level (#401).
+
+    This is the CITABILITY score, separate from the GEO signals_freshness score.
+    """
+    return {
+        "very_fresh": 4,
+        "fresh": 3,
+        "aging": 2,
+        "stale": 0,
+    }.get(freshness_level, 0)
+
+
 def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore:
-    """Detect content freshness via JSON-LD dates and year references in text."""
+    """Detect content freshness via JSON-LD dates and year references in text.
+
+    Returns a graduated freshness_level (#401):
+    - very_fresh: < 3 months (4 citability points)
+    - fresh: 3-6 months (3 citability points)
+    - aging: 6-12 months (2 citability points)
+    - stale: > 12 months or no date (0 citability points)
+    """
     now = datetime.now(tz=timezone.utc)
     current_year = now.year
 
@@ -980,52 +1023,49 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
     date_published = _dates["datePublished"]
 
     # Analyze the dates found
-    is_fresh = False
-    months_old = None
+    days_old = None
+    freshness_level = "unknown"
     has_date_signal = False
 
     for date_str in [date_modified, date_published]:
         if not date_str:
             continue
         has_date_signal = True
-        # Try to parse the date (ISO format)
         try:
-            # Handle common formats
             clean_date = str(date_str)[:10]  # YYYY-MM-DD
             parsed = datetime.strptime(clean_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            diff = now - parsed
-            months_old = diff.days / 30
-            if months_old <= 3:  # fix #401: < 3 mesi = very fresh
-                is_fresh = True
-            elif months_old <= 6:  # 3-6 mesi = fresh
-                is_fresh = True
+            days_old = (now - parsed).days
+            freshness_level = _compute_freshness_level(days_old)
             break
         except (ValueError, TypeError):
             continue
+
+    # Backward compat: is_fresh is True for very_fresh and fresh
+    is_fresh = freshness_level in ("very_fresh", "fresh")
+    months_old = days_old / 30 if days_old is not None else None
+
+    # No valid date parsed despite a date signal → treat as stale
+    if has_date_signal and days_old is None:
+        freshness_level = "stale"
+
+    # No date signal at all → unknown (treated as stale for scoring)
+    if not has_date_signal:
+        freshness_level = "stale"
 
     # Look for year references in the text
     body_text = clean_text or _get_clean_text(soup)
     year_refs = re.findall(r"\b(20[12]\d)\b", body_text)
     year_counts = Counter(year_refs)
 
-    # Check whether it contains past years without a recent dateModified
     has_old_year_refs = any(int(y) < current_year for y in year_counts)
     has_current_year_refs = any(int(y) >= current_year for y in year_counts)
 
     # Score calculation
-    score = 0
-    warnings = []
+    score = _freshness_citability_score(freshness_level)
+    warnings: list[str] = []
 
-    # Fix #401: differentiate score by freshness level
-    if is_fresh and months_old is not None and months_old <= 3:
-        score += 4  # very fresh: < 3 months
-    elif is_fresh:
-        score += 3  # fresh: 3-6 months
-    elif has_date_signal and months_old is not None:
-        if months_old <= 12:
-            score += 2  # aging: 6-12 months
-        else:
-            warnings.append(f"Contenuto aggiornato {int(months_old)} mesi fa")
+    if freshness_level == "stale" and has_date_signal and months_old is not None:
+        warnings.append(f"Contenuto aggiornato {int(months_old)} mesi fa")
     elif not has_date_signal:
         warnings.append("Nessun segnale di data (dateModified/datePublished) trovato")
         score += 1  # Base point to avoid penalizing too harshly
@@ -1046,6 +1086,7 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
             "date_modified": date_modified,
             "date_published": date_published,
             "is_fresh": is_fresh,
+            "freshness_level": freshness_level,
             "months_old": round(months_old, 1) if months_old is not None else None,
             "year_references": dict(year_counts),
             "warnings": warnings,

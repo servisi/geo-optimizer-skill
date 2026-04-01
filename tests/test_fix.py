@@ -5,7 +5,7 @@ Verifica la generazione di fix automatici (robots, llms, schema, meta)
 e il comando CLI geo fix. Tutto mockato — zero chiamate HTTP.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -17,6 +17,7 @@ from geo_optimizer.core.fixer import (
     generate_schema_fix,
     run_all_fixes,
 )
+from geo_optimizer.models.config import SAMEAS_AUTHORITATIVE_DOMAINS
 from geo_optimizer.models.results import (
     AuditResult,
     ContentResult,
@@ -25,7 +26,6 @@ from geo_optimizer.models.results import (
     RobotsResult,
     SchemaResult,
 )
-
 
 # ============================================================================
 # FIXTURES
@@ -230,6 +230,58 @@ class TestGenerateSchemaFix:
 
         assert len(fixes) == 0
 
+    def test_organization_schema_contiene_sameas(self):
+        """Il template Organization generato deve includere il campo sameAs (#398)."""
+        result = _make_result()
+        fixes = generate_schema_fix(result, "https://example.com")
+
+        org_fixes = [f for f in fixes if f.file_name == "schema-organization.jsonld"]
+        assert len(org_fixes) == 1, "Deve essere generato lo schema Organization"
+
+        import json
+
+        schema = json.loads(org_fixes[0].content)
+        assert "sameAs" in schema, "Il campo sameAs deve essere presente nello schema Organization"
+
+    def test_organization_sameas_ha_almeno_due_url(self):
+        """sameAs deve contenere almeno 2 URL placeholder (#398)."""
+        result = _make_result()
+        fixes = generate_schema_fix(result, "https://example.com")
+
+        import json
+
+        org_fix = next(f for f in fixes if f.file_name == "schema-organization.jsonld")
+        schema = json.loads(org_fix.content)
+        same_as = schema["sameAs"]
+
+        assert isinstance(same_as, list), "sameAs deve essere una lista"
+        assert len(same_as) >= 2, f"sameAs deve avere almeno 2 URL, trovati: {len(same_as)}"
+
+    def test_organization_sameas_usa_domini_autorevoli(self):
+        """I placeholder sameAs devono usare domini presenti in SAMEAS_AUTHORITATIVE_DOMAINS (#398)."""
+        result = _make_result()
+        fixes = generate_schema_fix(result, "https://example.com")
+
+        import json
+        from urllib.parse import urlparse
+
+        org_fix = next(f for f in fixes if f.file_name == "schema-organization.jsonld")
+        schema = json.loads(org_fix.content)
+        same_as_urls = schema["sameAs"]
+
+        authoritative_matches = 0
+        for url in same_as_urls:
+            parsed = urlparse(url)
+            # Controlla se il netloc contiene almeno un dominio autorevole
+            for domain in SAMEAS_AUTHORITATIVE_DOMAINS:
+                if domain in parsed.netloc:
+                    authoritative_matches += 1
+                    break
+
+        assert authoritative_matches >= 2, (
+            f"Almeno 2 URL sameAs devono usare domini autorevoli, trovati: {authoritative_matches}"
+        )
+
 
 # ============================================================================
 # TEST: generate_meta_fix
@@ -322,9 +374,11 @@ class TestFixCommand:
         mock_audit.return_value = _make_result()
         runner = CliRunner()
 
-        with patch("geo_optimizer.core.llms_generator.discover_sitemap", return_value=None):
-            with patch("geo_optimizer.core.llms_generator.fetch_sitemap", return_value=[]):
-                result = runner.invoke(cli, ["fix", "--url", "https://example.com"])
+        with (
+            patch("geo_optimizer.core.llms_generator.discover_sitemap", return_value=None),
+            patch("geo_optimizer.core.llms_generator.fetch_sitemap", return_value=[]),
+        ):
+            result = runner.invoke(cli, ["fix", "--url", "https://example.com"])
 
         assert result.exit_code == 0
         assert "PREVIEW" in result.output or "Fix plan" in result.output
@@ -336,19 +390,21 @@ class TestFixCommand:
         runner = CliRunner()
 
         output_dir = str(tmp_path / "geo-fixes")
-        with patch("geo_optimizer.core.llms_generator.discover_sitemap", return_value=None):
-            with patch("geo_optimizer.core.llms_generator.fetch_sitemap", return_value=[]):
-                result = runner.invoke(
-                    cli,
-                    [
-                        "fix",
-                        "--url",
-                        "https://example.com",
-                        "--apply",
-                        "--output-dir",
-                        output_dir,
-                    ],
-                )
+        with (
+            patch("geo_optimizer.core.llms_generator.discover_sitemap", return_value=None),
+            patch("geo_optimizer.core.llms_generator.fetch_sitemap", return_value=[]),
+        ):
+            result = runner.invoke(
+                cli,
+                [
+                    "fix",
+                    "--url",
+                    "https://example.com",
+                    "--apply",
+                    "--output-dir",
+                    output_dir,
+                ],
+            )
 
         assert result.exit_code == 0
         # Verifica che almeno un file sia stato scritto
