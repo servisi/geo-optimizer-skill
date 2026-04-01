@@ -260,7 +260,7 @@ def _score_academic(content: ContentResult, soup) -> TrustLayerScore:
     # Cited data/numbers (+1)
     if content.has_numbers and content.numbers_count >= 3:
         layer.score += 1
-        layer.signals_found.append(f"Statistics cited ({content.numbers_count})")
+        layer.signals_found.append(f"Numbers cited ({content.numbers_count})")
     else:
         layer.signals_missing.append("Few or no statistics/numbers in content")
 
@@ -301,7 +301,10 @@ def _score_academic(content: ContentResult, soup) -> TrustLayerScore:
 
     layer.score = min(layer.score, 5)
     layer.details["authoritative_domains"] = auth_links
+    # statistics_count = pattern statistici specifici da regex (_count_statistics)
+    # numbers_count = contatore generico di numeri trovati da citability
     layer.details["statistics_count"] = stats_count
+    layer.details["numbers_count"] = content.numbers_count
     return layer
 
 

@@ -169,7 +169,7 @@ class TestAcademicTrust:
     def test_numeri_sufficienti(self):
         content = ContentResult(has_numbers=True, numbers_count=5)
         result = audit_trust_stack(**_defaults(content=content))
-        assert any("Statistics cited" in s for s in result.academic.signals_found)
+        assert any("Numbers cited" in s for s in result.academic.signals_found)
 
     def test_link_esterni(self):
         content = ContentResult(external_links_count=3)
