@@ -170,6 +170,40 @@ def generate_schema_fix(result: AuditResult, base_url: str) -> list[FixItem]:
             )
         )
 
+    # FAQPage schema — genera struttura FAQ di esempio se assente (#fix-faq-schema)
+    if not result.schema.has_faq:
+        faq_schema = {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": f"Cos'è {site_name}?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": result.meta.description_text or f"Descrizione di {site_name}.",
+                    },
+                },
+                {
+                    "@type": "Question",
+                    "name": f"Come contattare {site_name}?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": f"Visita la pagina contatti su {base_url}/contatti",
+                    },
+                },
+            ],
+        }
+        fixes.append(
+            FixItem(
+                category="schema",
+                description="Generate FAQPage JSON-LD schema with example Q&A",
+                content=json.dumps(faq_schema, indent=2, ensure_ascii=False),
+                file_name="schema-faqpage.jsonld",
+                action="snippet",
+            )
+        )
+
     # Organization schema
     if "Organization" not in result.schema.found_types:
         template = copy.deepcopy(SCHEMA_TEMPLATES["organization"])
@@ -337,8 +371,11 @@ def _estimate_score_after(result: AuditResult, fixes: list[FixItem]) -> int:
     if "llms" in categories_fixed and not result.llms.found:
         bonus += SCORING["llms_found"] + SCORING["llms_h1"] + SCORING["llms_sections"] + SCORING["llms_links"]
 
-    if "schema" in categories_fixed and not result.schema.has_website:
-        bonus += SCORING["schema_website"]
+    if "schema" in categories_fixed:
+        if not result.schema.has_website:
+            bonus += SCORING["schema_website"]
+        if not result.schema.has_faq:
+            bonus += SCORING["schema_faq"]
 
     if "meta" in categories_fixed:
         if not result.meta.has_title:

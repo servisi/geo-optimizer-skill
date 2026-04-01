@@ -1484,7 +1484,7 @@ async def ai_faq():
             },
             {
                 "question": "How is the score calculated?",
-                "answer": "Across 7 categories: robots.txt (18pt), llms.txt (18pt), schema (22pt), meta (14pt), content (14pt), signals (8pt), AI discovery (6pt).",
+                "answer": "Across 8 categories: robots.txt (18pt), llms.txt (18pt), schema (16pt), meta (14pt), content (12pt), signals (6pt), AI discovery (6pt), brand & entity (10pt).",
             },
             {"question": "Is it free?", "answer": "Yes, MIT License. Install: pip install geo-optimizer-skill"},
         ]

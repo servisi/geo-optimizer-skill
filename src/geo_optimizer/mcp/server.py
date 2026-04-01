@@ -13,6 +13,8 @@ Available tools:
     geo_compare          — Compare GEO scores across multiple sites
     geo_ai_discovery     — Check AI discovery endpoints (.well-known/ai.txt, etc.)
     geo_check_bots       — Check which AI bots can access via robots.txt
+    geo_trust_score      — Trust Stack Score (5-layer trust signal aggregation)
+    geo_negative_signals — Check negative signals that reduce AI citation probability
 
 Available resources:
     geo://ai-bots            — List of tracked AI bots
@@ -393,6 +395,12 @@ def geo_check_bots(url: str) -> str:
                 status = "missing"
             bot_details[bot] = {"description": desc, "status": status, "tier": tier}
 
+        # Fix: calcola i conteggi dal dizionario bot_details per coerenza con i dettagli
+        # (len(result.bots_missing) e' 0 quando robots.txt non esiste, ma i bot restano "missing")
+        summary_allowed = sum(1 for b in bot_details.values() if b["status"] == "allowed")
+        summary_blocked = sum(1 for b in bot_details.values() if b["status"] == "blocked")
+        summary_missing = sum(1 for b in bot_details.values() if b["status"] == "missing")
+
         return json.dumps(
             {
                 "url": url,
@@ -400,9 +408,9 @@ def geo_check_bots(url: str) -> str:
                 "citation_bots_ok": result.citation_bots_ok,
                 "bots": bot_details,
                 "summary": {
-                    "allowed": len(result.bots_allowed),
-                    "blocked": len(result.bots_blocked),
-                    "missing": len(result.bots_missing),
+                    "allowed": summary_allowed,
+                    "blocked": summary_blocked,
+                    "missing": summary_missing,
                 },
             },
             indent=2,

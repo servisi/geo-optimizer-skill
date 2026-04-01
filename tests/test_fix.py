@@ -219,11 +219,12 @@ class TestGenerateSchemaFix:
         assert "https://example.com" in website_fix.content
 
     def test_schema_completo_ritorna_vuoto(self):
-        """Se tutti gli schema sono presenti, ritorna lista vuota."""
+        """Se tutti gli schema sono presenti (WebSite + Organization + FAQPage), ritorna lista vuota."""
         result = _make_result(
             **{
                 "schema.has_website": True,
-                "schema.found_types": ["WebSite", "Organization"],
+                "schema.has_faq": True,
+                "schema.found_types": ["WebSite", "Organization", "FAQPage"],
             }
         )
         fixes = generate_schema_fix(result, "https://example.com")

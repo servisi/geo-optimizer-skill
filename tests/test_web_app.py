@@ -647,3 +647,69 @@ def test_post_audit_con_token_sbagliato_ritorna_401(client):
         app_module._API_TOKEN = original_token
 
     assert response.status_code == 401
+
+
+# ─── Test endpoint AI discovery ──────────────────────────────────────────────
+
+
+def test_ai_faq_json_punteggi_coerenti_con_config(client):
+    """GET /ai/faq.json — i punteggi delle categorie devono corrispondere a SCORING in config.py.
+
+    Test di regressione per il bug in cui la risposta hard-coded descriveva
+    7 categorie con punteggi errati (schema=22, content=14, signals=8) invece
+    degli 8 corretti (schema=16, content=12, signals=6, brand=10).
+    """
+    # Act
+    response = client.get("/ai/faq.json")
+
+    # Assert — status e struttura
+    assert response.status_code == 200
+    data = response.json()
+    assert "faqs" in data
+    faq_list = data["faqs"]
+    assert len(faq_list) >= 2
+
+    # Trova la FAQ sul calcolo del punteggio
+    score_faq = next(
+        (f for f in faq_list if "score" in f.get("question", "").lower() or "calculat" in f.get("question", "").lower()),
+        None,
+    )
+    assert score_faq is not None, "Nessuna FAQ sul calcolo del punteggio trovata"
+
+    risposta = score_faq["answer"]
+
+    # Verifica categorie e punteggi corretti (da config.SCORING)
+    assert "8 categories" in risposta, f"Deve citare 8 categorie, trovato: {risposta}"
+    assert "schema (16pt)" in risposta, f"Schema deve essere 16pt, trovato: {risposta}"
+    assert "content (12pt)" in risposta, f"Content deve essere 12pt, trovato: {risposta}"
+    assert "signals (6pt)" in risposta, f"Signals deve essere 6pt, trovato: {risposta}"
+    assert "brand" in risposta.lower(), f"Deve includere la categoria brand, trovato: {risposta}"
+
+    # Verifica che i vecchi valori errati non siano presenti
+    assert "7 categories" not in risposta, f"Non deve citare 7 categorie: {risposta}"
+    assert "schema (22pt)" not in risposta, f"schema=22pt è il valore errato: {risposta}"
+    assert "content (14pt)" not in risposta, f"content=14pt è il valore errato: {risposta}"
+    assert "signals (8pt)" not in risposta, f"signals=8pt è il valore errato: {risposta}"
+
+
+def test_ai_summary_json_restituisce_struttura_valida(client):
+    """GET /ai/summary.json — deve contenere name, description, url, lastModified."""
+    response = client.get("/ai/summary.json")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "name" in data
+    assert "description" in data
+    assert "url" in data
+    assert "lastModified" in data
+
+
+def test_ai_service_json_restituisce_capabilities(client):
+    """GET /ai/service.json — deve contenere name e capabilities non vuote."""
+    response = client.get("/ai/service.json")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "name" in data
+    assert "capabilities" in data
+    assert len(data["capabilities"]) > 0
