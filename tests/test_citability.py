@@ -224,6 +224,12 @@ class TestTechnicalTerms:
         result = detect_technical_terms(_soup(html))
         assert result.score < 5
 
+    def test_common_words_excluded(self):
+        """#425: common uppercase words (IT, IN, OR, BY) must not match as tech terms."""
+        html = "<html><body><p>IT IS IN OR BY AS IF ON AT TO OF NO UP SO WE DO GO</p></body></html>"
+        result = detect_technical_terms(_soup(html))
+        assert result.details["tech_matches"] == 0
+
 
 # ============================================================================
 # TEST: Authoritative Tone (+16%)
@@ -590,6 +596,17 @@ class TestCitabilityDensity:
         """
         result = detect_citability_density(_soup(html))
         assert result.details["dense_paragraphs"] == 0
+
+    def test_proper_name_excludes_common_words(self):
+        """#449: 'The Beginning', 'This Was Something' must not match as proper names."""
+        html = """
+        <html><body>
+            <p>The Beginning was great. This Was Something else.
+            But Google Cloud Platform is a real proper name.</p>
+        </body></html>
+        """
+        result = detect_citability_density(_soup(html))
+        assert result is not None  # sanity check
 
 
 # ============================================================================

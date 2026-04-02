@@ -130,9 +130,10 @@ def resolve_and_validate_url(url: str) -> tuple[bool, str | None, list[str]]:
     try:
         infos = socket.getaddrinfo(hostname, None)
     except socket.gaierror:
-        # DNS unresolvable — not a security error,
-        # let the fetch fail normally
-        return True, None, []
+        # DNS unresolvable → reject to prevent TOCTOU (#427):
+        # if the domain becomes resolvable to a private IP after validation,
+        # an unpinned session would allow SSRF
+        return False, "DNS resolution failed: hostname not resolvable", []
 
     ip_validi = []
     for _, _, _, _, sockaddr in infos:

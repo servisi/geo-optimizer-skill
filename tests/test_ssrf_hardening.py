@@ -49,13 +49,13 @@ class TestResolveAndValidateUrl:
             assert "private" in err.lower()
             assert ips == []
 
-    def test_dns_non_risolvibile_restituisce_lista_vuota(self):
-        """DNS non risolvibile → ok=True, ip vuota (lascia fallire la connessione)."""
+    def test_dns_unresolvable_rejected(self):
+        """DNS unresolvable → ok=False, prevents TOCTOU (#427)."""
         with patch("geo_optimizer.utils.validators.socket.getaddrinfo") as mock_dns:
             mock_dns.side_effect = socket.gaierror("Name resolution failed")
             ok, err, ips = resolve_and_validate_url("https://nonexistent.example.com")
-            assert ok is True
-            assert err is None
+            assert ok is False
+            assert "DNS resolution failed" in err
             assert ips == []
 
     def test_dns_risolto_una_sola_volta(self):

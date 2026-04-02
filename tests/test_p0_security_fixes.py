@@ -88,14 +88,15 @@ class TestValidatePublicUrl:
             assert ok is False
             assert "private" in err.lower()
 
-    def test_dns_non_risolvibile_passa(self):
-        """DNS non risolvibile non è un errore di sicurezza."""
+    def test_dns_unresolvable_rejected(self):
+        """DNS unresolvable → rejected to prevent TOCTOU (#427)."""
         import socket
 
         with patch("geo_optimizer.utils.validators.socket.getaddrinfo") as mock_dns:
             mock_dns.side_effect = socket.gaierror("Name resolution failed")
             ok, err = validate_public_url("https://nonexistent.example.com")
-            assert ok is True
+            assert ok is False
+            assert "DNS resolution failed" in err
 
     def test_blocca_loopback_ipv4(self):
         ok, err = validate_public_url("http://127.0.0.1:8080/admin")

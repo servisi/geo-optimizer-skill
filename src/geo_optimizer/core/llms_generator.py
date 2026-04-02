@@ -28,7 +28,11 @@ from geo_optimizer.models.config import (
 )
 from geo_optimizer.models.results import SitemapUrl
 from geo_optimizer.utils.http import MAX_RESPONSE_SIZE, create_session_with_retry
-from geo_optimizer.utils.validators import url_belongs_to_domain, validate_public_url
+from geo_optimizer.utils.validators import (
+    resolve_and_validate_url,
+    url_belongs_to_domain,
+    validate_public_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,15 +105,15 @@ def fetch_sitemap(
         on_status(f"Fetching sitemap: {sitemap_url}")
     logger.info("Fetching sitemap: %s", sitemap_url)
 
-    # Anti-SSRF validation on the sitemap URL (fix #181)
-    safe, reason = validate_public_url(sitemap_url)
-    if not safe:
+    # Anti-SSRF validation + DNS pinning (#447: was validate_public_url without pinning)
+    ok, reason, pinned_ips = resolve_and_validate_url(sitemap_url)
+    if not ok:
         logger.warning("Sitemap URL blocked (SSRF): %s — %s", sitemap_url, reason)
         return urls
 
-    # Fix #122: use the passed session or create a new one only at the first level
+    # Fix #122: reuse parent session, or create with DNS pinning (#447)
     if session is None:
-        session = create_session_with_retry()
+        session = create_session_with_retry(pinned_ips=pinned_ips)
 
     try:
         r = session.get(sitemap_url, headers=HEADERS, timeout=15)
@@ -487,8 +491,27 @@ def discover_sitemap(
         "/sitemap-0.xml",
     ]
 
-    session = create_session_with_retry(total_retries=2, backoff_factor=0.5)
+    # Anti-SSRF + DNS pinning for the session (#447: was session without pinning)
+    ok, _reason, pinned_ips = resolve_and_validate_url(base_url)
+    if not ok:
+        logger.warning("Base URL blocked (SSRF): %s — %s", base_url, _reason)
+        return None
 
+    session = create_session_with_retry(total_retries=2, backoff_factor=0.5, pinned_ips=pinned_ips)
+    try:
+        return _discover_sitemap_inner(base_url, common_paths, session, on_status)
+    finally:
+        # Fix #454: close session to release resources
+        session.close()
+
+
+def _discover_sitemap_inner(
+    base_url: str,
+    common_paths: list[str],
+    session,
+    on_status: Callable[[str], None] | None,
+) -> str | None:
+    """Inner logic of discover_sitemap, separated for session.close() handling."""
     # Check robots.txt for ALL Sitemap: directives (#116)
     parsed_base = urlparse(base_url)
     base_domain = parsed_base.netloc
@@ -498,8 +521,7 @@ def discover_sitemap(
         for line in r.text.splitlines():
             if line.lower().startswith("sitemap:"):
                 sitemap_url = line.split(":", 1)[1].strip()
-                # Anti-SSRF validation: the sitemap URL must belong
-                # to the same domain and point to a public host
+                # Anti-SSRF: URL must belong to the same domain
                 if not url_belongs_to_domain(sitemap_url, base_domain):
                     logger.warning("External sitemap URL ignored: %s", sitemap_url)
                     continue
@@ -510,8 +532,6 @@ def discover_sitemap(
                 logger.info("Sitemap found in robots.txt: %s", sitemap_url)
                 if on_status:
                     on_status(f"Sitemap found in robots.txt: {sitemap_url}")
-                # Return the first valid URL found in robots.txt
-                # (others are discovered recursively by fetch_sitemap)
                 return sitemap_url
     except Exception:
         pass
@@ -527,7 +547,6 @@ def discover_sitemap(
                     on_status(f"Sitemap found: {url}")
                 return url
             if r.status_code == 405:
-                # Server does not support HEAD — fallback to GET (#115)
                 logger.debug("HEAD 405 for %s, fallback to GET", url)
                 r_get = session.get(url, headers=HEADERS, timeout=5)
                 if r_get.status_code == 200:
@@ -536,7 +555,6 @@ def discover_sitemap(
                         on_status(f"Sitemap found: {url}")
                     return url
         except Exception:
-            # Timeout or network error: try GET as fallback (#115)
             try:
                 r_get = session.get(url, headers=HEADERS, timeout=5)
                 if r_get.status_code == 200:

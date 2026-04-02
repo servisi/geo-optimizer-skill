@@ -294,8 +294,9 @@ class TestAuditCommand:
             os.unlink(output_path)
 
     @patch.dict("sys.modules", {"httpx": None})
+    @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
     @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
-    def test_audit_error_text_format(self, mock_audit, runner):
+    def test_audit_error_text_format(self, mock_audit, _mock_validate, runner):
         """Audit errors in text mode print error message and exit 1."""
         mock_audit.side_effect = ConnectionError("Connection refused")
         result = runner.invoke(cli, ["audit", "--url", "https://broken.example.com"])
@@ -307,8 +308,9 @@ class TestAuditCommand:
         assert "Connection refused" in combined
 
     @patch.dict("sys.modules", {"httpx": None})
+    @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
     @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
-    def test_audit_error_json_format(self, mock_audit, runner):
+    def test_audit_error_json_format(self, mock_audit, _mock_validate, runner):
         """Audit errors in JSON mode produce a JSON error object on stdout."""
         mock_audit.side_effect = RuntimeError("Server error")
         result = runner.invoke(cli, ["audit", "--url", "https://broken.example.com", "--format", "json"])
@@ -331,8 +333,9 @@ class TestAuditCommand:
         assert result.exit_code != 0
 
     @patch.dict("sys.modules", {"httpx": None})
+    @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
     @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
-    def test_audit_minimal_result_text(self, mock_audit, runner, minimal_audit_result):
+    def test_audit_minimal_result_text(self, mock_audit, _mock_validate, runner, minimal_audit_result):
         """Text output handles a minimal result (mostly empty/default fields)."""
         mock_audit.return_value = minimal_audit_result
         result = runner.invoke(cli, ["audit", "--url", "https://minimal.example.com"])
@@ -352,8 +355,9 @@ class TestAuditCommand:
         assert "PRIORITY NEXT STEPS" in result.output
 
     @patch.dict("sys.modules", {"httpx": None})
+    @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
     @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
-    def test_audit_no_recommendations(self, mock_audit, runner):
+    def test_audit_no_recommendations(self, mock_audit, _mock_validate, runner):
         """Text output shows 'Great!' when there are no recommendations."""
         audit_result = AuditResult(
             url="https://perfect.example.com",

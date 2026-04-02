@@ -32,9 +32,14 @@ from geo_optimizer.models.results import (
     TrustStackResult,
 )
 
-# Regex for original statistics in text
+# Regex for original statistics in text (#450: reduced false positives)
+# Percentages match any number; contextual keywords require
+# N >= 10 or a phrase like "secondo uno studio" / "according to a study"
 _STATISTICS_RE = re.compile(
-    r"\d+[\.,]?\d*\s*(?:%|percent|percentuale|studio|ricerca|survey|report|according to|secondo)",
+    r"\d+[\.,]?\d*\s*(?:%|percent(?:uale)?)"
+    r"|(?:\d{2,}[\.,]?\d*)\s+(?:studi[oe]?|ricerch[ae]|surveys?|reports?)\b"
+    r"|(?:secondo\s+(?:(?:un[oa]?|il|lo|la|i|gli|le)\s+)?(?:studio|ricerca|survey|report))\b"
+    r"|(?:according\s+to\s+(?:(?:a|the)\s+)?(?:study|research|survey|report))\b",
     re.IGNORECASE,
 )
 

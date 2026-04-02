@@ -86,9 +86,14 @@ _HEDGE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Technical terminology patterns
+# Common English uppercase words excluded from tech acronym matching (#425)
+_UPPER_STOPWORDS = (
+    r"AM|AN|AS|AT|BE|BY|DO|GO|HE|IF|IN|IS|IT|ME|MY|NO|OF|ON|OR|SO|TO|UP|US|WE"
+)
+
+# Technical terminology patterns (#425: excluded common words from acronym pattern)
 _TECH_PATTERNS = [
-    r"\b[A-Z]{2,6}\b",
+    r"\b(?!(?:" + _UPPER_STOPWORDS + r")\b)[A-Z]{2,6}\b",
     r"\bv\d+\.\d+(?:\.\d+)?\b",
     r"\bRFC\s*\d+\b",
     r"\bISO\s*\d+\b",
@@ -1106,8 +1111,14 @@ _CITABLE_FACT_NUMERIC_RE = re.compile(
     r"|\b\d+(?:\.\d+)?\s*(?:x|times|volte)\b",  # multipliers
     re.IGNORECASE,
 )
-# Proper nouns: 2-4 words starting with a capital letter (case-sensitive!)
-_CITABLE_PROPER_NAME_RE = re.compile(r"(?<!\.\s)(?<!^)\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3}\b")
+# Proper nouns: 2-4 capitalized words (#449: excluded common English words)
+_CITABLE_PROPER_NAME_RE = re.compile(
+    r"(?<!\.\s)(?<!^)\b"
+    r"(?!(?:The|This|That|These|Those|What|When|Where|Which|Who|How|"
+    r"And|But|For|Nor|Yet|Some|Most|Both|Each|Such|"
+    r"Not|Can|May|Will|Was|Were|Are|Has|Had|Did|Does)\s)"
+    r"[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3}\b"
+)
 
 
 def detect_citability_density(soup, clean_text: str | None = None) -> MethodScore:

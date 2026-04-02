@@ -198,6 +198,12 @@ class TestAcademicTrust:
         result = audit_trust_stack(**_defaults(soup=_soup(html)))
         assert any("Original statistics" in s for s in result.academic.signals_found)
 
+    def test_statistics_false_positive_2_studio(self):
+        """#450: '2 studio' must not match as a statistic."""
+        html = "<html><body><p>Nel nostro 2 studio abbiamo analizzato i dati</p></body></html>"
+        result = audit_trust_stack(**_defaults(soup=_soup(html)))
+        assert not any("Original statistics" in s for s in result.academic.signals_found)
+
     def test_link_accademici_ottengono_punto(self):
         """Fix #390: academic links (non-social) grant the External sources point."""
         html = (
