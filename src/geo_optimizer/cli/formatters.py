@@ -31,7 +31,7 @@ from geo_optimizer.cli.scoring_helpers import (
 from geo_optimizer.cli.scoring_helpers import (
     signals_score as _signals_score,
 )
-from geo_optimizer.models.config import SCORING
+from geo_optimizer.models.config import SCORE_BANDS, SCORING
 from geo_optimizer.models.results import AuditResult
 
 # Fix #409: max scores computed dynamically from SCORING (not hardcoded)
@@ -401,7 +401,10 @@ def format_audit_text(result: AuditResult) -> str:
         "critical": "❌ CRITICAL — Site is not visible to AI search engines",
     }
     lines.append(f"\n  {band_labels.get(result.band, result.band)}")
-    lines.append("\n  Score bands: 0–35 = critical | 36–67 = foundation | 68–85 = good | 86–100 = excellent")
+    # Fix #442: generazione dinamica delle bande da SCORE_BANDS (non hardcoded)
+    _band_order = ["critical", "foundation", "good", "excellent"]
+    _band_parts = [f"{SCORE_BANDS[b][0]}–{SCORE_BANDS[b][1]} = {b}" for b in _band_order if b in SCORE_BANDS]
+    lines.append(f"\n  Score bands: {' | '.join(_band_parts)}")
 
     # Recommendations
     lines.append("\n  📋 PRIORITY NEXT STEPS:")
