@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [4.0.1] — 2026-04-02
+
+### Performance
+- **Syllable counting**: `@lru_cache(512)` on `_count_syllables()` — eliminates redundant computation across 42 citability methods (#466)
+
+### Fixed
+- **Score bands**: text formatter generates band labels dynamically from `SCORE_BANDS` config (#442)
+- **Error sanitization**: CLI error output shows exception class name, not internal details (#431)
+- **Summary.json**: `lastModified` updated to current date (#444)
+
+### Refactored
+- **@graph extraction**: 6 duplicated blocks replaced with shared `_flatten_graph()` helper (#412)
+- **Citability constants**: `TTR_WINDOW_SIZE`, `TTR_THRESHOLD`, `FRONT_LOADING_DENSITY_THRESHOLD` centralized in config.py (#433)
+- **Dead code**: removed unused `_()` i18n imports, orphaned `sum()` in rich formatter (#443, #431)
+
+---
+
 ## [4.0.0] — 2026-04-02
 
 First stable release of the v4 architecture.
