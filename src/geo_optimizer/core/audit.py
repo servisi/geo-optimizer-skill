@@ -82,24 +82,13 @@ def build_recommendations(
     negative_signals=None,
     prompt_injection=None,
 ) -> list:
-    """Build a prioritized list of recommendations.
-
-    Args:
-        base_url: URL base del sito.
-        robots: RobotsResult.
-        llms: LlmsTxtResult.
-        schema: SchemaResult.
-        meta: MetaResult.
-        content: ContentResult.
-        ai_discovery: AiDiscoveryResult (opzionale).
-        signals: SignalsResult (opzionale, per raccomandazioni machine-readable #263).
-        brand_entity: BrandEntityResult (opzionale, v4.3).
-        webmcp: WebMcpResult (opzionale, #233).
-        negative_signals: NegativeSignalsResult (opzionale, v4.3).
-    """
+    """Build a prioritized list of recommendations based on audit results."""
     recommendations = []
 
-    if not robots.citation_bots_ok:
+    # Fix #453: split robots recommendation — create vs update
+    if not robots.found:
+        recommendations.append("Create robots.txt with Allow rules for AI bots (GPTBot, ClaudeBot, PerplexityBot)")
+    elif not robots.citation_bots_ok:
         recommendations.append("Update robots.txt to include all AI bots (GPTBot, ClaudeBot, PerplexityBot)")
     if not llms.found:
         recommendations.append(
@@ -131,12 +120,33 @@ def build_recommendations(
         recommendations.append("Add WebSite JSON-LD schema to homepage")
     if not schema.has_faq:
         recommendations.append("Add FAQPage schema with site FAQs")
+    # Fix #453: missing recommendations for key SCORING signals
+    if not schema.has_organization:
+        recommendations.append("Add Organization JSON-LD schema with name, url, and logo")
+    if not meta.has_title:
+        recommendations.append("Add a <title> tag — the strongest on-page signal for AI search (5 pts)")
     if not meta.has_description:
         recommendations.append("Add optimized meta description (150-160 characters)")
+    if not meta.has_canonical:
+        recommendations.append("Add <link rel=\"canonical\"> to prevent duplicate content issues in AI indexing")
+    if not meta.has_og_title or not meta.has_og_description:
+        recommendations.append("Add Open Graph tags (og:title, og:description, og:image) for AI and social previews")
+    if not content.has_h1:
+        recommendations.append("Add a single H1 heading that clearly states the page topic")
+    if content.word_count < 300:
+        recommendations.append("Expand content to 300+ words — AI engines need substance to cite")
     if not content.has_numbers:
         recommendations.append("Add numerical data and concrete statistics (+40% AI visibility)")
     if not content.has_links:
         recommendations.append("Cite authoritative sources with external links (increase AI credibility)")
+    if hasattr(content, "has_heading_hierarchy") and not content.has_heading_hierarchy:
+        recommendations.append("Add H2/H3 subheadings to structure content for AI extraction")
+    if hasattr(content, "has_front_loading") and not content.has_front_loading:
+        recommendations.append("Front-load key information in the first 30% of content for AI snippet selection")
+
+    # Fix #453: lang attribute recommendation (3 pts)
+    if signals is not None and not signals.has_lang:
+        recommendations.append("Add lang attribute to <html> tag (e.g., lang=\"en\") for AI language detection")
 
     # #263: Machine-Readable Presence recommendations (RSS + sitemap)
     if signals is not None and not signals.has_rss:
@@ -340,6 +350,9 @@ def _build_audit_result(
         effective_negative_signals,
         effective_prompt_injection,
     )
+
+    # Fix #460: load entry_point plugins if not already loaded (API + MCP callers)
+    CheckRegistry.load_entry_points()
 
     # Fix #104: run plugins registered in CheckRegistry
     # Their results do not affect the base score

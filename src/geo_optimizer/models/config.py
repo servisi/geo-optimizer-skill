@@ -5,6 +5,8 @@ All shared constants (bots, schemas, scoring weights, patterns) live here
 so that core modules, CLI, and tests can import from a single source.
 """
 
+from __future__ import annotations
+
 # ─── HTTP ────────────────────────────────────────────────────────────────────
 
 USER_AGENT = "GEO-Optimizer/2.0 (https://github.com/auriti-labs/geo-optimizer-skill)"

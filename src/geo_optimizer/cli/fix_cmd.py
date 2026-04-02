@@ -70,7 +70,7 @@ def fix(url, output_dir, dry_run, do_apply, only, config_file):
     click.echo("🔧 Generating fixes...\n", err=True)
     from geo_optimizer.core.fixer import run_all_fixes
 
-    plan = run_all_fixes(url=safe_url, audit_result=result, only=only_set)
+    plan = run_all_fixes(url=safe_url, audit_result=result, only=only_set, project_config=project_config)
 
     if not plan.fixes:
         click.echo("✅ No fixes needed — the site is already optimized!")

@@ -100,7 +100,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data:; frame-ancestors 'none'"
+            "img-src 'self' data:; frame-ancestors 'none'; "
+            "object-src 'none'; base-uri 'self'; form-action 'self'"
         )
         return response
 
@@ -239,6 +240,7 @@ _audit_cache: dict = {}
 _CACHE_TTL = 3600
 _MAX_CACHE_SIZE = 500
 _audit_cache_lock = asyncio.Lock()  # race condition protection on _audit_cache (fix #209)
+_stats_cache_lock = asyncio.Lock()  # race condition protection on stats cache (#456)
 
 
 def _cache_key(url: str) -> str:
@@ -545,10 +547,11 @@ async def stats():
     cache_key = "_stats_cache"
     cache_ttl = 3600  # 1 hour
 
-    # Simple in-memory cache via function attribute
-    cached = getattr(stats, cache_key, None)
-    if cached and (_time.time() - cached["ts"]) < cache_ttl:
-        return cached["data"]
+    # Fix #456: protect cache read with lock (like _audit_cache)
+    async with _stats_cache_lock:
+        cached = getattr(stats, cache_key, None)
+        if cached and (_time.time() - cached["ts"]) < cache_ttl:
+            return cached["data"]
 
     result = {"github_stars": 0, "pypi_downloads_month": 0, "audits_run": 0}
 
@@ -601,7 +604,9 @@ async def stats():
     if geo_stats and "stats" in geo_stats:
         result["audits_run"] = geo_stats["stats"].get("audits", 0)
 
-    setattr(stats, cache_key, {"data": result, "ts": _time.time()})
+    # Fix #456: protect cache write with lock
+    async with _stats_cache_lock:
+        setattr(stats, cache_key, {"data": result, "ts": _time.time()})
     return result
 
 
@@ -668,16 +673,17 @@ async def report(report_id: str):
 
     # Fix #286: cache access protected by lock to avoid race condition
     # Fix #343: check TTL — expired reports are no longer served
+    # Fix #457: extract data inside lock to prevent concurrent mutation
     async with _audit_cache_lock:
         entry = _audit_cache.get(report_id)
         if entry and (time.time() - entry.get("cached_at", 0)) >= _CACHE_TTL:
             entry = None
-    if not entry:
-        raise HTTPException(status_code=404, detail="Report not found or expired")
+        if not entry:
+            raise HTTPException(status_code=404, detail="Report not found or expired")
+        data = entry["data"]
 
     from geo_optimizer.cli.html_formatter import format_audit_html
 
-    data = entry["data"]
     result = _dict_to_audit_result(data)
     return HTMLResponse(content=format_audit_html(result))
 

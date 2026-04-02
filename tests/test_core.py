@@ -1436,35 +1436,38 @@ class TestBuildRecommendations:
     def test_all_good_gives_no_recommendations(self):
         recs = build_recommendations(
             "https://example.com",
-            RobotsResult(citation_bots_ok=True),
+            RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=True, has_sections=True, sections_count=3, has_links=True, links_count=5),
-            SchemaResult(has_website=True, has_faq=True),
-            MetaResult(has_description=True),
-            ContentResult(has_numbers=True, has_links=True),
+            SchemaResult(has_website=True, has_faq=True, has_organization=True),
+            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
+            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
+                          has_heading_hierarchy=True, has_front_loading=True),
         )
         assert len(recs) == 0
 
     def test_partial_recommendations(self):
         recs = build_recommendations(
             "https://example.com",
-            RobotsResult(citation_bots_ok=True),
+            RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=False),
-            SchemaResult(has_website=True, has_faq=True),
-            MetaResult(has_description=True),
-            ContentResult(has_numbers=True, has_links=True),
+            SchemaResult(has_website=True, has_faq=True, has_organization=True),
+            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
+            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
+                          has_heading_hierarchy=True, has_front_loading=True),
         )
         assert len(recs) == 1
         assert "llms.txt" in recs[0]
 
     def test_json_parse_errors_generates_recommendation(self):
-        """json_parse_errors > 0 deve generare raccomandazione con schema.org/validator (#399)."""
+        """json_parse_errors > 0 generates recommendation with schema.org/validator (#399)."""
         recs = build_recommendations(
             "https://example.com",
-            RobotsResult(citation_bots_ok=True),
+            RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=True, has_sections=True, sections_count=3, has_links=True, links_count=5),
-            SchemaResult(has_website=True, has_faq=True, json_parse_errors=2),
-            MetaResult(has_description=True),
-            ContentResult(has_numbers=True, has_links=True),
+            SchemaResult(has_website=True, has_faq=True, has_organization=True, json_parse_errors=2),
+            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
+            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
+                          has_heading_hierarchy=True, has_front_loading=True),
         )
         assert len(recs) == 1
         assert "JSON-LD" in recs[0]
@@ -1472,14 +1475,15 @@ class TestBuildRecommendations:
         assert "schema.org/validator" in recs[0]
 
     def test_no_recommendation_when_no_parse_errors(self):
-        """Nessuna raccomandazione JSON-LD parse error quando json_parse_errors == 0 (#399)."""
+        """No JSON-LD parse error recommendation when json_parse_errors == 0 (#399)."""
         recs = build_recommendations(
             "https://example.com",
-            RobotsResult(citation_bots_ok=True),
+            RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=True, has_sections=True, sections_count=3, has_links=True, links_count=5),
-            SchemaResult(has_website=True, has_faq=True, json_parse_errors=0),
-            MetaResult(has_description=True),
-            ContentResult(has_numbers=True, has_links=True),
+            SchemaResult(has_website=True, has_faq=True, has_organization=True, json_parse_errors=0),
+            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
+            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
+                          has_heading_hierarchy=True, has_front_loading=True),
         )
         assert not any("JSON-LD" in r and "parse" in r.lower() for r in recs)
 

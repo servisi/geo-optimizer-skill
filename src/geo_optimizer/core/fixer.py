@@ -24,17 +24,25 @@ from geo_optimizer.models.results import AuditResult, FixItem, FixPlan
 logger = logging.getLogger(__name__)
 
 
-def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
+def generate_robots_fix(
+    result: AuditResult, base_url: str, project_config=None
+) -> FixItem | None:
     """Generate robots.txt patch with missing AI bots.
 
-    If robots.txt not found: generates complete file with all 14 bots.
+    If robots.txt not found: generates complete file with all bots.
     If found but with missing bots: generates lines to append.
+    Uses project_config.extra_bots if provided (#422).
 
     Returns:
         FixItem or None if no fix needed.
     """
     if result.robots.found and not result.robots.bots_missing and not result.robots.bots_blocked:
         return None
+
+    # Fix #422: merge extra_bots from project config (same as run_full_audit)
+    effective_bots = dict(AI_BOTS)
+    if project_config is not None and getattr(project_config, "extra_bots", None):
+        effective_bots.update(project_config.extra_bots)
 
     if not result.robots.found:
         # Generate complete robots.txt
@@ -46,7 +54,7 @@ def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
             "Allow: /",
             "",
         ]
-        for bot, description in AI_BOTS.items():
+        for bot, description in effective_bots.items():
             lines.append(f"# {description}")
             lines.append(f"User-agent: {bot}")
             lines.append("Allow: /")
@@ -59,7 +67,7 @@ def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
 
         return FixItem(
             category="robots",
-            description=f"Create robots.txt with access for all {len(AI_BOTS)} AI bots",
+            description=f"Create robots.txt with access for all {len(effective_bots)} AI bots",
             content="\n".join(lines),
             file_name="robots.txt",
             action="create",
@@ -75,7 +83,7 @@ def generate_robots_fix(result: AuditResult, base_url: str) -> FixItem | None:
         "",
     ]
     for bot in bots_to_fix:
-        description = AI_BOTS.get(bot, "AI bot")
+        description = effective_bots.get(bot, "AI bot")
         lines.append(f"# {description}")
         lines.append(f"User-agent: {bot}")
         lines.append("Allow: /")
@@ -400,6 +408,7 @@ def run_all_fixes(
     url: str,
     audit_result: AuditResult | None = None,
     only: set[str] | None = None,
+    project_config=None,
 ) -> FixPlan:
     """Orchestrator: runs audit if needed, generates all fixes.
 
@@ -427,7 +436,7 @@ def run_all_fixes(
 
     # Robots fix
     if "robots" in active:
-        fix = generate_robots_fix(audit_result, base_url)
+        fix = generate_robots_fix(audit_result, base_url, project_config=project_config)
         if fix:
             fixes.append(fix)
         else:
