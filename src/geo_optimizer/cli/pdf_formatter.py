@@ -22,7 +22,7 @@ def format_audit_pdf(result: AuditResult) -> bytes:
             "PDF generation requires weasyprint. Install with: pip install geo-optimizer-skill[pdf]"
         ) from exc
 
-    # Genera l'HTML self-contained e lo converte in PDF
+    # Generate self-contained HTML and convert to PDF
     html_content = format_audit_html(result)
     pdf_bytes = HTML(string=html_content).write_pdf()
     return pdf_bytes

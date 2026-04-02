@@ -134,6 +134,26 @@ def format_audit_json(result: AuditResult) -> str:
             "has_mixed_signals": result.negative_signals.has_mixed_signals,
         }
 
+    # Fix #451: CDN AI Crawler check
+    if hasattr(result, "cdn_check") and result.cdn_check and result.cdn_check.checked:
+        data["cdn_check"] = asdict(result.cdn_check)
+
+    # Fix #451: JS Rendering check
+    if hasattr(result, "js_rendering") and result.js_rendering and result.js_rendering.checked:
+        data["js_rendering"] = asdict(result.js_rendering)
+
+    # Fix #451: Trust Stack score
+    if hasattr(result, "trust_stack") and result.trust_stack:
+        data["trust_stack"] = asdict(result.trust_stack)
+
+    # Fix #451: Prompt Injection detection
+    if hasattr(result, "prompt_injection") and result.prompt_injection and result.prompt_injection.checked:
+        data["prompt_injection"] = asdict(result.prompt_injection)
+
+    # Metadata
+    data["http_status"] = result.http_status
+    data["page_size"] = result.page_size
+
     return json.dumps(data, indent=2)
 
 

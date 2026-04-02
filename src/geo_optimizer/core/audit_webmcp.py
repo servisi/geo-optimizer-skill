@@ -92,7 +92,7 @@ def audit_webmcp_readiness(soup, raw_html: str, schema_result) -> WebMcpResult:
     forms = soup.find_all("form")
     labeled_count = 0
     for form in forms:
-        # Un form è "agent-usable" se ha:
+        # A form is "agent-usable" if it has:
         # - almeno 1 input con label associata OPPURE aria-label OPPURE placeholder descrittivo
         # - una action o method definiti
         inputs = form.find_all(["input", "select", "textarea"])
@@ -124,7 +124,7 @@ def audit_webmcp_readiness(soup, raw_html: str, schema_result) -> WebMcpResult:
         if any(pattern in href for pattern in openapi_patterns):
             result.has_openapi = True
             break
-    # Controlla anche tag link
+    # Also check link tags
     if not result.has_openapi:
         for link in soup.find_all("link", href=True):
             href = link["href"].lower()

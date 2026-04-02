@@ -753,7 +753,7 @@ async def audit_pdf(
                 detail="Internal error during audit. Try again later.",
             ) from e
 
-    # Genera PDF
+    # Generate PDF
     from geo_optimizer.cli.pdf_formatter import format_audit_pdf
 
     try:
@@ -1441,7 +1441,7 @@ async def llms_txt():
         "- [CI/CD](https://auriti-labs.github.io/geo-optimizer-skill/ci-cd/): GitHub Actions integration\n"
         "- [GEO Methods](https://auriti-labs.github.io/geo-optimizer-skill/geo-methods/): 42 research-backed methods\n\n"
         "## Reference\n\n"
-        "- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 24 AI crawlers documented\n"
+        "- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 27 AI crawlers documented\n"
         "- [Troubleshooting](https://auriti-labs.github.io/geo-optimizer-skill/troubleshooting/): Common issues\n"
         "- [Changelog](https://github.com/Auriti-Labs/geo-optimizer-skill/blob/main/CHANGELOG.md): Full release history\n"
         "- [PyPI](https://pypi.org/project/geo-optimizer-skill/): Package and version history\n\n"

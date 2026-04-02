@@ -208,7 +208,7 @@ def audit_brand_entity(
                 break
 
     # ── 5. Topic Authority ───────────────────────────────────────
-    # Profondità FAQ dallo schema FAQPage
+    # FAQ depth from FAQPage schema
     for raw_schema in schema_result.raw_schemas:
         schemas_to_check = []
         if "@graph" in raw_schema:

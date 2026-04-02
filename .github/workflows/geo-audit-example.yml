@@ -1,5 +1,5 @@
-# Workflow di esempio / dogfooding per la GitHub Action GEO Optimizer.
-# Esegue un audit GEO sul sito AgencyPilot ogni lunedì e ad ogni push su main.
+# Example / dogfooding workflow for the GEO Optimizer GitHub Action.
+# Runs a GEO audit on the AgencyPilot site every Monday and on push to main.
 
 name: GEO Audit (dogfooding)
 
@@ -7,11 +7,11 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 6 * * 1" # ogni lunedì alle 6 UTC
+    - cron: "0 6 * * 1" # every Monday at 6 UTC
 
 permissions:
   contents: read
-  security-events: write # necessario per SARIF upload
+  security-events: write # required for SARIF upload
 
 jobs:
   geo-audit:
@@ -21,16 +21,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Esempio base — audit con output JSON
+      # Basic example — audit with JSON output
       - name: Run GEO Audit
         id: geo
         uses: ./
         with:
           url: https://agencypilot.it
-          threshold: 40
+          min-score: 40
           format: json
 
-      # Mostra risultati nel summary del job
+      # Show results in job summary
       - name: Print results
         run: |
           echo "## 🎯 GEO Audit Results" >> "$GITHUB_STEP_SUMMARY"
@@ -39,17 +39,17 @@ jobs:
           echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Score | **${{ steps.geo.outputs.score }}**/100 |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Band | \`${{ steps.geo.outputs.band }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Report | \`${{ steps.geo.outputs.report-path }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Report | \`${{ steps.geo.outputs.report }}\` |" >> "$GITHUB_STEP_SUMMARY"
 
-      # Upload report come artifact
+      # Upload report as artifact
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: geo-report
-          path: ${{ steps.geo.outputs.report-path }}
+          path: ${{ steps.geo.outputs.report }}
           retention-days: 30
 
-  # Esempio con SARIF — visibile nella tab Security di GitHub
+  # SARIF example — visible in GitHub Security tab
   geo-sarif:
     name: GEO Audit (SARIF)
     runs-on: ubuntu-latest

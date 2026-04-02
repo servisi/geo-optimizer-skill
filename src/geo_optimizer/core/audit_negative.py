@@ -60,7 +60,7 @@ def audit_negative_signals(
         elements = soup.find_all(attrs={"class": lambda c, _cls=cls: c and _cls in str(c).lower()})
         if elements:
             result.popup_indicators.append(cls)
-    # Controlla anche attributi data-*
+    # Also check data-* attributes
     for attr in ["data-modal", "data-popup", "data-overlay"]:
         if soup.find(attrs={attr: True}):
             result.popup_indicators.append(attr)
@@ -97,7 +97,7 @@ def audit_negative_signals(
     result.has_broken_links = broken_count > 3
 
     # ── 5. Keyword stuffing ──────────────────────────────────────
-    # Calcola frequenza parole (escludendo stop words e parole corte)
+    # Calculate word frequency (excluding stop words and short words)
     stop_words = {
         "the",
         "a",
@@ -189,7 +189,7 @@ def audit_negative_signals(
         if result.has_author_signal:
             break
 
-    # Controlla anche rel=author o class=author nell'HTML
+    # Also check rel=author or class=author in HTML
     if not result.has_author_signal and (
         soup.find("a", rel="author") or soup.find(attrs={"class": lambda c: c and "author" in str(c).lower()})
     ):
@@ -212,7 +212,7 @@ def audit_negative_signals(
     result.boilerplate_high = result.boilerplate_ratio > 0.6
 
     # ── 8. Segnali misti ─────────────────────────────────────────
-    # H1 promette molto, ma il contenuto è scarso
+    # H1 promises a lot, but the content is thin
     h1 = content_result.h1_text.lower() if content_result.h1_text else ""
     big_promise_words = [
         "complete",

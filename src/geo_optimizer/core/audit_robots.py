@@ -62,7 +62,7 @@ def audit_robots_txt(base_url: str, bots: dict = None) -> RobotsResult:
             # "allowed" (completamente permesso)
             result.bots_allowed.append(bot)
 
-    # Verifica citation bots (allowed include anche partial)
+    # Check citation bots (allowed includes partial matches)
     result.citation_bots_ok = all(b in result.bots_allowed for b in CITATION_BOTS)
 
     # #111 — Verifica che i citation bots siano ESPLICITAMENTE permessi (non solo via wildcard)

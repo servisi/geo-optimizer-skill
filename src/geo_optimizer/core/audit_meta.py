@@ -10,7 +10,7 @@ from geo_optimizer.models.results import MetaResult
 
 
 def audit_meta_tags(soup, url: str) -> MetaResult:
-    """Controlla i meta tag SEO/GEO. Ritorna MetaResult."""
+    """Check SEO/GEO meta tags. Returns MetaResult."""
     result = MetaResult()
 
     # Title

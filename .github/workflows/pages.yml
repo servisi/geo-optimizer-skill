@@ -23,18 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Prepara sorgenti sito
+      - name: Prepare site sources
         run: |
-          # Copia i markdown da docs/ nel sito Jekyll aggiungendo front matter
+          # Copy markdown from docs/ to Jekyll site, adding front matter
           for f in docs/*.md; do
             filename=$(basename "$f" .md)
-            # Salta index.md (abbiamo gia site/index.md)
+            # Skip index.md (we already have site/index.md)
             [ "$filename" = "index" ] && continue
 
-            # Genera titolo dal filename
-            title=$(echo "$filename" | sed 's/-/ /g' | sed 's/\b\w/\U&/g')
+            # Generate title from filename
+            title=$(echo "$filename" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))substr($i,2)}1')
 
-            # Crea il file nel sito con front matter se non ha gia ---
+            # Create the file in site with front matter if it doesn't have --- yet
             if ! head -1 "$f" | grep -q '^---'; then
               {
                 echo "---"

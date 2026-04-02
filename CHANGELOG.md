@@ -14,7 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
   - 3 Phase 2 modules (fetch_url-dependent): robots, llms, ai_discovery
   - audit.py reduced from 2270 to 740 lines (orchestration only)
   - 100% backward compatible via re-exports
-- **Codebase**: complete IT→EN conversion — all comments, docstrings, error messages now in English
+- **Codebase**: IT→EN conversion for user-facing strings, docstrings, and error messages
 
 ### Fixed
 

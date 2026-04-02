@@ -89,10 +89,10 @@ _CATEGORY_ICONS = {
 
 # Score bands with descriptions and icons
 _BAND_CONFIG = {
-    "excellent": {"icon": "🏆", "label": "EXCELLENT", "desc": "AI-ready — ottimizzazione completa"},
-    "good": {"icon": "✅", "label": "GOOD", "desc": "Buona base — pochi miglioramenti"},
-    "foundation": {"icon": "⚡", "label": "FOUNDATION", "desc": "Elementi chiave mancanti"},
-    "critical": {"icon": "🚨", "label": "CRITICAL", "desc": "Non visibile ai motori AI"},
+    "excellent": {"icon": "🏆", "label": "EXCELLENT", "desc": "AI-ready — fully optimized"},
+    "good": {"icon": "✅", "label": "GOOD", "desc": "Solid foundation — minor improvements needed"},
+    "foundation": {"icon": "⚡", "label": "FOUNDATION", "desc": "Key elements missing"},
+    "critical": {"icon": "🚨", "label": "CRITICAL", "desc": "Not visible to AI engines"},
 }
 
 
@@ -1013,19 +1013,19 @@ def _build_negative_signals_card(result: AuditResult) -> Panel | None:
 
 
 def format_audit_rich(result: AuditResult) -> str:
-    """Formatta AuditResult con design dashboard immersivo.
+    """Format AuditResult as an immersive dashboard.
 
     Layout:
-    1. Header branding con logo gradient
-    2. Info panel con URL e HTTP status
-    3. Score gauge gigante con numero ASCII art
-    4. Barra stacked breakdown categorie
-    5. Check card dettagliate (7 categorie)
-    6. Card opzionali (CDN, JS Rendering)
-    7. Raccomandazioni con priorità
-    8. Footer motivazionale
+    1. Header branding with gradient logo
+    2. Info panel with URL and HTTP status
+    3. Large score gauge with ASCII art number
+    4. Stacked category breakdown bar
+    5. Detailed check cards (7 categories)
+    6. Optional cards (CDN, JS Rendering)
+    7. Prioritized recommendations
+    8. Motivational footer
 
-    Ritorna stringa con codici ANSI per output terminale colorato.
+    Returns string with ANSI codes for colored terminal output.
     """
     from geo_optimizer import __version__
 
@@ -1166,7 +1166,7 @@ def format_audit_rich(result: AuditResult) -> str:
     if neg_card:
         console.print(neg_card)
 
-    # ── 7. Raccomandazioni ───────────────────────────────────────
+    # ── 7. Recommendations ─────────────────────────────────────────
     if result.recommendations:
         rec_parts = []
         for i, rec in enumerate(result.recommendations, 1):
@@ -1184,7 +1184,7 @@ def format_audit_rich(result: AuditResult) -> str:
         console.print(
             Panel(
                 rec_table,
-                title="[bold]💡 Raccomandazioni[/]",
+                title="[bold]💡 Recommendations[/]",
                 title_align="left",
                 border_style=_COLORS["foundation"],
                 box=box.ROUNDED,

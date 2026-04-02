@@ -1,5 +1,5 @@
 # Composite GitHub Action per GEO Audit
-# Verifica la visibilità di un sito agli AI search engines
+# Check a website's visibility to AI search engines
 name: 'GEO Audit'
 description: 'Audit a website for Generative Engine Optimization (GEO) readiness'
 author: 'Auriti Labs'
@@ -44,13 +44,13 @@ runs:
   using: 'composite'
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Install geo-optimizer-skill
       shell: bash
-      # Sanitizzazione inputs.version: usa env variable per prevenire injection (#134)
+      # Sanitize inputs.version: use env variable to prevent injection (#134)
       # La versione viene validata con regex prima di essere usata nell'installazione
       env:
         GEO_VERSION: ${{ inputs.version }}

@@ -84,26 +84,26 @@ def audit_llms_txt(base_url: str) -> LlmsTxtResult:
     lines = content.splitlines()
     result.word_count = len(content.split())
 
-    # Verifica H1 (obbligatorio)
+    # Check H1 (required)
     h1_lines = [line for line in lines if line.startswith("# ")]
     if h1_lines:
         result.has_h1 = True
 
-    # Verifica blockquote description
+    # Check blockquote description
     blockquotes = [line for line in lines if line.startswith("> ")]
     if blockquotes:
         # Fix #317: sincronizza has_description (alias backward-compat) con has_blockquote
         result.has_blockquote = True
         result.has_description = True
 
-    # Verifica sezioni H2
+    # Check H2 sections
     h2_lines = [line for line in lines if line.startswith("## ")]
     if h2_lines:
         result.has_sections = True
     # #247: conta le sezioni H2 per Policy Intelligence
     result.sections_count = len(h2_lines)
 
-    # Verifica link markdown
+    # Check markdown links
     links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", content)
     if links:
         result.has_links = True
@@ -113,7 +113,7 @@ def audit_llms_txt(base_url: str) -> LlmsTxtResult:
     # #39: validazione v2 — conformità spec completa
     _validate_llms_content(result, content)
 
-    # Verifica /llms-full.txt (spec llmstxt.org — versione estesa opzionale)
+    # Check /llms-full.txt (llmstxt.org spec — optional extended version)
     full_url = urljoin(base_url, "/llms-full.txt")
     r_full, err_full = fetch_url(full_url)
     if r_full and r_full.status_code == 200 and len(r_full.text.strip()) > 0:
@@ -164,7 +164,7 @@ def _audit_llms_from_response(r, r_full=None) -> LlmsTxtResult:
     # #39: validazione v2 — conformità spec completa
     _validate_llms_content(result, content)
 
-    # Verifica /llms-full.txt — fix #184: funziona ora anche nel percorso async
+    # Check /llms-full.txt — fix #184: now works in the async path too
     if r_full and r_full.status_code == 200 and len(r_full.text.strip()) > 0:
         result.has_full = True
 

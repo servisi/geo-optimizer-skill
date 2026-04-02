@@ -38,14 +38,14 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
     """
     result = AiDiscoveryResult()
 
-    # Verifica /.well-known/ai.txt
+    # Check /.well-known/ai.txt
     ai_txt_url = urljoin(base_url, "/.well-known/ai.txt")
     r, err = fetch_url(ai_txt_url)
     if r and not err and r.status_code == 200 and len(r.text.strip()) > 0:
         result.has_well_known_ai = True
         result.endpoints_found += 1
 
-    # Verifica /ai/summary.json
+    # Check /ai/summary.json
     summary_url = urljoin(base_url, "/ai/summary.json")
     r, err = fetch_url(summary_url)
     if r and not err and r.status_code == 200:
@@ -63,7 +63,7 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
         except (json.JSONDecodeError, ValueError):
             pass
 
-    # Verifica /ai/faq.json
+    # Check /ai/faq.json
     faq_url = urljoin(base_url, "/ai/faq.json")
     r, err = fetch_url(faq_url)
     if r and not err and r.status_code == 200:
@@ -85,7 +85,7 @@ def audit_ai_discovery(base_url: str) -> AiDiscoveryResult:
         except (json.JSONDecodeError, ValueError):
             pass
 
-    # Verifica /ai/service.json
+    # Check /ai/service.json
     service_url = urljoin(base_url, "/ai/service.json")
     r, err = fetch_url(service_url)
     if r and not err and r.status_code == 200:

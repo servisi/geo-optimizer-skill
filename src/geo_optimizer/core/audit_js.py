@@ -54,7 +54,7 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
     headings = body_clean.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
     result.raw_heading_count = len(headings)
 
-    # Controlla container SPA radice vuoti
+    # Check for empty SPA root containers
     spa_indicators = [
         ("div", {"id": "root"}),
         ("div", {"id": "app"}),
@@ -65,13 +65,13 @@ def audit_js_rendering(soup, raw_html: str) -> JsRenderingResult:
     for tag_name, attrs in spa_indicators:
         el = body_clean.find(tag_name, attrs)
         if el:
-            # Controlla se l'elemento è essenzialmente vuoto (< 50 caratteri di testo)
+            # Check if element is essentially empty (< 50 chars of text)
             inner_text = el.get_text(strip=True)
             if len(inner_text) < 50:
                 result.has_empty_root = True
                 break
 
-    # Controlla contenuto <noscript>
+    # Check <noscript> content
     # Fix #27: usa il soup originale (non mutato, grazie al fix #24)
     noscript_tags = soup.find_all("noscript")
     for ns in noscript_tags:
