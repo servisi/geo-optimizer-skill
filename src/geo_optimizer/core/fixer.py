@@ -375,7 +375,16 @@ def _estimate_score_after(result: AuditResult, fixes: list[FixItem]) -> int:
         bonus += max_robots - current_robots
 
     if "llms" in categories_fixed and not result.llms.found:
-        bonus += SCORING["llms_found"] + SCORING["llms_h1"] + SCORING["llms_sections"] + SCORING["llms_links"]
+        # Fix #420: include all llms SCORING keys (was missing blockquote, depth, full)
+        bonus += (
+            SCORING["llms_found"]
+            + SCORING["llms_h1"]
+            + SCORING["llms_sections"]
+            + SCORING["llms_links"]
+            + SCORING.get("llms_blockquote", 0)
+            + SCORING.get("llms_depth", 0)
+            + SCORING.get("llms_full", 0)
+        )
 
     if "schema" in categories_fixed:
         if not result.schema.has_website:

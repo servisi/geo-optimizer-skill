@@ -54,11 +54,11 @@ async def fetch_url_async(
     Returns:
         Tuple (response, error_msg) — response is None on error.
     """
-    from geo_optimizer.utils.validators import validate_public_url
+    from geo_optimizer.utils.validators import resolve_and_validate_url
 
-    # Anti-SSRF validation before any fetch
-    safe, reason = validate_public_url(url)
-    if not safe:
+    # Fix #414: use resolve_and_validate_url for DNS pinning (prevents TOCTOU rebinding)
+    ok, reason, pinned_ips = resolve_and_validate_url(url)
+    if not ok:
         return None, f"Unsafe URL: {reason}"
 
     import httpx
@@ -66,8 +66,18 @@ async def fetch_url_async(
     own_client = client is None
 
     try:
-        # Fix #8: use the provided client if available (connection pooling)
-        # Fix #196: create a new client only if we do not have one
+        # Fix #414: install DNS pinning via thread-local (same mechanism as http.py)
+        # Import triggers the global getaddrinfo patch
+        from urllib.parse import urlparse as _urlparse
+
+        from geo_optimizer.utils.http import _pinning_local
+
+        _parsed = _urlparse(url)
+        _pinned_ip = pinned_ips[0] if pinned_ips else None
+        if _pinned_ip:
+            _target_port = _parsed.port or (443 if _parsed.scheme == "https" else 80)
+            _pinning_local.pin = {"host": _parsed.hostname, "ip": _pinned_ip, "port": _target_port}
+
         if own_client:
             client = httpx.AsyncClient(
                 headers=HEADERS,
@@ -115,9 +125,9 @@ async def fetch_url_async(
 
                 location = urljoin(current_url, location)
 
-            safe, reason = validate_public_url(location)
-            if not safe:
-                return None, f"Redirect to unsafe URL: {reason}"
+            ok_redir, reason_redir, _redir_ips = resolve_and_validate_url(location)
+            if not ok_redir:
+                return None, f"Redirect to unsafe URL: {reason_redir}"
 
             current_url = location
 
@@ -130,6 +140,8 @@ async def fetch_url_async(
     except Exception as e:
         return None, str(e)
     finally:
+        # Fix #414: clear DNS pin
+        _pinning_local.pin = None
         if own_client and client:
             await client.aclose()
 

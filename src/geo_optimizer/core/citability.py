@@ -1060,7 +1060,8 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
     year_refs = re.findall(r"\b(20[12]\d)\b", body_text)
     year_counts = Counter(year_refs)
 
-    has_old_year_refs = any(int(y) < current_year for y in year_counts)
+    # Fix #426: consistent threshold — use current_year-1 (same as detect_no_stale_data)
+    has_old_year_refs = any(int(y) < current_year - 1 for y in year_counts)
     has_current_year_refs = any(int(y) >= current_year for y in year_counts)
 
     # Score calculation
@@ -1194,9 +1195,9 @@ def detect_definition_patterns(soup) -> MethodScore:
 
     for heading in headings:
         # Find the first paragraph after the heading
+        # Fix #421: always try fallback when sibling is not <p> (e.g. wrapper div)
         next_elem = heading.find_next_sibling()
-        if not next_elem:
-            # Fall back to find_next (could be nested)
+        if not next_elem or next_elem.name != "p":
             next_elem = heading.find_next("p")
         if not next_elem or next_elem.name != "p":
             continue
@@ -1291,8 +1292,8 @@ _ATTRIBUTION_INLINE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Pattern for footnotes: [1], [2], superscript numbers
-_FOOTNOTE_RE = re.compile(r"\[(\d{1,3})\]|\{\d{1,3}\}|<sup>\d{1,3}</sup>")
+# Pattern for footnotes: [1], [2], {1} — Fix #417: removed <sup> (counted separately below)
+_FOOTNOTE_RE = re.compile(r"\[(\d{1,3})\]|\{\d{1,3}\}")
 
 
 def detect_attribution(soup, clean_text: str | None = None) -> MethodScore:
@@ -1651,7 +1652,12 @@ def detect_boilerplate_ratio(soup, soup_clean=None) -> MethodScore:
     method = "main_tag"
 
     if content_tag:
-        content_text = content_tag.get_text(separator=" ", strip=True)
+        # Fix #419: remove script/style from content_tag before extracting text
+        # (total_text already has them removed; without this, ratio is inflated)
+        clean_content = copy.deepcopy(content_tag)
+        for tag in clean_content(["script", "style"]):
+            tag.decompose()
+        content_text = clean_content.get_text(separator=" ", strip=True)
     else:
         # Heuristic: remove nav, header, footer, sidebar
         method = "heuristic"
@@ -2427,9 +2433,15 @@ def detect_stale_data(soup, clean_text: str | None = None) -> MethodScore:
     old_copyright = False
     if footer:
         footer_text = footer.get_text(strip=True)
-        copyright_years = re.findall(r"©\s*(20\d{2})|copyright\s*(20\d{2})", footer_text, re.I)
+        # Fix #418: handle copyright ranges (e.g. © 2020-2026) — use end year
+        copyright_years = re.findall(
+            r"©\s*(20\d{2})(?:\s*[-–]\s*(20\d{2}))?|copyright\s*(20\d{2})(?:\s*[-–]\s*(20\d{2}))?",
+            footer_text,
+            re.I,
+        )
         for match in copyright_years:
-            year = int(match[0] or match[1])
+            # Use the last year in the range (end year), or the single year
+            year = int(match[1] or match[3] or match[0] or match[2])
             if year < current_year - 1:
                 old_copyright = True
                 penalties += 2

@@ -133,7 +133,8 @@ def _is_path_allowed(path: str, rules: AgentRules) -> bool | None:
         if not disallow_path:
             # Empty Disallow = allow everything (RFC compliant)
             continue
-        if path.startswith(disallow_path) or disallow_path in ("/", "/*"):
+        # Fix #428: RFC 9309 §2.2.2 — wildcard * is NOT a metacharacter, only / is root
+        if path.startswith(disallow_path) or disallow_path == "/":
             match_len = len(disallow_path)
             if match_len > best_length:
                 best_length = match_len
@@ -146,7 +147,7 @@ def _is_path_allowed(path: str, rules: AgentRules) -> bool | None:
     for allow_path in rules.allow:
         if not allow_path:
             continue
-        if path.startswith(allow_path) or allow_path in ("/", "/*"):
+        if path.startswith(allow_path) or allow_path == "/":
             match_len = len(allow_path)
             if match_len > best_length:
                 best_length = match_len

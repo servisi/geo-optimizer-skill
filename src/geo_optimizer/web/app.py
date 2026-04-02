@@ -69,6 +69,17 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
                         status_code=413,
                         content={"detail": f"Body too large. Limit: {_MAX_BODY_BYTES} bytes."},
                     )
+            else:
+                # Fix #411: enforce size limit on chunked/streaming bodies without Content-Length
+                try:
+                    body = await request.body()
+                    if len(body) > _MAX_BODY_BYTES:
+                        return JSONResponse(
+                            status_code=413,
+                            content={"detail": f"Body too large. Limit: {_MAX_BODY_BYTES} bytes."},
+                        )
+                except Exception:
+                    return JSONResponse(status_code=400, content={"detail": "Failed to read request body."})
         return await call_next(request)
 
 
@@ -102,6 +113,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data:; frame-ancestors 'none'; "
             "object-src 'none'; base-uri 'self'; form-action 'self'"
+        )
+        # Fix #413: restrict browser API access
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), "
+            "accelerometer=(), gyroscope=(), magnetometer=()"
         )
         return response
 
@@ -424,11 +440,18 @@ def _markdown_to_html(md: str) -> str:
     try:
         import markdown
 
-        return markdown.markdown(
+        html = markdown.markdown(
             md,
             extensions=["tables", "fenced_code", "toc"],
             output_format="html",
         )
+        # Fix #404: sanitize markdown output to prevent XSS (javascript: links, raw HTML)
+        import re as _re_md
+
+        html = _re_md.sub(r'href\s*=\s*"javascript:[^"]*"', 'href="#"', html)
+        html = _re_md.sub(r"<script[^>]*>.*?</script>", "", html, flags=_re_md.DOTALL | _re_md.IGNORECASE)
+        html = _re_md.sub(r"\bon\w+\s*=\s*\"[^\"]*\"", "", html, flags=_re_md.IGNORECASE)
+        return html
     except ImportError:
         # Fallback: basic conversion with regex
         import html as _html_mod
@@ -502,26 +525,32 @@ if _STATS_API_URL:
 
 def _increment_remote_stat(key: str, amount: int = 1) -> None:
     """Increment a counter on the external API (best-effort, does not block on failure)."""
-    import json as _json
-    import urllib.request
 
     if not _STATS_API_KEY:
         return
-    # Fix #307: block if URL is not safe (SSRF prevention)
     if not _STATS_API_URL_SAFE:
         return
-    # Fix #36: validate stats API URL (HTTPS only)
     if not _STATS_API_URL.startswith("https://"):
         return
     try:
-        data = _json.dumps({"key": key, "amount": amount}).encode()
-        req = urllib.request.Request(
-            f"{_STATS_API_URL}/increment",
-            data=data,
-            headers={"Content-Type": "application/json", "X-API-Key": _STATS_API_KEY},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=3)
+        # Fix #406: use requests with DNS pinning instead of bare urllib.request.urlopen
+        from geo_optimizer.utils.http import create_session_with_retry
+        from geo_optimizer.utils.validators import resolve_and_validate_url
+
+        target = f"{_STATS_API_URL}/increment"
+        ok, _reason, pinned_ips = resolve_and_validate_url(target)
+        if not ok:
+            return
+        session = create_session_with_retry(total_retries=1, pinned_ips=pinned_ips)
+        try:
+            session.post(
+                target,
+                json={"key": key, "amount": amount},
+                headers={"X-API-Key": _STATS_API_KEY},
+                timeout=3,
+            )
+        finally:
+            session.close()
     except Exception:
         pass  # Best-effort: don't block the audit if the API is down
 
@@ -697,6 +726,14 @@ async def audit_pdf(
     from fastapi.responses import Response
 
     from geo_optimizer.utils.validators import validate_public_url
+
+    # Fix #403: verify Bearer token (same as /api/audit GET and POST)
+    if not _verify_bearer_token(request):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     # Rate limit
     if not await _check_rate_limit(_get_client_ip(request)):
@@ -1111,6 +1148,14 @@ def _dict_to_audit_result(data: dict):
             has_sections=ll.get("has_sections", False),
             has_links=ll.get("has_links", False),
             word_count=ll.get("word_count", 0),
+            # Fix #452: missing LlmsTxt fields
+            has_full=ll.get("has_full", False),
+            sections_count=ll.get("sections_count", 0),
+            links_count=ll.get("links_count", 0),
+            has_blockquote=ll.get("has_blockquote", False),
+            has_optional_section=ll.get("has_optional_section", False),
+            companion_files_hint=ll.get("companion_files_hint", False),
+            validation_warnings=ll.get("validation_warnings", []),
         ),
         schema=SchemaResult(
             found_types=s.get("found_types", []),
@@ -1123,6 +1168,15 @@ def _dict_to_audit_result(data: dict):
             any_schema_found=s.get("any_schema_found", False),
             schema_richness_score=s.get("schema_richness_score", 0),
             raw_schemas=s.get("raw_schemas", []),
+            # Fix #452: missing Schema fields
+            has_howto=s.get("has_howto", False),
+            has_person=s.get("has_person", False),
+            has_product=s.get("has_product", False),
+            sameas_urls=s.get("sameas_urls", []),
+            has_date_modified=s.get("has_date_modified", False),
+            avg_attributes_per_schema=s.get("avg_attributes_per_schema", 0.0),
+            ecommerce_signals=s.get("ecommerce_signals", {}),
+            json_parse_errors=s.get("json_parse_errors", 0),
         ),
         meta=MetaResult(
             has_title=m.get("has_title", False),
@@ -1146,6 +1200,10 @@ def _dict_to_audit_result(data: dict):
             h1_text=c.get("h1_text", ""),
             numbers_count=c.get("numbers_count", 0),
             external_links_count=c.get("external_links_count", 0),
+            # Fix #415: missing Content fields (affect score by up to 6pts)
+            has_heading_hierarchy=c.get("has_heading_hierarchy", False),
+            has_lists_or_tables=c.get("has_lists_or_tables", False),
+            has_front_loading=c.get("has_front_loading", False),
         ),
         recommendations=data.get("recommendations", []),
         http_status=data.get("http_status", 0),
