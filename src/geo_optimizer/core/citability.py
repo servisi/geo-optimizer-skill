@@ -161,7 +161,7 @@ def _get_clean_text(soup, soup_clean=None) -> str:
 
     Args:
         soup: BeautifulSoup originale.
-        soup_clean: (opzionale) soup già pulito da script/style (fix #285).
+        soup_clean: (optional) soup pre-cleaned from script/style (fix #285).
                     Se fornito, evita il re-parse costoso dell'HTML.
     """
     import copy
@@ -1077,7 +1077,7 @@ def detect_content_freshness(soup, clean_text: str | None = None) -> MethodScore
     if has_current_year_refs:
         score += 2
     elif has_old_year_refs and not is_fresh:
-        warnings.append("Riferimenti ad anni passati senza data di aggiornamento recente")
+        warnings.append("References to past years without recent update date")
 
     return MethodScore(
         name="content_freshness",
@@ -3189,7 +3189,7 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
     Args:
         soup: BeautifulSoup of the HTML page.
         base_url: Base URL of the site.
-        soup_clean: (opzionale) soup pre-pulito da script/style (fix #285).
+        soup_clean: (optional) soup pre-cleaned from script/style (fix #285).
 
     Returns:
         CitabilityResult with score 0-100 and per-method detail.

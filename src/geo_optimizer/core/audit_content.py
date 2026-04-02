@@ -12,7 +12,7 @@ def audit_content_quality(soup, url: str, soup_clean=None) -> ContentResult:
     Args:
         soup: BeautifulSoup dell'HTML originale.
         url: URL della pagina.
-        soup_clean: (opzionale) BeautifulSoup già pulito (senza script/style).
+        soup_clean: (optional) BeautifulSoup pre-cleaned (no script/style).
                     Se fornito, evita il re-parse dell'HTML (fix #285).
     """
     import copy
