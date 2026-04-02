@@ -11,7 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 - **SSRF bypass** in `llms_generator.py`: `fetch_sitemap`/`discover_sitemap` now use DNS pinning (#447)
 - **TOCTOU DNS rebinding**: NXDOMAIN no longer silently disables pinning (#427)
 - **CSP hardened**: added `object-src`, `base-uri`, `form-action` directives (#470)
-- **requests CVE**: minimum bumped to >=2.33.0 (CVE-2026-25645) (#463)
+- **requests**: reverted minimum to >=2.28.0 (2.33.0 requires Python ≥3.10, incompatible with our 3.9 support) (#463)
 
 ### Fixed
 - **Python 3.9 crash**: added `from __future__ import annotations` to 8 missing files (#446)
