@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [4.1.0] — 2026-04-03
+
+### Added
+- **Answer Capsule Detection** (#372): detects self-contained paragraphs (30-120 words) with concrete facts, optimized for RAG chunk extraction (+12% AI citation)
+- **Token Efficiency Analysis** (#365): measures content-to-noise ratio for LLM context window optimization — rewards `<main>`/`<article>` semantic structure (+8%)
+- **Entity Resolution Friendliness** (#373): evaluates how easily LLMs can disambiguate entities — checks schema.org typing, `sameAs` links, and first-use definitions (+10%)
+- **Knowledge Graph Density** (#366): counts explicit relationship statements ("X is a Y", "founded by Z") in content and schema for KG extraction (+10%)
+- **Retrieval Trigger Patterns** (#374): detects phrases that improve RAG retrieval ranking — "research shows", "best practice", question headings (+10%)
+
+### Changed
+- Citability engine: **42 → 47 methods** (5 new RAG readiness checks, max_score 189 → 208, capped at 100)
+
+---
+
 ## [4.0.1] — 2026-04-02
 
 ### Performance

@@ -2,7 +2,7 @@
 
 ## Panoramica
 
-**GEO Optimizer** (v4.0.0-beta.1) è un toolkit Python open-source per Generative Engine Optimization: rende i siti web visibili e citabili dai motori di ricerca AI (ChatGPT, Perplexity, Claude, Gemini).
+**GEO Optimizer** (v4.1.0) è un toolkit Python open-source per Generative Engine Optimization: rende i siti web visibili e citabili dai motori di ricerca AI (ChatGPT, Perplexity, Claude, Gemini).
 
 Basato su Princeton KDD 2024, AutoGEO ICLR 2026, SE Ranking 2025, Growth Marshal 2026.
 

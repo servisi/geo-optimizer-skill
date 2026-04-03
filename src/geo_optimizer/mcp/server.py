@@ -8,7 +8,7 @@ Available tools (10):
     geo_audit            — Full GEO audit (score 0-100)
     geo_fix              — Generate automatic fixes (robots, llms, schema, meta)
     geo_llms_generate    — Generate llms.txt content from sitemap
-    geo_citability       — Citability score (42 research-backed methods)
+    geo_citability       — Citability score (47 research-backed methods)
     geo_schema_validate  — Validate JSON-LD schema
     geo_compare          — Compare GEO scores across multiple sites
     geo_ai_discovery     — Check AI discovery endpoints (.well-known/ai.txt, etc.)
@@ -19,7 +19,7 @@ Available tools (10):
 Available resources:
     geo://ai-bots            — List of tracked AI bots
     geo://score-bands        — GEO score bands
-    geo://methods            — 42 citability methods with impact data (dynamic)
+    geo://methods            — 47 citability methods with impact data (dynamic)
     geo://changelog          — Latest changes
     geo://ai-discovery-spec  — AI discovery endpoint specification
 
@@ -198,9 +198,9 @@ def geo_llms_generate(url: str) -> str:
 
 @mcp.tool()
 def geo_citability(url: str) -> str:
-    """Analyze content citability using 42 methods (Princeton GEO + AutoGEO + content analysis).
+    """Analyze content citability using 47 methods (Princeton GEO + AutoGEO + content analysis).
 
-    Evaluates page content with 42 methods from Princeton KDD 2024,
+    Evaluates page content with 47 methods from Princeton KDD 2024,
     AutoGEO ICLR 2026, SE Ranking 2025, and Growth Marshal 2026.
 
     Returns score 0-100 with per-method detail and suggestions.
@@ -536,7 +536,7 @@ def get_score_bands() -> str:
 
 @mcp.resource("geo://methods")
 def get_citability_methods() -> str:
-    """All 42 citability methods with measured impact (fix #1: generated dynamically from the engine)."""
+    """All 47 citability methods with measured impact (fix #1: generated dynamically from the engine)."""
     from bs4 import BeautifulSoup
 
     from geo_optimizer.core.citability import audit_citability

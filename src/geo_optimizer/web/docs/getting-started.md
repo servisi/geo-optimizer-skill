@@ -127,7 +127,7 @@ Follow this priority order — each step has the highest ROI before moving to th
 3. **Schema** — Add WebSite, Organization, FAQPage, Article. → [Schema Injector](schema-injector.md)
 4. **Brand & Entity** — Add sameAs KG links, about/contact pages. → [Scoring Rubric](scoring-rubric.md#8-brand--entity-signals--max-10-pts-new-in-v3182)
 5. **AI Discovery** — Generate ai.txt and /ai/*.json endpoints. Use `geo fix` to auto-generate.
-6. **Content** — Add statistics, external citations, expert quotes. → [42 GEO Methods](geo-methods.md)
+6. **Content** — Add statistics, external citations, expert quotes. → [47 GEO Methods](geo-methods.md)
 
 ---
 

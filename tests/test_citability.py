@@ -51,6 +51,11 @@ from geo_optimizer.core.citability import (
     detect_anchor_text_quality,
     detect_international_geo,
     detect_crawl_budget,
+    detect_answer_capsule,
+    detect_token_efficiency,
+    detect_entity_resolution,
+    detect_kg_density,
+    detect_retrieval_triggers,
 )
 
 
@@ -1170,9 +1175,9 @@ class TestWeightSum:
         """Verifica che i 18 metodi base sommano 100, i 7 bonus aggiungono 31."""
         html = "<html><body><p>Test content.</p></body></html>"
         result = audit_citability(_soup(html), "https://example.com")
-        # 18 metodi base = 100, 7 bonus batch2 = 31, 5 bonus batch3+4 = 18, 8 bonus batchA = 27, 4 bonus batchB = 13, totale = 189
+        # 18 base=100, 7 batch2=31, 5 batch3+4=18, 8 batchA=27, 4 batchB=13, 5 RAG=19 → 208
         total_max = sum(m.max_score for m in result.methods)
-        assert total_max == 189, f"Somma max_score = {total_max}, atteso 189 (100 base + 31 batch2 + 18 batch3+4 + 27 batchA + 13 batchB)"
+        assert total_max == 208, f"Somma max_score = {total_max}, atteso 208 (189 precedenti + 19 RAG batch)"
         # Ma il total_score è sempre cappato a 100
         assert result.total_score <= 100
 
@@ -1222,7 +1227,7 @@ class TestAuditCitability:
 
         assert result.total_score > 0
         assert result.grade in ("low", "medium", "high", "excellent")
-        assert len(result.methods) == 42
+        assert len(result.methods) == 47
 
         # Verifica che ogni metodo abbia un nome
         names = {m.name for m in result.methods}
@@ -1265,7 +1270,7 @@ class TestAuditCitability:
     def test_pagina_vuota(self):
         result = audit_citability(_soup("<html><body></body></html>"), "https://example.com")
         assert result.total_score >= 0
-        assert len(result.methods) == 42
+        assert len(result.methods) == 47
 
     def test_top_improvements_generate(self):
         result = audit_citability(_soup("<html><body><p>Testo semplice.</p></body></html>"), "https://example.com")
@@ -1805,3 +1810,255 @@ class TestCrawlBudget:
         assert result.detected
         assert result.score == 3
         assert not result.details["has_sitemap_link"]
+
+
+# ============================================================================
+# TEST: Answer Capsule Detection (+12%) — #372
+# ============================================================================
+
+
+class TestAnswerCapsule:
+    def test_capsule_paragraphs_detected(self):
+        """Paragraphs with facts in 30-120 words are answer capsules."""
+        # ~50 words, starts direct, ends with period, has numeric fact
+        para = (
+            "GEO Optimizer is an open-source Python toolkit that analyzes website "
+            "visibility for AI search engines. In 2025, over 73% of websites were "
+            "not optimized for generative engine retrieval. The tool scores pages "
+            "on a 0-100 scale across 8 categories including robots.txt, schema, "
+            "and content quality metrics."
+        )
+        html = f"<html><body><p>{para}</p><p>{para}</p></body></html>"
+        result = detect_answer_capsule(_soup(html))
+        assert result.detected is True
+        assert result.score >= 1
+        assert result.details["capsule_count"] >= 2
+
+    def test_no_capsules_in_short_paragraphs(self):
+        """Very short paragraphs are not capsules."""
+        html = "<html><body><p>Hello world.</p><p>Short text.</p></body></html>"
+        result = detect_answer_capsule(_soup(html))
+        assert result.detected is False
+        assert result.details["capsule_count"] == 0
+
+    def test_no_capsules_without_facts(self):
+        """Long paragraphs without concrete facts are not capsules."""
+        para = (
+            "The content is very important for modern websites and digital marketing "
+            "strategies that help businesses grow in the competitive online landscape "
+            "where quality matters more than quantity in many different ways that "
+            "experts continue to explore and analyze thoroughly."
+        )
+        html = f"<html><body><p>{para}</p></body></html>"
+        result = detect_answer_capsule(_soup(html))
+        assert result.details["capsule_count"] == 0
+
+    def test_empty_page(self):
+        """Empty page returns zero capsules."""
+        html = "<html><body></body></html>"
+        result = detect_answer_capsule(_soup(html))
+        assert result.score == 0
+        assert result.name == "answer_capsule"
+
+
+# ============================================================================
+# TEST: Token Efficiency (+8%) — #365
+# ============================================================================
+
+
+class TestTokenEfficiency:
+    def test_high_efficiency_with_article_tag(self):
+        """Page with most content in <article> has high token efficiency."""
+        html = """
+        <html><body>
+            <nav>Home | About | Contact</nav>
+            <article>
+                <p>GEO Optimizer is a Python toolkit for AI search optimization.
+                It provides 8 audit categories covering robots.txt, schema, meta tags,
+                and content analysis. The tool scores pages on a 0-100 scale.</p>
+                <p>Research shows that 73% of websites lack proper AI optimization.
+                The market grew by 357% in 2025 according to Stanford Research.</p>
+                <p>Best practices include adding structured data, optimizing content
+                for retrieval, and ensuring proper crawl permissions for AI bots.</p>
+            </article>
+            <footer>Copyright 2025</footer>
+        </body></html>
+        """
+        result = detect_token_efficiency(_soup(html))
+        assert result.detected is True
+        assert result.score >= 2
+        assert result.details["ratio"] >= 0.5
+
+    def test_low_efficiency_heavy_nav(self):
+        """Page dominated by navigation has low token efficiency."""
+        nav = " ".join(f"Link{i} " * 5 for i in range(50))
+        html = f"""
+        <html><body>
+            <nav>{nav}</nav>
+            <p>Short content.</p>
+            <footer>{nav}</footer>
+        </body></html>
+        """
+        result = detect_token_efficiency(_soup(html))
+        assert result.details["ratio"] < 0.5
+
+    def test_insufficient_text(self):
+        """Very short page returns insufficient_text method."""
+        html = "<html><body><p>Hi.</p></body></html>"
+        result = detect_token_efficiency(_soup(html))
+        assert result.details.get("method") == "insufficient_text"
+
+
+# ============================================================================
+# TEST: Entity Resolution Friendliness (+10%) — #373
+# ============================================================================
+
+
+class TestEntityResolution:
+    def test_well_defined_entity(self):
+        """Page with schema entity + definition + sameAs scores high."""
+        html = """
+        <html><head>
+            <script type="application/ld+json">
+            {"@type": "Organization", "name": "Auriti Labs",
+             "description": "Open-source AI optimization tools",
+             "sameAs": ["https://github.com/Auriti-Labs", "https://twitter.com/AuritiLabs"]}
+            </script>
+        </head>
+        <body>
+            <p>Auriti Labs is an open-source organization that builds tools
+            for AI search engine optimization and web visibility.</p>
+        </body></html>
+        """
+        result = detect_entity_resolution(_soup(html))
+        assert result.detected is True
+        assert result.score >= 3
+        assert result.details["has_schema_entity"] is True
+        assert result.details["has_sameas"] is True
+        assert result.details["has_definition"] is True
+
+    def test_no_schema_no_definition(self):
+        """Page without schema or entity definitions scores low."""
+        html = "<html><body><p>Welcome to our website about things.</p></body></html>"
+        result = detect_entity_resolution(_soup(html))
+        assert result.detected is False
+        assert result.score == 0
+
+    def test_schema_with_graph(self):
+        """JSON-LD with @graph array is supported."""
+        html = """
+        <html><head>
+            <script type="application/ld+json">
+            {"@graph": [
+                {"@type": "Organization", "name": "Test Corp",
+                 "description": "A test organization"}
+            ]}
+            </script>
+        </head><body><p>Generic content here.</p></body></html>
+        """
+        result = detect_entity_resolution(_soup(html))
+        assert result.details["has_schema_entity"] is True
+        assert result.score >= 2
+
+
+# ============================================================================
+# TEST: Knowledge Graph Density (+10%) — #366
+# ============================================================================
+
+
+class TestKgDensity:
+    def test_rich_relationships(self):
+        """Content with many explicit relationship statements scores high."""
+        html = """
+        <html><body>
+            <p>GEO Optimizer is a Python toolkit developed by Auriti Labs.
+            It is part of the open-source AI tools ecosystem. The project
+            was founded in 2025 and is based in Italy. The tool belongs to
+            the category of SEO optimization software. It was created by
+            Juan Camilo and is maintained by the community.</p>
+            <script type="application/ld+json">
+            {"@type": "SoftwareApplication", "name": "GEO Optimizer",
+             "author": {"@type": "Organization", "name": "Auriti Labs"},
+             "publisher": {"@type": "Organization", "name": "Auriti Labs"}}
+            </script>
+        </body></html>
+        """
+        result = detect_kg_density(_soup(html))
+        assert result.detected is True
+        assert result.score >= 2
+        assert result.details["relation_count"] >= 4
+        assert result.details["schema_relations"] >= 2
+
+    def test_no_relationships(self):
+        """Generic content without relationship patterns scores low."""
+        html = """
+        <html><body>
+            <p>This website has many features. The features are good.
+            Users like the features very much. The features work well.</p>
+        </body></html>
+        """
+        result = detect_kg_density(_soup(html))
+        assert result.score <= 1
+
+    def test_empty_content(self):
+        """Empty page returns zero."""
+        html = "<html><body></body></html>"
+        result = detect_kg_density(_soup(html))
+        assert result.score == 0
+        assert result.name == "kg_density"
+
+
+# ============================================================================
+# TEST: Retrieval Trigger Patterns (+10%) — #374
+# ============================================================================
+
+
+class TestRetrievalTriggers:
+    def test_content_with_triggers(self):
+        """Content with RAG trigger phrases scores high."""
+        html = """
+        <html><body>
+            <h2>What is GEO Optimization?</h2>
+            <p>According to Princeton research, GEO optimization improves
+            AI visibility by 41%. Studies show that structured content
+            is more likely to be cited. For example, adding schema markup
+            increases retrieval accuracy. The best practice is to use
+            explicit definitions. Research shows that compared to
+            unoptimized pages, GEO-ready content performs significantly
+            better. Experts recommend following industry standards.</p>
+            <h2>How to optimize your website?</h2>
+            <p>Step 1: run an audit. In summary, data shows that
+            optimized sites get 3x more AI citations.</p>
+        </body></html>
+        """
+        result = detect_retrieval_triggers(_soup(html))
+        assert result.detected is True
+        assert result.score >= 3
+        assert result.details["unique_triggers"] >= 4
+        assert result.details["question_headings"] >= 2
+
+    def test_no_triggers(self):
+        """Generic content without trigger phrases scores low."""
+        html = """
+        <html><body>
+            <h2>Welcome</h2>
+            <p>Our website offers many products and services that
+            customers can browse and purchase online at great prices.</p>
+        </body></html>
+        """
+        result = detect_retrieval_triggers(_soup(html))
+        assert result.details["unique_triggers"] <= 1
+
+    def test_question_headings_only(self):
+        """Question headings without body triggers still contribute."""
+        html = """
+        <html><body>
+            <h2>What is SEO?</h2>
+            <p>It helps websites rank higher in searches.</p>
+            <h2>Why does it matter?</h2>
+            <p>More visibility means more traffic.</p>
+        </body></html>
+        """
+        result = detect_retrieval_triggers(_soup(html))
+        assert result.details["question_headings"] >= 2
+        assert result.score >= 1

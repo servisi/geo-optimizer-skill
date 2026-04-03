@@ -370,7 +370,7 @@ def _build_audit_result(
             for r in check_results
         }
 
-    # Citability Score: content analysis with 42 methods (fix #31)
+    # Citability Score: content analysis with 47 methods (fix #31)
     # Fix #285: pass pre-computed soup_clean to avoid re-parsing in citability
     from geo_optimizer.core.citability import audit_citability
 

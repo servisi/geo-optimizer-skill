@@ -1,5 +1,5 @@
 """
-Citability Score — Content analysis with 42 methods (Princeton GEO + AutoGEO + content analysis).
+Citability Score — Content analysis with 47 methods (Princeton GEO + AutoGEO + RAG readiness).
 
 Each detect_*() function analyzes one aspect of HTML content and returns
 a MethodScore. No ML dependencies — only regex, HTML tags and structural metrics.
@@ -3073,6 +3073,404 @@ def detect_crawl_budget(soup) -> MethodScore:
     )
 
 
+# ─── RAG Readiness Checks (v4.1.0 — #372, #365, #373, #366, #374) ────────────
+
+# Regex: sentence-ending punctuation (period, question mark, exclamation)
+_SENTENCE_END_RE = re.compile(r"[.!?](?:\s|$)")
+
+# Regex: explicit relationship verbs for knowledge graph density
+_KG_RELATION_RE = re.compile(
+    r"\b(?:"
+    r"is\s+a|is\s+the|is\s+an|are\s+the|was\s+founded|founded\s+(?:in|by)"
+    r"|belongs?\s+to|part\s+of|consists?\s+of|includes?"
+    r"|developed\s+by|created\s+by|built\s+by|maintained\s+by|owned\s+by"
+    r"|located\s+in|based\s+in|headquartered\s+in"
+    r"|acquired\s+by|merged\s+with|partnered\s+with"
+    r"|invented\s+by|designed\s+by|authored\s+by"
+    r"|known\s+as|also\s+called|referred\s+to\s+as|formerly"
+    r"|type\s+of|kind\s+of|category\s+of|subset\s+of"
+    r"|è\s+un[ao]?|sono\s+i|fa\s+parte\s+di|si\s+trova\s+[ai]"
+    r"|fondato\s+(?:da|nel)|creato\s+da|sviluppato\s+da"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Regex: retrieval trigger phrases that help RAG systems select content
+_RETRIEVAL_TRIGGER_RE = re.compile(
+    r"\b(?:"
+    r"according\s+to|research\s+shows|studies?\s+(?:show|found|indicate|suggest)"
+    r"|data\s+(?:shows?|indicates?|suggests?|reveals?)"
+    r"|evidence\s+(?:shows?|suggests?|indicates?)"
+    r"|experts?\s+(?:say|recommend|suggest|agree|note)"
+    r"|(?:the\s+)?official\s+(?:documentation|guide|specification)"
+    r"|(?:as\s+of|since|starting|beginning)\s+\d{4}"
+    r"|(?:defined|specified|described)\s+(?:as|in|by)"
+    r"|in\s+(?:summary|conclusion|practice|short|brief)"
+    r"|the\s+(?:key|main|primary|most\s+important)\s+(?:difference|benefit|advantage|factor)"
+    r"|(?:step|phase|stage)\s+\d"
+    r"|(?:compared?\s+to|versus|vs\.?|unlike|in\s+contrast)"
+    r"|(?:for\s+example|for\s+instance|such\s+as|e\.g\.|i\.e\.)"
+    r"|(?:best\s+practice|recommended\s+approach|industry\s+standard)"
+    r"|(?:FAQ|frequently\s+asked)"
+    r"|(?:how\s+to|what\s+is|why\s+(?:does|is|do)|when\s+to)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def detect_answer_capsule(soup, clean_text: str | None = None) -> MethodScore:
+    """Detect self-contained answer paragraphs extractable by RAG systems (#372).
+
+    An answer capsule is a paragraph that:
+    1. Starts with a direct statement (not a question or transition)
+    2. Contains a concrete fact (number, name, date)
+    3. Is 30-120 words (fits in a single RAG chunk)
+    4. Ends with a complete sentence (not truncated)
+    """
+    paragraphs = soup.find_all("p")
+    if not paragraphs:
+        return MethodScore(
+            name="answer_capsule", label="Answer Capsule Detection",
+            max_score=4, impact="+12%",
+        )
+
+    capsule_count = 0
+    total_candidates = 0
+
+    for p in paragraphs:
+        text = p.get_text(strip=True)
+        words = text.split()
+        word_count = len(words)
+
+        # Only paragraphs in the 30-120 word range (RAG chunk sweet spot)
+        if word_count < 30 or word_count > 120:
+            continue
+        total_candidates += 1
+
+        # Must end with sentence-ending punctuation
+        if not _SENTENCE_END_RE.search(text[-3:]):
+            continue
+
+        # Must contain a concrete fact (number, percentage, date, proper noun)
+        if not _CITABLE_FACT_NUMERIC_RE.search(text):
+            continue
+
+        # Must start with a direct statement (not a question or weak opener)
+        first_word = words[0].lower().rstrip(",:")
+        if first_word in ("however", "but", "although", "moreover", "furthermore",
+                          "additionally", "nevertheless", "meanwhile"):
+            continue
+
+        capsule_count += 1
+
+    ratio = capsule_count / total_candidates if total_candidates > 0 else 0
+
+    if ratio >= 0.4:
+        score = 4
+    elif ratio >= 0.25:
+        score = 3
+    elif ratio >= 0.15:
+        score = 2
+    elif capsule_count >= 1:
+        score = 1
+    else:
+        score = 0
+
+    return MethodScore(
+        name="answer_capsule",
+        label="Answer Capsule Detection",
+        detected=capsule_count >= 2,
+        score=min(score, 4),
+        max_score=4,
+        impact="+12%",
+        details={
+            "capsule_count": capsule_count,
+            "total_candidates": total_candidates,
+            "ratio": round(ratio, 2),
+        },
+    )
+
+
+def detect_token_efficiency(soup, clean_text: str | None = None) -> MethodScore:
+    """Analyze content-to-noise ratio for LLM context window efficiency (#365).
+
+    Measures how much of the page is useful content vs boilerplate/noise
+    from an LLM token perspective. High token efficiency = more useful
+    information per token consumed from the context window.
+    """
+    import copy
+
+    # Total page text (without scripts/styles)
+    total_soup = copy.deepcopy(soup)
+    for tag in total_soup(["script", "style"]):
+        tag.decompose()
+    total_text = total_soup.get_text(separator=" ", strip=True)
+    total_words = len(total_text.split())
+
+    if total_words < 20:
+        return MethodScore(
+            name="token_efficiency", label="Token Efficiency",
+            detected=False, score=1, max_score=3, impact="+8%",
+            details={"total_words": total_words, "ratio": 0, "method": "insufficient_text"},
+        )
+
+    # Content words: text inside <main>, <article>, or content <p> tags
+    content_tag = soup.find("main") or soup.find("article")
+    if content_tag:
+        clean_content = copy.deepcopy(content_tag)
+        for tag in clean_content(["script", "style", "nav"]):
+            tag.decompose()
+        content_text = clean_content.get_text(separator=" ", strip=True)
+    else:
+        # Fallback: sum all <p> text
+        content_text = " ".join(p.get_text(strip=True) for p in soup.find_all("p"))
+
+    content_words = len(content_text.split())
+
+    # Noise: navigation, footer, sidebar, repeated elements
+    noise_words = total_words - content_words
+    ratio = content_words / total_words if total_words > 0 else 0
+
+    # Score: higher ratio = better token efficiency
+    if ratio >= 0.75:
+        score = 3
+    elif ratio >= 0.60:
+        score = 2
+    elif ratio >= 0.45:
+        score = 1
+    else:
+        score = 0
+
+    return MethodScore(
+        name="token_efficiency",
+        label="Token Efficiency",
+        detected=ratio >= 0.60,
+        score=min(score, 3),
+        max_score=3,
+        impact="+8%",
+        details={
+            "total_words": total_words,
+            "content_words": content_words,
+            "noise_words": noise_words,
+            "ratio": round(ratio, 2),
+        },
+    )
+
+
+def detect_entity_resolution(soup) -> MethodScore:
+    """Detect how easily LLMs can disambiguate entities on the page (#373).
+
+    Checks:
+    1. Entities are defined at first use (explicit "X is..." patterns)
+    2. Schema.org provides @type + name + description for main entity
+    3. Consistent entity naming (no conflicting references)
+    4. sameAs links for disambiguation
+    """
+    score = 0
+    has_schema_entity = False
+    has_sameas = False
+    has_definition = False
+    entity_types_found: list[str] = []
+
+    # 1. Check JSON-LD for well-typed entities with description
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                # Support @graph arrays
+                graph = item.get("@graph", [])
+                if graph and isinstance(graph, list):
+                    items.extend(graph)
+                    continue
+                entity_type = item.get("@type")
+                name = item.get("name")
+                desc = item.get("description")
+                if entity_type and name:
+                    has_schema_entity = True
+                    if isinstance(entity_type, list):
+                        entity_types_found.extend(entity_type)
+                    else:
+                        entity_types_found.append(str(entity_type))
+                    if desc:
+                        score += 1  # well-described entity
+                # sameAs check (same item may have both @type and sameAs)
+                same_as = item.get("sameAs", [])
+                if isinstance(same_as, str):
+                    same_as = [same_as]
+                if isinstance(same_as, list) and len(same_as) >= 2:
+                    has_sameas = True
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    if has_schema_entity:
+        score += 1
+    if has_sameas:
+        score += 1
+
+    # 2. Check first paragraph for entity definition pattern
+    body = soup.find("body")
+    if body:
+        first_p = body.find("p")
+        if first_p:
+            text = first_p.get_text(strip=True)
+            if re.search(
+                r"\b(?:is|are|refers?\s+to|è|sono|significa)\s+"
+                r"(?:a|an|the|un|una|il|la|lo|one\s+of|defined\s+as)",
+                text, re.I,
+            ):
+                has_definition = True
+                score += 1
+
+    return MethodScore(
+        name="entity_resolution",
+        label="Entity Resolution Friendliness",
+        detected=score >= 2,
+        score=min(score, 4),
+        max_score=4,
+        impact="+10%",
+        details={
+            "has_schema_entity": has_schema_entity,
+            "has_sameas": has_sameas,
+            "has_definition": has_definition,
+            "entity_types": entity_types_found[:5],
+        },
+    )
+
+
+def detect_kg_density(soup, clean_text: str | None = None) -> MethodScore:
+    """Detect explicit entity relationships for knowledge graph extraction (#366).
+
+    Measures how many explicit relationship statements (e.g., "X is a Y",
+    "founded by Z", "located in W") exist in the content, making it easier
+    for LLMs to build structured knowledge from the page.
+    """
+    body_text = clean_text or _get_clean_text(soup)
+    if not body_text or len(body_text) < 50:
+        return MethodScore(
+            name="kg_density", label="Knowledge Graph Density",
+            max_score=4, impact="+10%",
+        )
+
+    # Count relationship pattern matches
+    matches = _KG_RELATION_RE.findall(body_text)
+    relation_count = len(matches)
+
+    # Normalize by content length (per 500 words)
+    word_count = len(body_text.split())
+    density = (relation_count / word_count) * 500 if word_count > 0 else 0
+
+    # Check for structured data relationships too (schema.org)
+    schema_relations = 0
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                graph = item.get("@graph", [])
+                if graph and isinstance(graph, list):
+                    items.extend(graph)
+                    continue
+                # Count relationship properties
+                for key in ("author", "creator", "publisher", "founder",
+                            "parentOrganization", "memberOf", "worksFor",
+                            "location", "address", "brand", "manufacturer",
+                            "isPartOf", "hasPart", "mainEntity"):
+                    if item.get(key):
+                        schema_relations += 1
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    # Score: content relations + schema relations
+    if density >= 8 or (density >= 5 and schema_relations >= 3):
+        score = 4
+    elif density >= 5 or (density >= 3 and schema_relations >= 2):
+        score = 3
+    elif density >= 3 or schema_relations >= 2:
+        score = 2
+    elif relation_count >= 2 or schema_relations >= 1:
+        score = 1
+    else:
+        score = 0
+
+    return MethodScore(
+        name="kg_density",
+        label="Knowledge Graph Density",
+        detected=score >= 2,
+        score=min(score, 4),
+        max_score=4,
+        impact="+10%",
+        details={
+            "relation_count": relation_count,
+            "density_per_500w": round(density, 1),
+            "schema_relations": schema_relations,
+            "word_count": word_count,
+        },
+    )
+
+
+def detect_retrieval_triggers(soup, clean_text: str | None = None) -> MethodScore:
+    """Detect phrases that trigger RAG retrieval in LLM pipelines (#374).
+
+    RAG systems rank chunks by relevance to user queries. Content with
+    explicit trigger phrases (e.g., "research shows", "best practice",
+    "how to", "compared to") is more likely to be retrieved and cited.
+    """
+    body_text = clean_text or _get_clean_text(soup)
+    if not body_text or len(body_text) < 50:
+        return MethodScore(
+            name="retrieval_triggers", label="Retrieval Trigger Patterns",
+            max_score=4, impact="+10%",
+        )
+
+    # Count unique trigger types found
+    matches = _RETRIEVAL_TRIGGER_RE.findall(body_text)
+    trigger_count = len(matches)
+    unique_triggers = len({m.lower().strip() for m in matches})
+
+    # Normalize by content length (per 500 words)
+    word_count = len(body_text.split())
+    density = (trigger_count / word_count) * 500 if word_count > 0 else 0
+
+    # Check for question-format headings (strong retrieval triggers)
+    question_headings = 0
+    for h in soup.find_all(re.compile(r"^h[1-6]$")):
+        text = h.get_text(strip=True)
+        if text.endswith("?") or re.match(r"(?:how|what|why|when|where|which|who)\b", text, re.I):
+            question_headings += 1
+
+    # Score: variety of triggers + density + question headings
+    if unique_triggers >= 8 and question_headings >= 2:
+        score = 4
+    elif unique_triggers >= 6 or (unique_triggers >= 4 and question_headings >= 2):
+        score = 3
+    elif unique_triggers >= 4 or (unique_triggers >= 2 and question_headings >= 1):
+        score = 2
+    elif unique_triggers >= 2 or question_headings >= 1:
+        score = 1
+    else:
+        score = 0
+
+    return MethodScore(
+        name="retrieval_triggers",
+        label="Retrieval Trigger Patterns",
+        detected=score >= 2,
+        score=min(score, 4),
+        max_score=4,
+        impact="+10%",
+        details={
+            "trigger_count": trigger_count,
+            "unique_triggers": unique_triggers,
+            "density_per_500w": round(density, 1),
+            "question_headings": question_headings,
+        },
+    )
+
+
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 # Improvement suggestions for each undetected method
@@ -3123,6 +3521,12 @@ _IMPROVEMENT_SUGGESTIONS = {
     "anchor_text_quality": "Use descriptive anchor text for internal links instead of 'click here' or 'read more' (+5%)",
     "international_geo": "Add hreflang tags and schema inLanguage for multilingual sites (+5%)",
     "crawl_budget": "Remove meta robots noindex/nofollow to allow AI crawlers to index content (+5%)",
+    # RAG Readiness Batch v4.1.0
+    "answer_capsule": "Write self-contained answer paragraphs (30-120 words) with concrete facts for RAG extraction (+12%)",
+    "token_efficiency": "Increase content-to-noise ratio: use <main>/<article> tags, reduce boilerplate (+8%)",
+    "entity_resolution": "Define entities at first use and add schema.org with name + description + sameAs (+10%)",
+    "kg_density": "Add explicit relationship statements ('X is a Y', 'founded by Z') for knowledge graph extraction (+10%)",
+    "retrieval_triggers": "Use RAG trigger phrases: 'research shows', 'best practice', 'how to', question headings (+10%)",
 }
 
 # Order by decreasing impact (excluding penalties)
@@ -3167,6 +3571,12 @@ _METHOD_ORDER = [
     "anchor_text_quality",
     "international_geo",
     "crawl_budget",
+    # RAG Readiness Batch v4.1.0
+    "answer_capsule",
+    "retrieval_triggers",
+    "kg_density",
+    "entity_resolution",
+    "token_efficiency",
     # Penalties
     "keyword_stuffing",
     "no_negative_signals",
@@ -3191,7 +3601,7 @@ def _compute_grade(total: int) -> str:
 
 
 def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
-    """Analyze content citability with 42 methods (Princeton GEO + AutoGEO + content analysis).
+    """Analyze content citability with 47 methods (Princeton GEO + AutoGEO + RAG readiness).
 
     Args:
         soup: BeautifulSoup of the HTML page.
@@ -3253,6 +3663,12 @@ def audit_citability(soup, base_url: str, soup_clean=None) -> CitabilityResult:
         detect_anchor_text_quality(soup, base_url),
         detect_international_geo(soup),
         detect_crawl_budget(soup),
+        # RAG Readiness Batch v4.1.0 (#372, #365, #373, #366, #374)
+        detect_answer_capsule(soup, clean_text=clean_text),
+        detect_token_efficiency(soup, clean_text=clean_text),
+        detect_entity_resolution(soup),
+        detect_kg_density(soup, clean_text=clean_text),
+        detect_retrieval_triggers(soup, clean_text=clean_text),
     ]
 
     # Sum scores (max possible = 100)

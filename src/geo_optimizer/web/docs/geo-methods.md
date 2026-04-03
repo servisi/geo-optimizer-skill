@@ -1,8 +1,8 @@
-# The 42 GEO Methods
+# The 47 GEO Methods
 
 Research-backed content optimization techniques for AI citation visibility.
 
-> **Methods 1–9 from Princeton KDD 2024. Methods 10–11 from AutoGEO ICLR 2026 & Stanford 2025. Methods 12–42 from SE Ranking, OtterlyAI, Growth Marshal, and LLM-perspective analysis.
+> **Methods 1–9 from Princeton KDD 2024. Methods 10–11 from AutoGEO ICLR 2026 & Stanford 2025. Methods 12–42 from SE Ranking, OtterlyAI, Growth Marshal, and LLM-perspective analysis. Methods 43–47: RAG Readiness checks (v4.1.0).
 
 ---
 
@@ -281,6 +281,42 @@ Focus on the two highest-ROI methods first.
 | Keyword Stuffing | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ⭐⭐⭐ High impact · ⭐⭐ Moderate · ⭐ Low · ❌ Avoid
+
+---
+
+## Methods 43–47: RAG Readiness (v4.1.0)
+
+These methods evaluate how well content is optimized for **Retrieval-Augmented Generation** pipelines — the technology behind AI search engines like ChatGPT, Perplexity, and Claude.
+
+### 43. Answer Capsule Detection (+12%)
+
+Self-contained paragraphs (30–120 words) with concrete facts that RAG systems can extract as standalone answers.
+
+**How to implement:** Write paragraphs that pass the "capsule test" — can this paragraph answer a user question on its own, without surrounding context?
+
+### 44. Token Efficiency (+8%)
+
+Measures the ratio of useful content to noise (navigation, boilerplate, sidebars) from an LLM context window perspective.
+
+**How to implement:** Use `<main>` or `<article>` tags to wrap content. Minimize navigation and footer text. Aim for > 60% content-to-total ratio.
+
+### 45. Entity Resolution Friendliness (+10%)
+
+Evaluates how easily LLMs can disambiguate the entities on your page — via schema.org typing, `sameAs` links, and first-use definitions.
+
+**How to implement:** Add JSON-LD with `@type`, `name`, `description`, and `sameAs` URLs. Define your main entity in the first paragraph: "X is a..."
+
+### 46. Knowledge Graph Density (+10%)
+
+Counts explicit relationship statements ("X is a Y", "founded by Z", "located in W") that help LLMs build structured knowledge from your content.
+
+**How to implement:** Use explicit relationship verbs: "is a", "founded by", "part of", "located in". Add schema.org properties: `author`, `publisher`, `memberOf`, `isPartOf`.
+
+### 47. Retrieval Trigger Patterns (+10%)
+
+Detects phrases that improve RAG retrieval ranking: "research shows", "best practice", "how to", question-format headings.
+
+**How to implement:** Start sections with question headings ("What is X?", "How to Y?"). Use evidence markers: "according to", "studies show", "for example". Include comparison triggers: "compared to", "vs", "unlike".
 
 ---
 

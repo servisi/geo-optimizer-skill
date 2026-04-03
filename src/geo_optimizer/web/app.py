@@ -1455,7 +1455,7 @@ async def llms_txt():
     llms = (
         "# GEO Optimizer\n\n"
         "> Open-source toolkit to audit, fix, and optimize any website for AI search engine visibility.\n"
-        "> Scores 0-100 across 8 categories and 42 research-backed methods.\n"
+        "> Scores 0-100 across 8 categories and 47 research-backed methods.\n"
         "> Based on Princeton KDD 2024 and AutoGEO ICLR 2026 peer-reviewed research.\n"
         "> MIT License. Free for commercial and personal use.\n\n"
         "## What GEO Optimizer Does\n\n"
@@ -1498,7 +1498,7 @@ async def llms_txt():
         "- [Scoring Rubric](https://auriti-labs.github.io/geo-optimizer-skill/scoring-rubric/): All 8 categories explained\n"
         "- [MCP Server](https://auriti-labs.github.io/geo-optimizer-skill/mcp-server/): AI agent integration\n"
         "- [CI/CD](https://auriti-labs.github.io/geo-optimizer-skill/ci-cd/): GitHub Actions integration\n"
-        "- [GEO Methods](https://auriti-labs.github.io/geo-optimizer-skill/geo-methods/): 42 research-backed methods\n\n"
+        "- [GEO Methods](https://auriti-labs.github.io/geo-optimizer-skill/geo-methods/): 47 research-backed methods\n\n"
         "## Reference\n\n"
         "- [AI Bots Reference](https://auriti-labs.github.io/geo-optimizer-skill/ai-bots-reference/): 27 AI crawlers documented\n"
         "- [Troubleshooting](https://auriti-labs.github.io/geo-optimizer-skill/troubleshooting/): Common issues\n"
@@ -1532,7 +1532,7 @@ async def ai_summary():
     """Site summary for AI systems."""
     return {
         "name": "GEO Optimizer",
-        "description": "Open-source toolkit to audit and optimize websites for AI search engine visibility. Scores 0-100 based on 42 research-backed methods.",
+        "description": "Open-source toolkit to audit and optimize websites for AI search engine visibility. Scores 0-100 based on 47 research-backed methods.",
         "url": "https://geo-optimizer-web.onrender.com",
         "lastModified": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
     }
@@ -1545,7 +1545,7 @@ async def ai_faq():
         "faqs": [
             {
                 "question": "What is GEO Optimizer?",
-                "answer": "An open-source toolkit that audits websites for AI search visibility, scoring 0-100 based on 42 research-backed methods.",
+                "answer": "An open-source toolkit that audits websites for AI search visibility, scoring 0-100 based on 47 research-backed methods.",
             },
             {
                 "question": "How is the score calculated?",

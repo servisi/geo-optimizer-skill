@@ -58,7 +58,7 @@ src/geo_optimizer/
 │   ├── audit_robots.py      # robots.txt analysis (fetch_url)
 │   ├── audit_llms.py        # llms.txt analysis (fetch_url)
 │   ├── audit_ai_discovery.py # AI discovery endpoints (fetch_url)
-│   ├── citability.py        # 42 citability methods (3200 lines)
+│   ├── citability.py        # 47 citability methods (~3500 lines)
 │   ├── scoring.py           # Engine scoring (weights from config.py)
 │   ├── injection_detector.py # Prompt Injection Detection (8 categories)
 │   ├── fixer.py             # Fix generation (robots, llms, schema, meta)

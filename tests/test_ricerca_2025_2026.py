@@ -323,15 +323,15 @@ class TestPesiCitability:
         html = "<html><body><p>Test content.</p></body></html>"
         result = audit_citability(_soup(html), "https://example.com")
         total_max = sum(m.max_score for m in result.methods)
-        assert total_max == 189, (
-            f"Max totale citability: {total_max}, atteso 189 (100 base + 31 batch2 + 18 batch3+4 + 27 batchA + 13 batchB)"
+        assert total_max == 208, (
+            f"Max totale citability: {total_max}, atteso 208 (189 precedenti + 19 RAG batch)"
         )
 
     def test_metodi_sono_25(self):
         """Devono esserci 30 metodi (18 base + 7 Batch 2 + 5 Batch 3+4)."""
         html = "<html><body><p>Test.</p></body></html>"
         result = audit_citability(_soup(html), "https://example.com")
-        assert len(result.methods) == 42
+        assert len(result.methods) == 47
 
     def test_nomi_nuovi_metodi_presenti(self):
         """I nuovi metodi answer_first e passage_density devono essere presenti."""

@@ -30,7 +30,7 @@ Perplexity: "According to [Competitor.com], the formula is..."
              ↑ They appear. You don't.
 ```
 
-GEO Optimizer audits your site against **42 research-backed methods** ([Princeton KDD 2024](https://arxiv.org/abs/2311.09735), [AutoGEO ICLR 2026](https://arxiv.org/abs/2510.11438)) and generates the fixes.
+GEO Optimizer audits your site against **47 research-backed methods** ([Princeton KDD 2024](https://arxiv.org/abs/2311.09735), [AutoGEO ICLR 2026](https://arxiv.org/abs/2510.11438)) and generates the fixes.
 
 ---
 
@@ -82,8 +82,8 @@ geo schema --type faq --url https://yoursite.com
 | **Prompt Injection Detection** | 8 manipulation patterns: hidden text, invisible Unicode, LLM instructions, HTML comment injection, monochrome text, micro-font, data-attr injection, aria-hidden abuse |
 | **Trust Stack Score** | 5-layer trust aggregation (Technical, Identity, Social, Academic, Consistency) — composite grade A-F |
 
-Plus a separate **Citability Score** (0-100) measuring content quality across 42 methods:
-Quotation +41% · Statistics +33% · Fluency +29% · Cite Sources +27% · and 38 more.
+Plus a separate **Citability Score** (0-100) measuring content quality across 47 methods:
+Quotation +41% · Statistics +33% · Fluency +29% · Cite Sources +27% · and 43 more.
 
 ---
 
@@ -132,7 +132,7 @@ Then ask: *"audit my site and fix what's missing"*
 | `geo_audit` | Full audit with score + recommendations |
 | `geo_fix` | Generate fix files |
 | `geo_llms_generate` | Generate llms.txt |
-| `geo_citability` | Content citability analysis (42 methods) |
+| `geo_citability` | Content citability analysis (47 methods) |
 | `geo_schema_validate` | Validate JSON-LD |
 | `geo_compare` | Compare multiple sites |
 | `geo_ai_discovery` | Check AI discovery endpoints |

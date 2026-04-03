@@ -30,7 +30,7 @@
 | **Prompt Injection Detection** | 8 manipulation patterns: hidden text, invisible Unicode, LLM instructions, HTML comment injection |
 | **Trust Stack Score** | 5-layer trust aggregation (Technical, Identity, Social, Academic, Consistency) — grade A-F |
 
-Plus a separate **Citability Score** (0-100) measuring content quality across 42 methods.
+Plus a separate **Citability Score** (0-100) measuring content quality across 47 methods.
 
 ---
 
