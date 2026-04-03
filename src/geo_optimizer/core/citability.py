@@ -3130,8 +3130,10 @@ def detect_answer_capsule(soup, clean_text: str | None = None) -> MethodScore:
     paragraphs = soup.find_all("p")
     if not paragraphs:
         return MethodScore(
-            name="answer_capsule", label="Answer Capsule Detection",
-            max_score=4, impact="+12%",
+            name="answer_capsule",
+            label="Answer Capsule Detection",
+            max_score=4,
+            impact="+12%",
         )
 
     capsule_count = 0
@@ -3157,8 +3159,16 @@ def detect_answer_capsule(soup, clean_text: str | None = None) -> MethodScore:
 
         # Must start with a direct statement (not a question or weak opener)
         first_word = words[0].lower().rstrip(",:")
-        if first_word in ("however", "but", "although", "moreover", "furthermore",
-                          "additionally", "nevertheless", "meanwhile"):
+        if first_word in (
+            "however",
+            "but",
+            "although",
+            "moreover",
+            "furthermore",
+            "additionally",
+            "nevertheless",
+            "meanwhile",
+        ):
             continue
 
         capsule_count += 1
@@ -3209,8 +3219,12 @@ def detect_token_efficiency(soup, clean_text: str | None = None) -> MethodScore:
 
     if total_words < 20:
         return MethodScore(
-            name="token_efficiency", label="Token Efficiency",
-            detected=False, score=1, max_score=3, impact="+8%",
+            name="token_efficiency",
+            label="Token Efficiency",
+            detected=False,
+            score=1,
+            max_score=3,
+            impact="+8%",
             details={"total_words": total_words, "ratio": 0, "method": "insufficient_text"},
         )
 
@@ -3319,7 +3333,8 @@ def detect_entity_resolution(soup) -> MethodScore:
             if re.search(
                 r"\b(?:is|are|refers?\s+to|è|sono|significa)\s+"
                 r"(?:a|an|the|un|una|il|la|lo|one\s+of|defined\s+as)",
-                text, re.I,
+                text,
+                re.I,
             ):
                 has_definition = True
                 score += 1
@@ -3350,8 +3365,10 @@ def detect_kg_density(soup, clean_text: str | None = None) -> MethodScore:
     body_text = clean_text or _get_clean_text(soup)
     if not body_text or len(body_text) < 50:
         return MethodScore(
-            name="kg_density", label="Knowledge Graph Density",
-            max_score=4, impact="+10%",
+            name="kg_density",
+            label="Knowledge Graph Density",
+            max_score=4,
+            impact="+10%",
         )
 
     # Count relationship pattern matches
@@ -3376,10 +3393,22 @@ def detect_kg_density(soup, clean_text: str | None = None) -> MethodScore:
                     items.extend(graph)
                     continue
                 # Count relationship properties
-                for key in ("author", "creator", "publisher", "founder",
-                            "parentOrganization", "memberOf", "worksFor",
-                            "location", "address", "brand", "manufacturer",
-                            "isPartOf", "hasPart", "mainEntity"):
+                for key in (
+                    "author",
+                    "creator",
+                    "publisher",
+                    "founder",
+                    "parentOrganization",
+                    "memberOf",
+                    "worksFor",
+                    "location",
+                    "address",
+                    "brand",
+                    "manufacturer",
+                    "isPartOf",
+                    "hasPart",
+                    "mainEntity",
+                ):
                     if item.get(key):
                         schema_relations += 1
         except (json.JSONDecodeError, TypeError):
@@ -3423,8 +3452,10 @@ def detect_retrieval_triggers(soup, clean_text: str | None = None) -> MethodScor
     body_text = clean_text or _get_clean_text(soup)
     if not body_text or len(body_text) < 50:
         return MethodScore(
-            name="retrieval_triggers", label="Retrieval Trigger Patterns",
-            max_score=4, impact="+10%",
+            name="retrieval_triggers",
+            label="Retrieval Trigger Patterns",
+            max_score=4,
+            impact="+10%",
         )
 
     # Count unique trigger types found
