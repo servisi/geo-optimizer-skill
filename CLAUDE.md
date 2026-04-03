@@ -54,6 +54,36 @@ i18n/         → Traduzioni it/en (parziale)
 
 **Bande:** 86-100 excellent · 68-85 good · 36-67 foundation · 0-35 critical
 
+## Miglioramenti pianificati (da leak Claude Code, aprile 2026)
+
+### 1. Trasparenza AI come vantaggio competitivo (PRIORITÀ ALTA)
+Il leak ha rivelato la modalità "Undercover" di Anthropic (contributi stealth a repo open source).
+GEO Optimizer è open source MIT — posizionarsi come progetto trasparente:
+- Documentare chiaramente nel README se/quando si usa AI per contribuire al codice
+- Aggiungere sezione "AI Transparency" nella Wiki
+- Differenziarsi dai competitor che nascondono l'uso di AI
+
+### 2. Telemetria strutturata per la web demo (PRIORITÀ MEDIA)
+Schema con prefisso `geo_` per tracciare utilizzo:
+- `geo_audit_run` (URL, score, durata)
+- `geo_score_improved` (delta tra audit successivi)
+- `geo_suggestion_applied` (quale fix è stato applicato)
+- `geo_api_error` (errori nelle chiamate)
+- `geo_badge_generated` (badge SVG serviti)
+
+### 3. Source map hygiene per Docker/PyPI (PRIORITÀ BASSA)
+Verificare che i workflow di publish non includano file di sviluppo:
+- Controllare `MANIFEST.in` e `pyproject.toml` `[tool.setuptools.packages.find]`
+- Verificare dimensione pacchetto PyPI (red flag se > 5 MB per un tool CLI)
+- Aggiungere check nel CI: nessun `*.pyc`, `__pycache__`, `.env` nel pacchetto
+
+### 4. Retry con backoff per fetch HTTP (PRIORITÀ MEDIA)
+Il core usa `fetch_url()` con anti-SSRF. Aggiungere retry esponenziale per:
+- Timeout temporanei dei siti auditati
+- Rate limiting da Google PageSpeed API
+- DNS resolution failures transitori
+Decoratore `@with_retry(max=3, backoff=2)` in `utils/http.py`.
+
 ## Vincoli inderogabili
 
 1. **core/ non stampa MAI** — ritorna dataclasses da `models/results.py`
