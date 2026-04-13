@@ -10,6 +10,7 @@ import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from click.testing import CliRunner
@@ -40,6 +41,24 @@ from geo_optimizer.models.results import (
 def runner():
     """Create a Click CliRunner for invoking CLI commands."""
     return CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _mock_cli_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test CLI offline."""
+
+    def _fake_validate(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host in {"example.com", "minimal.example.com", "perfect.example.com", "broken.example.com"}:
+            return True, None
+        if host in {"localhost", "192.168.1.1", "10.0.0.1"}:
+            return False, "blocked for test"
+        return True, None
+
+    monkeypatch.setattr("geo_optimizer.cli.audit_cmd.validate_public_url", _fake_validate)
+    monkeypatch.setattr("geo_optimizer.cli.llms_cmd.validate_public_url", _fake_validate)
+    monkeypatch.setattr("geo_optimizer.cli.history_cmd.validate_public_url", _fake_validate)
+    monkeypatch.setattr("geo_optimizer.cli.track_cmd.validate_public_url", _fake_validate)
 
 
 @pytest.fixture

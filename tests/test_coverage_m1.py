@@ -19,13 +19,12 @@ Convenzioni:
 """
 
 import asyncio
-import json
 import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from click.testing import CliRunner
@@ -40,6 +39,22 @@ from geo_optimizer.models.results import (
 )
 
 # ─── Fixture condivisa ────────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def _mock_offline_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test di coverage offline."""
+
+    def _fake_resolve(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host.endswith("example.com"):
+            return True, None, ["93.184.216.34"]
+        if host in {"localhost", "169.254.169.254", "192.168.0.1", "10.0.0.1"}:
+            return False, "blocked for test", []
+        return True, None, ["93.184.216.34"]
+
+    monkeypatch.setattr("geo_optimizer.utils.validators.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.utils.http_async.resolve_and_validate_url", _fake_resolve, raising=False)
 
 
 def _crea_audit_result_completo() -> AuditResult:
@@ -697,7 +712,6 @@ class TestRichFormatter:
     def test_meta_score_og_richiede_entrambi(self):
         """_meta_score() assegna punti OG solo se entrambi og_title e og_desc presenti."""
         from geo_optimizer.cli.rich_formatter import _meta_score
-        from geo_optimizer.models.config import SCORING
 
         # Solo og_title, senza og_description: nessun punto OG
         r = AuditResult(url="https://example.com")
@@ -776,7 +790,7 @@ class TestGithubFormatter:
         lines = output.split("\n")
 
         # Deve esserci almeno una riga warning per un check fallito
-        warning_lines = [l for l in lines if l.startswith("::warning::")]
+        warning_lines = [line for line in lines if line.startswith("::warning::")]
         assert len(warning_lines) >= 1
 
     def test_format_audit_github_raccomandazioni_come_warning(self):
@@ -1048,7 +1062,6 @@ class TestHttpAsync:
     )
     def test_fetch_urls_async_parallelo(self):
         """fetch_urls_async() ritorna un dict con tutti gli URL come chiavi."""
-        import httpx
 
         from geo_optimizer.utils.http_async import fetch_urls_async
 
@@ -1164,16 +1177,16 @@ class TestI18n:
         """set_lang() cambia la lingua corrente senza errori."""
         import gettext
 
-        from geo_optimizer.i18n import set_lang
         import geo_optimizer.i18n as i18n_mod
+        from geo_optimizer.i18n import set_lang
 
         set_lang("en")
         assert isinstance(i18n_mod._current_translation, gettext.NullTranslations)
 
     def test_set_lang_non_supportata_usa_italiano(self):
         """set_lang() con lingua non supportata ricade sull'italiano."""
-        from geo_optimizer.i18n import set_lang
         import geo_optimizer.i18n as i18n_mod
+        from geo_optimizer.i18n import set_lang
 
         set_lang("zh")  # Cinese non supportato
         # Deve aver impostato una traduzione senza errori
@@ -1231,7 +1244,7 @@ class TestWebCli:
         mock_uvicorn = MagicMock()
 
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            result = runner.invoke(main, ["--host", "127.0.0.1", "--port", "9999"])
+            runner.invoke(main, ["--host", "127.0.0.1", "--port", "9999"])
 
         # uvicorn.run deve essere stato chiamato
         mock_uvicorn.run.assert_called_once()
@@ -1248,7 +1261,7 @@ class TestWebCli:
         mock_uvicorn = MagicMock()
 
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            result = runner.invoke(main, [])
+            runner.invoke(main, [])
 
         mock_uvicorn.run.assert_called_once()
         call_kwargs = mock_uvicorn.run.call_args
@@ -1277,7 +1290,7 @@ class TestWebCli:
         mock_uvicorn = MagicMock()
 
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            result = runner.invoke(main, ["--reload"])
+            runner.invoke(main, ["--reload"])
 
         call_kwargs = mock_uvicorn.run.call_args
         assert call_kwargs[1].get("reload") is True or True in call_kwargs[0]
@@ -1674,7 +1687,7 @@ class TestCheckRegistry:
 
     def test_run_all_check_che_crasha_ritorna_score_zero(self):
         """run_all() gestisce check che lanciano eccezioni: score 0, passed False."""
-        from geo_optimizer.core.registry import AuditCheck, CheckRegistry, CheckResult
+        from geo_optimizer.core.registry import CheckRegistry, CheckResult
 
         class CheckCheCrepa:
             name = "check_crepa"

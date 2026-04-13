@@ -13,13 +13,32 @@ Copre:
 """
 
 from unittest.mock import MagicMock, Mock, patch
+from urllib.parse import urlparse
 
+import pytest
 from bs4 import BeautifulSoup
 
 from geo_optimizer.core.audit import audit_llms_txt, audit_robots_txt, audit_schema
 from geo_optimizer.core.llms_generator import fetch_page_title, fetch_sitemap
 from geo_optimizer.core.schema_injector import extract_faq_from_html
 from geo_optimizer.utils.http import fetch_url
+
+
+@pytest.fixture(autouse=True)
+def _mock_v2_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test residuali offline."""
+
+    def _fake_resolve(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host.endswith("example.com"):
+            return True, None, ["93.184.216.34"]
+        if host in {"localhost", "169.254.169.254", "192.168.0.1", "10.0.0.1"}:
+            return False, "blocked for test", []
+        return True, None, ["93.184.216.34"]
+
+    monkeypatch.setattr("geo_optimizer.utils.validators.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.core.llms_generator.resolve_and_validate_url", _fake_resolve)
+
 
 # ============================================================================
 # #12 — audit_robots_txt / audit_llms_txt ignorano non-200

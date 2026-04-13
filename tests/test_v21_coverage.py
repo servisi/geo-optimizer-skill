@@ -17,7 +17,9 @@ Copre:
 
 import socket
 from unittest.mock import MagicMock, Mock, patch
+from urllib.parse import urlparse
 
+import pytest
 from click.testing import CliRunner
 
 from geo_optimizer.cli.formatters import format_audit_text
@@ -39,6 +41,28 @@ from geo_optimizer.models.results import (
     SchemaResult,
 )
 from geo_optimizer.utils.validators import validate_public_url, validate_safe_path
+
+
+@pytest.fixture(autouse=True)
+def _mock_v21_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test v2.1 offline."""
+
+    def _fake_resolve(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host.endswith("example.com"):
+            return True, None, ["93.184.216.34"]
+        if host in {"localhost", "169.254.169.254", "192.168.0.1", "10.0.0.1"}:
+            return False, "blocked for test", []
+        return True, None, ["93.184.216.34"]
+
+    def _fake_validate(url):
+        ok, reason, _ips = _fake_resolve(url)
+        return ok, reason
+
+    monkeypatch.setattr("geo_optimizer.utils.validators.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.core.llms_generator.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.core.llms_generator.validate_public_url", _fake_validate)
+
 
 # ============================================================================
 # Fixture comune per AuditResult

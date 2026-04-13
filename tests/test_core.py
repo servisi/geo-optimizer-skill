@@ -19,7 +19,9 @@ Author: Juan Camilo Auriti
 import os
 import tempfile
 from unittest.mock import MagicMock, Mock, patch
+from urllib.parse import urlparse
 
+import pytest
 import requests
 from bs4 import BeautifulSoup
 
@@ -62,12 +64,12 @@ from geo_optimizer.core.schema_validator import (
 # ─── Models imports ──────────────────────────────────────────────────────────
 from geo_optimizer.models.config import (
     AI_BOTS,
+    ARTICLE_TYPES,
     CATEGORY_PATTERNS,
     CITATION_BOTS,
     HEADERS,
     OPTIONAL_CATEGORIES,
     ROBOTS_PARTIAL_SCORE,
-    ARTICLE_TYPES,
     SCHEMA_ORG_REQUIRED,
     SCHEMA_TEMPLATES,
     SCORE_BANDS,
@@ -95,6 +97,28 @@ from geo_optimizer.utils.robots_parser import (
     classify_bot,
     parse_robots_txt,
 )
+
+
+@pytest.fixture(autouse=True)
+def _mock_core_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test core offline."""
+
+    def _fake_resolve(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host.endswith("example.com"):
+            return True, None, ["93.184.216.34"]
+        if host in {"localhost", "169.254.169.254", "192.168.0.1", "10.0.0.1"}:
+            return False, "blocked for test", []
+        return True, None, ["93.184.216.34"]
+
+    def _fake_validate(url):
+        ok, reason, _ips = _fake_resolve(url)
+        return ok, reason
+
+    monkeypatch.setattr("geo_optimizer.utils.validators.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.core.llms_generator.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.core.llms_generator.validate_public_url", _fake_validate)
+
 
 # ============================================================================
 # 1. ROBOTS PARSER (geo_optimizer.utils.robots_parser)
@@ -1080,11 +1104,11 @@ class TestAuditSchema:
     def test_multiple_invalid_json_blocks_counted(self):
         """Più blocchi JSON-LD invalidi devono incrementare il contatore per ognuno (#399)."""
         html = (
-            '<html><head>'
+            "<html><head>"
             '<script type="application/ld+json">{broken one}</script>'
             '<script type="application/ld+json">{broken two}</script>'
             '<script type="application/ld+json">{"@type":"WebSite","name":"T"}</script>'
-            '</head><body></body></html>'
+            "</head><body></body></html>"
         )
         soup = BeautifulSoup(html, "html.parser")
         result = audit_schema(soup, "https://example.com")
@@ -1439,9 +1463,17 @@ class TestBuildRecommendations:
             RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=True, has_sections=True, sections_count=3, has_links=True, links_count=5),
             SchemaResult(has_website=True, has_faq=True, has_organization=True),
-            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
-            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
-                          has_heading_hierarchy=True, has_front_loading=True),
+            MetaResult(
+                has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True
+            ),
+            ContentResult(
+                has_numbers=True,
+                has_links=True,
+                has_h1=True,
+                word_count=500,
+                has_heading_hierarchy=True,
+                has_front_loading=True,
+            ),
         )
         assert len(recs) == 0
 
@@ -1451,9 +1483,17 @@ class TestBuildRecommendations:
             RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=False),
             SchemaResult(has_website=True, has_faq=True, has_organization=True),
-            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
-            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
-                          has_heading_hierarchy=True, has_front_loading=True),
+            MetaResult(
+                has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True
+            ),
+            ContentResult(
+                has_numbers=True,
+                has_links=True,
+                has_h1=True,
+                word_count=500,
+                has_heading_hierarchy=True,
+                has_front_loading=True,
+            ),
         )
         assert len(recs) == 1
         assert "llms.txt" in recs[0]
@@ -1465,9 +1505,17 @@ class TestBuildRecommendations:
             RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=True, has_sections=True, sections_count=3, has_links=True, links_count=5),
             SchemaResult(has_website=True, has_faq=True, has_organization=True, json_parse_errors=2),
-            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
-            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
-                          has_heading_hierarchy=True, has_front_loading=True),
+            MetaResult(
+                has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True
+            ),
+            ContentResult(
+                has_numbers=True,
+                has_links=True,
+                has_h1=True,
+                word_count=500,
+                has_heading_hierarchy=True,
+                has_front_loading=True,
+            ),
         )
         assert len(recs) == 1
         assert "JSON-LD" in recs[0]
@@ -1481,9 +1529,17 @@ class TestBuildRecommendations:
             RobotsResult(found=True, citation_bots_ok=True),
             LlmsTxtResult(found=True, has_sections=True, sections_count=3, has_links=True, links_count=5),
             SchemaResult(has_website=True, has_faq=True, has_organization=True, json_parse_errors=0),
-            MetaResult(has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True),
-            ContentResult(has_numbers=True, has_links=True, has_h1=True, word_count=500,
-                          has_heading_hierarchy=True, has_front_loading=True),
+            MetaResult(
+                has_title=True, has_description=True, has_canonical=True, has_og_title=True, has_og_description=True
+            ),
+            ContentResult(
+                has_numbers=True,
+                has_links=True,
+                has_h1=True,
+                word_count=500,
+                has_heading_hierarchy=True,
+                has_front_loading=True,
+            ),
         )
         assert not any("JSON-LD" in r and "parse" in r.lower() for r in recs)
 

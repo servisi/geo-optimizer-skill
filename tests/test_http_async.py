@@ -9,14 +9,36 @@ from __future__ import annotations
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 
 # Skip se httpx non disponibile
 pytest.importorskip("httpx", reason="httpx non installato (pip install httpx)")
 
-from geo_optimizer.utils.http_async import _MAX_REDIRECTS, fetch_url_async, fetch_urls_async
 from geo_optimizer.utils.http import MAX_RESPONSE_SIZE
+from geo_optimizer.utils.http_async import _MAX_REDIRECTS, fetch_url_async, fetch_urls_async
+
+
+@pytest.fixture(autouse=True)
+def _mock_async_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test async offline."""
+
+    def _fake_resolve(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host.endswith("example.com"):
+            return True, None, ["93.184.216.34"]
+        if host in {"localhost", "192.168.1.1", "10.0.0.1", "127.0.0.1"}:
+            return False, "blocked for test", []
+        return True, None, ["93.184.216.34"]
+
+    def _fake_validate(url):
+        ok, reason, _ips = _fake_resolve(url)
+        return ok, reason
+
+    monkeypatch.setattr("geo_optimizer.utils.validators.resolve_and_validate_url", _fake_resolve)
+    monkeypatch.setattr("geo_optimizer.utils.http_async.resolve_and_validate_url", _fake_resolve, raising=False)
+    monkeypatch.setattr("geo_optimizer.utils.validators.validate_public_url", _fake_validate)
 
 
 # ─── Helper: risposta httpx mock ─────────────────────────────────────────────
@@ -43,17 +65,19 @@ def test_fetch_url_async_happy_path_restituisce_risposta_e_none():
     mock_resp = _mock_response(200, b"<html>Ciao</html>")
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client = AsyncMock()
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock(return_value=None)
-                mock_client.get = AsyncMock(return_value=mock_resp)
-                mock_client._transport = MagicMock()  # impedisce la creazione di un nuovo client
-                mock_client_cls.return_value = mock_client
-                mock_client.aclose = AsyncMock()
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_resp)
+            mock_client._transport = MagicMock()  # impedisce la creazione di un nuovo client
+            mock_client_cls.return_value = mock_client
+            mock_client.aclose = AsyncMock()
 
-                resp, err = await fetch_url_async("https://example.com", client=mock_client)
+            resp, err = await fetch_url_async("https://example.com", client=mock_client)
 
         return resp, err
 
@@ -70,16 +94,18 @@ def test_fetch_url_async_happy_path_proprio_client_creato():
     mock_resp = _mock_response(200, b"<html>Ok</html>")
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(return_value=mock_resp)
-                mock_client_inst.aclose = AsyncMock()
-                # Attributo mancante: forza la creazione di un nuovo client
-                del mock_client_inst._transport
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(return_value=mock_resp)
+            mock_client_inst.aclose = AsyncMock()
+            # Attributo mancante: forza la creazione di un nuovo client
+            del mock_client_inst._transport
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -127,14 +153,16 @@ def test_fetch_url_async_redirect_verso_ip_privato_restituisce_errore():
             call_count += 1
             return result
 
-        with patch("geo_optimizer.utils.validators.validate_public_url", side_effect=_validate):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(return_value=redirect_resp)
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", side_effect=_validate),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(return_value=redirect_resp)
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -158,15 +186,17 @@ def test_fetch_url_async_troppi_redirect_restituisce_errore():
     )
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                # Restituisce sempre redirect — forza il superamento del limite
-                mock_client_inst.get = AsyncMock(return_value=redirect_resp)
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            # Restituisce sempre redirect — forza il superamento del limite
+            mock_client_inst.get = AsyncMock(return_value=redirect_resp)
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -187,14 +217,16 @@ def test_fetch_url_async_redirect_senza_location_restituisce_errore():
     redirect_resp = _mock_response(status_code=301, headers={})
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(return_value=redirect_resp)
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(return_value=redirect_resp)
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -214,14 +246,16 @@ def test_fetch_url_async_timeout_restituisce_errore_con_secondi():
     import httpx
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com", timeout=10)
+            resp, err = await fetch_url_async("https://example.com", timeout=10)
 
         return resp, err
 
@@ -241,14 +275,16 @@ def test_fetch_url_async_connect_error_restituisce_errore():
     import httpx
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -270,14 +306,16 @@ def test_fetch_url_async_risposta_troppo_grande_restituisce_errore():
     mock_resp = _mock_response(200, corpo_enorme)
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(return_value=mock_resp)
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(return_value=mock_resp)
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -302,14 +340,16 @@ def test_fetch_url_async_content_length_troppo_grande_restituisce_errore():
     )
 
     async def _run():
-        with patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(return_value=mock_resp)
-                mock_client_inst.aclose = AsyncMock()
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", return_value=(True, None)),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(return_value=mock_resp)
+            mock_client_inst.aclose = AsyncMock()
+            mock_client_cls.return_value = mock_client_inst
 
-                resp, err = await fetch_url_async("https://example.com")
+            resp, err = await fetch_url_async("https://example.com")
 
         return resp, err
 
@@ -340,17 +380,19 @@ def test_fetch_urls_async_mix_successo_e_fallimento():
                 return False, "Private IP"
             return True, None
 
-        with patch("geo_optimizer.utils.validators.validate_public_url", side_effect=_validate):
-            with patch("httpx.AsyncClient") as mock_client_cls:
-                mock_client_inst = AsyncMock()
-                mock_client_inst.get = AsyncMock(return_value=mock_resp_ok)
-                mock_client_inst.aclose = AsyncMock()
-                # Supporta context manager
-                mock_client_inst.__aenter__ = AsyncMock(return_value=mock_client_inst)
-                mock_client_inst.__aexit__ = AsyncMock(return_value=None)
-                mock_client_cls.return_value = mock_client_inst
+        with (
+            patch("geo_optimizer.utils.validators.validate_public_url", side_effect=_validate),
+            patch("httpx.AsyncClient") as mock_client_cls,
+        ):
+            mock_client_inst = AsyncMock()
+            mock_client_inst.get = AsyncMock(return_value=mock_resp_ok)
+            mock_client_inst.aclose = AsyncMock()
+            # Supporta context manager
+            mock_client_inst.__aenter__ = AsyncMock(return_value=mock_client_inst)
+            mock_client_inst.__aexit__ = AsyncMock(return_value=None)
+            mock_client_cls.return_value = mock_client_inst
 
-                results = await fetch_urls_async([url_ok, url_privato])
+            results = await fetch_urls_async([url_ok, url_privato])
 
         return results
 

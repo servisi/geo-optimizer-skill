@@ -7,6 +7,7 @@ Richiede: pip install geo-optimizer-skill[mcp]
 
 import json
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 
@@ -38,6 +39,21 @@ from geo_optimizer.models.results import (
 # ============================================================================
 # FIXTURES
 # ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def _mock_mcp_url_validation(monkeypatch):
+    """Rende deterministica la validazione URL nei test MCP offline."""
+
+    def _fake_validate(url):
+        host = (urlparse(url).hostname or "").lower()
+        if host.endswith("example.com"):
+            return True, None
+        if host in {"localhost", "169.254.169.254", "192.168.0.1", "10.0.0.1"}:
+            return False, "blocked for test"
+        return True, None
+
+    monkeypatch.setattr("geo_optimizer.utils.validators.validate_public_url", _fake_validate)
 
 
 def _mock_audit_result():

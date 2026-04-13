@@ -112,6 +112,17 @@ def geo_fix(url: str, only: str = "") -> str:
         only: Filter categories (comma-separated): robots,llms,schema,meta.
               Empty = all categories.
     """
+    # Parse category filter with validation (fix #186)
+    only_set = None
+    if only:
+        only_set = {c.strip().lower() for c in only.split(",")}
+        valid = {"robots", "llms", "schema", "meta", "ai_discovery", "content"}
+        invalid = only_set - valid
+        if invalid:
+            return json.dumps(
+                {"error": f"Invalid categories: {', '.join(sorted(invalid))}. Valid: {', '.join(sorted(valid))}"}
+            )
+
     from geo_optimizer.utils.validators import validate_public_url
 
     url = _normalize_url(url)
@@ -119,17 +130,6 @@ def geo_fix(url: str, only: str = "") -> str:
     safe, reason = validate_public_url(url)
     if not safe:
         return json.dumps({"error": f"Unsafe URL: {reason}"})
-
-    # Parse category filter with validation (fix #186)
-    only_set = None
-    if only:
-        only_set = {c.strip().lower() for c in only.split(",")}
-        valid = {"robots", "llms", "schema", "meta", "ai_discovery"}
-        invalid = only_set - valid
-        if invalid:
-            return json.dumps(
-                {"error": f"Invalid categories: {', '.join(sorted(invalid))}. Valid: {', '.join(sorted(valid))}"}
-            )
 
     try:
         from geo_optimizer.core.fixer import run_all_fixes
