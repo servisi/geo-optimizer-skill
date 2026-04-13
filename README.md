@@ -47,6 +47,9 @@ geo audit --url https://yoursite.com
 # Audit a full sitemap and surface weakest pages first
 geo audit --sitemap https://yoursite.com/sitemap.xml --max-urls 25
 
+# Compare before/after versions of a page
+geo diff --before https://yoursite.com/page-old --after https://yoursite.com/page-new
+
 # Auto-generate all missing files (robots.txt, llms.txt, schema, meta)
 geo fix --url https://yoursite.com --apply
 

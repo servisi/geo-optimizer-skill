@@ -504,6 +504,46 @@ class BatchAuditResult:
     worst_pages: list[BatchAuditPageResult] = field(default_factory=list)
 
 
+# ─── Audit diff ──────────────────────────────────────────────────────────────
+
+
+@dataclass
+class CategoryDelta:
+    """Delta di punteggio per una singola categoria GEO tra due audit."""
+
+    category: str
+    label: str
+    before_score: int = 0
+    after_score: int = 0
+    delta: int = 0
+    max_score: int = 0
+
+
+@dataclass
+class AuditDiffResult:
+    """Confronto A/B tra due audit GEO della stessa o di due diverse pagine."""
+
+    before_url: str
+    after_url: str
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    before_score: int = 0
+    after_score: int = 0
+    score_delta: int = 0
+    before_band: str = "critical"
+    after_band: str = "critical"
+    before_http_status: int = 0
+    after_http_status: int = 0
+    before_error: str | None = None
+    after_error: str | None = None
+    before_recommendations_count: int = 0
+    after_recommendations_count: int = 0
+    recommendations_delta: int = 0
+    category_deltas: list[CategoryDelta] = field(default_factory=list)
+    improved_categories: list[CategoryDelta] = field(default_factory=list)
+    regressed_categories: list[CategoryDelta] = field(default_factory=list)
+    unchanged_categories: list[CategoryDelta] = field(default_factory=list)
+
+
 # ─── Schema analysis ─────────────────────────────────────────────────────────
 
 

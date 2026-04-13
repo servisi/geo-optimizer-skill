@@ -16,9 +16,11 @@ from click.testing import CliRunner
 from geo_optimizer import __version__
 from geo_optimizer.cli.main import cli
 from geo_optimizer.models.results import (
+    AuditDiffResult,
     AuditResult,
     BatchAuditPageResult,
     BatchAuditResult,
+    CategoryDelta,
     ContentResult,
     LlmsTxtResult,
     MetaResult,
@@ -154,6 +156,54 @@ def sample_batch_audit_result():
 
 
 @pytest.fixture
+def sample_audit_diff_result():
+    """Create a representative AuditDiffResult for CLI diff tests."""
+    improved = CategoryDelta(
+        category="llms",
+        label="llms.txt",
+        before_score=8,
+        after_score=15,
+        delta=7,
+        max_score=18,
+    )
+    regressed = CategoryDelta(
+        category="meta",
+        label="Meta Tags",
+        before_score=12,
+        after_score=10,
+        delta=-2,
+        max_score=14,
+    )
+    unchanged = CategoryDelta(
+        category="robots",
+        label="Robots.txt",
+        before_score=18,
+        after_score=18,
+        delta=0,
+        max_score=18,
+    )
+    return AuditDiffResult(
+        before_url="https://example.com/before",
+        after_url="https://example.com/after",
+        timestamp="2026-01-15T12:00:00+00:00",
+        before_score=62,
+        after_score=79,
+        score_delta=17,
+        before_band="foundation",
+        after_band="good",
+        before_http_status=200,
+        after_http_status=200,
+        before_recommendations_count=6,
+        after_recommendations_count=3,
+        recommendations_delta=-3,
+        category_deltas=[improved, regressed, unchanged],
+        improved_categories=[improved],
+        regressed_categories=[regressed],
+        unchanged_categories=[unchanged],
+    )
+
+
+@pytest.fixture
 def sample_schema_analysis():
     """Create a SchemaAnalysis result for testing."""
     return SchemaAnalysis(
@@ -189,10 +239,11 @@ class TestCLIVersionAndHelp:
         assert "geo-optimizer" in result.output
 
     def test_help_lists_all_commands(self, runner):
-        """geo --help lists audit, llms, and schema commands."""
+        """geo --help lists audit, diff, llms, and schema commands."""
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
         assert "audit" in result.output
+        assert "diff" in result.output
         assert "llms" in result.output
         assert "schema" in result.output
         assert "GEO Optimizer" in result.output
@@ -215,6 +266,15 @@ class TestCLIVersionAndHelp:
         assert "--output" in result.output
         assert "--sitemap" in result.output
         assert "--fetch-titles" in result.output
+
+    def test_diff_help(self, runner):
+        """geo diff --help shows A/B comparison options."""
+        result = runner.invoke(cli, ["diff", "--help"])
+        assert result.exit_code == 0
+        assert "--before" in result.output
+        assert "--after" in result.output
+        assert "--format" in result.output
+        assert "--output" in result.output
 
     def test_schema_help(self, runner):
         """geo schema --help shows schema-specific options."""
@@ -470,6 +530,66 @@ class TestAuditCommand:
         result = runner.invoke(cli, ["audit", "--url", "https://perfect.example.com"])
         assert result.exit_code == 0
         assert "Excellent" in result.output or "implemented" in result.output
+
+
+class TestDiffCommand:
+    """Tests for the `geo diff` CLI command."""
+
+    @patch("geo_optimizer.cli.diff_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.diff_cmd.run_diff_audit")
+    def test_diff_text_output(self, mock_run_diff, _mock_validate, runner, sample_audit_diff_result):
+        """geo diff renders a text A/B comparison."""
+        mock_run_diff.return_value = sample_audit_diff_result
+
+        result = runner.invoke(
+            cli,
+            ["diff", "--before", "https://example.com/before", "--after", "https://example.com/after"],
+        )
+
+        assert result.exit_code == 0
+        assert "GEO DIFF" in result.output
+        assert "62/100" in result.output
+        assert "79/100" in result.output
+        assert "IMPROVEMENTS" in result.output
+        assert "REGRESSIONS" in result.output
+        mock_run_diff.assert_called_once()
+
+    @patch("geo_optimizer.cli.diff_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.diff_cmd.run_diff_audit")
+    def test_diff_json_output(self, mock_run_diff, _mock_validate, runner, sample_audit_diff_result):
+        """geo diff --format json emits valid JSON."""
+        mock_run_diff.return_value = sample_audit_diff_result
+
+        result = runner.invoke(
+            cli,
+            [
+                "diff",
+                "--before",
+                "https://example.com/before",
+                "--after",
+                "https://example.com/after",
+                "--format",
+                "json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["mode"] == "diff"
+        assert data["score_delta"] == 17
+        assert data["before_url"] == "https://example.com/before"
+        assert data["after_url"] == "https://example.com/after"
+        assert data["improved_categories"][0]["category"] == "llms"
+
+    @patch("geo_optimizer.cli.diff_cmd.validate_public_url", return_value=(False, "blocked"))
+    def test_diff_rejects_unsafe_url(self, _mock_validate, runner):
+        """geo diff blocks unsafe URL input before auditing."""
+        result = runner.invoke(
+            cli,
+            ["diff", "--before", "https://example.com/before", "--after", "https://example.com/after"],
+        )
+        assert result.exit_code != 0
+        assert "Unsafe before URL" in result.output
 
 
 

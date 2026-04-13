@@ -33,11 +33,13 @@ def cli(lang):
 
 # Import and register subcommands
 from geo_optimizer.cli.audit_cmd import audit  # noqa: E402
+from geo_optimizer.cli.diff_cmd import diff  # noqa: E402
 from geo_optimizer.cli.fix_cmd import fix  # noqa: E402
 from geo_optimizer.cli.llms_cmd import llms  # noqa: E402
 from geo_optimizer.cli.schema_cmd import schema  # noqa: E402
 
 cli.add_command(audit)
+cli.add_command(diff)
 cli.add_command(fix)
 cli.add_command(llms)
 cli.add_command(schema)

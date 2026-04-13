@@ -32,7 +32,7 @@ from geo_optimizer.cli.scoring_helpers import (
     signals_score as _signals_score,
 )
 from geo_optimizer.models.config import SCORE_BANDS, SCORING
-from geo_optimizer.models.results import AuditResult, BatchAuditResult
+from geo_optimizer.models.results import AuditDiffResult, AuditResult, BatchAuditResult
 
 # Fix #409: max scores computed dynamically from SCORING (not hardcoded)
 _MAX_ROBOTS = sum(v for k, v in SCORING.items() if k.startswith("robots_"))
@@ -500,6 +500,96 @@ def format_batch_audit_text(result: BatchAuditResult) -> str:
         for page in result.pages:
             if page.error:
                 lines.append(f"  • {page.url} — {page.error}")
+
+    return "\n".join(lines)
+
+
+def format_audit_diff_json(result: AuditDiffResult) -> str:
+    """Formatta AuditDiffResult come JSON."""
+    data = {
+        "mode": "diff",
+        "before_url": result.before_url,
+        "after_url": result.after_url,
+        "timestamp": result.timestamp,
+        "before_score": result.before_score,
+        "after_score": result.after_score,
+        "score_delta": result.score_delta,
+        "before_band": result.before_band,
+        "after_band": result.after_band,
+        "before_http_status": result.before_http_status,
+        "after_http_status": result.after_http_status,
+        "before_error": result.before_error,
+        "after_error": result.after_error,
+        "before_recommendations_count": result.before_recommendations_count,
+        "after_recommendations_count": result.after_recommendations_count,
+        "recommendations_delta": result.recommendations_delta,
+        "category_deltas": [asdict(item) for item in result.category_deltas],
+        "improved_categories": [asdict(item) for item in result.improved_categories],
+        "regressed_categories": [asdict(item) for item in result.regressed_categories],
+        "unchanged_categories": [asdict(item) for item in result.unchanged_categories],
+    }
+    return json.dumps(data, indent=2)
+
+
+def format_audit_diff_text(result: AuditDiffResult) -> str:
+    """Formatta AuditDiffResult come confronto testuale leggibile."""
+    lines = []
+    score_sign = "+" if result.score_delta > 0 else ""
+    rec_sign = "+" if result.recommendations_delta > 0 else ""
+
+    lines.append("")
+    lines.append("🔍 " * 20)
+    lines.append("  GEO DIFF — A/B COMPARISON")
+    lines.append("  github.com/auriti-labs/geo-optimizer-skill")
+    lines.append("🔍 " * 20)
+    lines.append("")
+    lines.append(f"   Before: {result.before_url}")
+    lines.append(f"   After:  {result.after_url}")
+    lines.append("")
+    lines.append(
+        "   "
+        f"Score: {result.before_score}/100 ({result.before_band.upper()}) → "
+        f"{result.after_score}/100 ({result.after_band.upper()}) "
+        f"({score_sign}{result.score_delta})"
+    )
+    lines.append(
+        "   "
+        f"Recommendations: {result.before_recommendations_count} → "
+        f"{result.after_recommendations_count} ({rec_sign}{result.recommendations_delta})"
+    )
+
+    lines.append("")
+    lines.append(_section_header("1. CATEGORY DELTAS"))
+    for item in result.category_deltas:
+        sign = "+" if item.delta > 0 else ""
+        suffix = f"/{item.max_score}" if item.max_score else ""
+        lines.append(
+            f"  • {item.label}: {item.before_score}{suffix} → {item.after_score}{suffix} ({sign}{item.delta})"
+        )
+
+    lines.append("")
+    lines.append(_section_header("2. IMPROVEMENTS"))
+    if result.improved_categories:
+        for item in result.improved_categories[:5]:
+            lines.append(f"  • {item.label}: +{item.delta}")
+    else:
+        lines.append("  • No category improved")
+
+    lines.append("")
+    lines.append(_section_header("3. REGRESSIONS"))
+    if result.regressed_categories:
+        for item in result.regressed_categories[:5]:
+            lines.append(f"  • {item.label}: {item.delta}")
+    else:
+        lines.append("  • No regressions detected")
+
+    if result.before_error or result.after_error:
+        lines.append("")
+        lines.append(_section_header("4. ERRORS"))
+        if result.before_error:
+            lines.append(f"  • Before audit error: {result.before_error}")
+        if result.after_error:
+            lines.append(f"  • After audit error: {result.after_error}")
 
     return "\n".join(lines)
 
