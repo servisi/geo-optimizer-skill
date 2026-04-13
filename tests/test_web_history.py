@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from geo_optimizer.models.results import AuditResult
+
+pytest.importorskip("fastapi", reason="fastapi non installato (pip install geo-optimizer-skill[web])")
+
 from geo_optimizer.web.app import _load_history_summary, _save_and_load_history_summary
 
 
