@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [4.4.0] — 2026-04-13
+
+### Added
+- **`geo_gap_analysis` MCP tool** — interprets the competitive gap between two sites, identifies the weaker target, and returns prioritized actions with estimated point impact and concrete CLI commands where available (#236)
+- **Content rewrite guidance in `geo fix`** — new `content-rewrite.md` snippet with deterministic rewrite suggestions based on weak content signals such as thin copy, missing front-loading, weak heading hierarchy, and missing citations (#355)
+
+### Changed
+- **`geo fix --only`** now supports `content` and validates categories before network checks, improving CLI behavior in strict or offline environments
+- **MCP documentation** updated in both packaged docs and web docs to include `geo_gap_analysis`
+- **Fixer documentation** updated in both packaged docs and web docs to document content rewrite guidance and the new `--only content` flow
+
+### Tests
+- Added dedicated coverage for gap analysis core logic, MCP serialization, and content rewrite fix generation
+
+---
+
 ## [4.3.0] — 2026-04-13
 
 ### Added
