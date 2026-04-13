@@ -24,7 +24,9 @@ from geo_optimizer.utils.validators import validate_public_url
 
 @click.command()
 @click.option("--url", default=None, help="URL of the site to audit (e.g. https://example.com)")
-@click.option("--sitemap", default=None, help="XML sitemap URL for batch auditing (e.g. https://example.com/sitemap.xml)")
+@click.option(
+    "--sitemap", default=None, help="XML sitemap URL for batch auditing (e.g. https://example.com/sitemap.xml)"
+)
 @click.option(
     "--format",
     "output_format",
@@ -46,7 +48,20 @@ from geo_optimizer.utils.validators import validate_public_url
     type=int,
     help="Minimum score threshold (0-100). Exit code 1 if score is below.",
 )
-def audit(url, sitemap, output_format, output_file, verbose, cache, clear_cache, config_file, no_plugins, max_urls, concurrency, threshold):
+def audit(
+    url,
+    sitemap,
+    output_format,
+    output_file,
+    verbose,
+    cache,
+    clear_cache,
+    config_file,
+    no_plugins,
+    max_urls,
+    concurrency,
+    threshold,
+):
     """Audit a website's GEO (Generative Engine Optimization) readiness."""
     # Load project configuration (if available)
     from geo_optimizer.models.project_config import load_config
@@ -109,7 +124,9 @@ def audit(url, sitemap, output_format, output_file, verbose, cache, clear_cache,
         raise click.UsageError("Batch audit via '--sitemap' supports only '--format text' or '--format json'")
 
     target_url = sitemap or url
-    safe, reason = validate_public_url(target_url if target_url.startswith(("http://", "https://")) else f"https://{target_url}")
+    safe, reason = validate_public_url(
+        target_url if target_url.startswith(("http://", "https://")) else f"https://{target_url}"
+    )
     if not safe:
         click.echo(f"\n❌ Unsafe URL: {reason}", err=True)
         sys.exit(1)

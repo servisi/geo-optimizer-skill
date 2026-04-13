@@ -183,7 +183,4 @@ def _average_breakdowns(page_results: list[BatchAuditPageResult]) -> dict[str, f
             category_totals[category] = category_totals.get(category, 0.0) + score
 
     total_pages = len(page_results)
-    return {
-        category: round(total / total_pages, 2)
-        for category, total in sorted(category_totals.items())
-    }
+    return {category: round(total / total_pages, 2) for category, total in sorted(category_totals.items())}

@@ -563,9 +563,7 @@ def format_audit_diff_text(result: AuditDiffResult) -> str:
     for item in result.category_deltas:
         sign = "+" if item.delta > 0 else ""
         suffix = f"/{item.max_score}" if item.max_score else ""
-        lines.append(
-            f"  • {item.label}: {item.before_score}{suffix} → {item.after_score}{suffix} ({sign}{item.delta})"
-        )
+        lines.append(f"  • {item.label}: {item.before_score}{suffix} → {item.after_score}{suffix} ({sign}{item.delta})")
 
     lines.append("")
     lines.append(_section_header("2. IMPROVEMENTS"))
@@ -592,8 +590,6 @@ def format_audit_diff_text(result: AuditDiffResult) -> str:
             lines.append(f"  • After audit error: {result.after_error}")
 
     return "\n".join(lines)
-
-
 
 
 def _section_header(text: str) -> str:
