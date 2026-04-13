@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from html import escape
 
 from geo_optimizer.cli.scoring_helpers import (
     brand_entity_score as _brand_entity_score,
@@ -32,7 +33,7 @@ from geo_optimizer.cli.scoring_helpers import (
     signals_score as _signals_score,
 )
 from geo_optimizer.models.config import SCORE_BANDS, SCORING
-from geo_optimizer.models.results import AuditDiffResult, AuditResult, BatchAuditResult
+from geo_optimizer.models.results import AuditDiffResult, AuditResult, BatchAuditResult, HistoryResult
 
 # Fix #409: max scores computed dynamically from SCORING (not hardcoded)
 _MAX_ROBOTS = sum(v for k, v in SCORING.items() if k.startswith("robots_"))
@@ -590,6 +591,137 @@ def format_audit_diff_text(result: AuditDiffResult) -> str:
             lines.append(f"  • After audit error: {result.after_error}")
 
     return "\n".join(lines)
+
+
+def format_history_json(result: HistoryResult) -> str:
+    """Formatta HistoryResult come JSON."""
+    return json.dumps(asdict(result), indent=2)
+
+
+def format_history_text(result: HistoryResult) -> str:
+    """Formatta la history GEO come testo leggibile."""
+    lines = []
+    lines.append("")
+    lines.append("🔍 " * 20)
+    lines.append("  GEO HISTORY — SCORE TREND")
+    lines.append("  github.com/auriti-labs/geo-optimizer-skill")
+    lines.append("🔍 " * 20)
+    lines.append("")
+    lines.append(f"   URL: {result.url}")
+    lines.append(f"   Snapshots: {result.total_snapshots} | Retention: {result.retention_days} days")
+
+    if result.latest_score is None:
+        lines.append("")
+        lines.append("  No saved snapshots found for this URL.")
+        return "\n".join(lines)
+
+    delta_text = "n/a" if result.score_delta is None else f"{result.score_delta:+d}"
+    lines.append(
+        "   "
+        f"Latest: {result.latest_score}/100 ({(result.latest_band or 'critical').upper()}) | "
+        f"Delta vs previous: {delta_text}"
+    )
+    lines.append(f"   Best: {result.best_score}/100 | Worst: {result.worst_score}/100")
+
+    lines.append("")
+    lines.append(_section_header("1. TREND"))
+    for entry in result.entries:
+        delta_text = "—" if entry.delta is None else f"{entry.delta:+d}"
+        bar = "█" * max(1, min(25, int(round(entry.score / 4))))
+        lines.append(f"  {entry.timestamp[:10]}  {entry.score:>3}/100  {entry.band.upper():<10} {delta_text:>4}  {bar}")
+
+    return "\n".join(lines)
+
+
+def format_tracking_text(audit_result: AuditResult, history_result: HistoryResult) -> str:
+    """Formatta il risultato di `geo track` come testo."""
+    lines = []
+    lines.append("")
+    lines.append("🔍 " * 20)
+    lines.append("  GEO TRACK — MONITORING SNAPSHOT")
+    lines.append("  github.com/auriti-labs/geo-optimizer-skill")
+    lines.append("🔍 " * 20)
+    lines.append("")
+    lines.append(f"   URL: {audit_result.url}")
+    lines.append(f"   Current score: {audit_result.score}/100 ({audit_result.band.upper()})")
+    if history_result.score_delta is None:
+        lines.append("   Baseline snapshot saved.")
+    else:
+        lines.append(f"   Delta vs previous snapshot: {history_result.score_delta:+d}")
+    lines.append(f"   Snapshots stored: {history_result.total_snapshots}")
+
+    if history_result.entries:
+        lines.append("")
+        lines.append(_section_header("1. RECENT SNAPSHOTS"))
+        for entry in history_result.entries[:5]:
+            delta_text = "—" if entry.delta is None else f"{entry.delta:+d}"
+            lines.append(f"  • {entry.timestamp[:10]} — {entry.score}/100 ({entry.band}) [{delta_text}]")
+
+    return "\n".join(lines)
+
+
+def format_tracking_json(audit_result: AuditResult, history_result: HistoryResult) -> str:
+    """Formatta il risultato di `geo track` come JSON."""
+    data = {
+        "audit": json.loads(format_audit_json(audit_result)),
+        "history": asdict(history_result),
+    }
+    return json.dumps(data, indent=2)
+
+
+def format_history_report_html(result: HistoryResult) -> str:
+    """Genera un report HTML minimale con il trend storico GEO."""
+    rows = []
+    for entry in result.entries:
+        width = max(4, min(100, entry.score))
+        delta = "—" if entry.delta is None else f"{entry.delta:+d}"
+        rows.append(
+            "<tr>"
+            f"<td>{escape(entry.timestamp[:10])}</td>"
+            f"<td>{entry.score}/100</td>"
+            f"<td>{escape(entry.band.upper())}</td>"
+            f"<td>{escape(delta)}</td>"
+            "<td><div class='track'><span class='fill' style='width:"
+            f"{width}%'></span></div></td>"
+            "</tr>"
+        )
+
+    latest = (
+        "n/a"
+        if result.latest_score is None
+        else f"{result.latest_score}/100 ({(result.latest_band or 'critical').upper()})"
+    )
+    delta = "n/a" if result.score_delta is None else f"{result.score_delta:+d}"
+    tbody = "".join(rows) if rows else '<tr><td colspan="5">No snapshots available.</td></tr>'
+
+    return (
+        "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        f"<title>GEO History Report — {escape(result.url)}</title>"
+        "<style>"
+        "body{font-family:system-ui,sans-serif;background:#f6f7fb;color:#101828;margin:0;padding:32px;}"
+        ".wrap{max-width:960px;margin:0 auto;background:#fff;border:1px solid #d0d5dd;border-radius:20px;padding:32px;}"
+        "h1{margin:0 0 8px;font-size:2rem;}p{color:#475467;margin:0 0 20px;}"
+        ".meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:24px 0;}"
+        ".card{background:#f8fafc;border:1px solid #e4e7ec;border-radius:16px;padding:16px;}"
+        ".label{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#667085;}"
+        ".value{font-size:1.5rem;font-weight:700;margin-top:6px;}"
+        "table{width:100%;border-collapse:collapse;margin-top:16px;}th,td{padding:12px 8px;border-bottom:1px solid #eaecf0;text-align:left;}"
+        ".track{width:100%;height:10px;background:#e4e7ec;border-radius:999px;overflow:hidden;}"
+        ".fill{display:block;height:100%;background:linear-gradient(90deg,#06b6d4,#22c55e);}"
+        "</style></head><body><div class='wrap'>"
+        "<h1>GEO History Report</h1>"
+        f"<p>{escape(result.url)}</p>"
+        "<div class='meta'>"
+        f"<div class='card'><div class='label'>Latest</div><div class='value'>{escape(latest)}</div></div>"
+        f"<div class='card'><div class='label'>Delta</div><div class='value'>{escape(delta)}</div></div>"
+        f"<div class='card'><div class='label'>Snapshots</div><div class='value'>{result.total_snapshots}</div></div>"
+        f"<div class='card'><div class='label'>Retention</div><div class='value'>{result.retention_days}d</div></div>"
+        "</div>"
+        "<table><thead><tr><th>Date</th><th>Score</th><th>Band</th><th>Δ</th><th>Trend</th></tr></thead>"
+        f"<tbody>{tbody}</tbody>"
+        "</table></div></body></html>"
+    )
 
 
 def _section_header(text: str) -> str:

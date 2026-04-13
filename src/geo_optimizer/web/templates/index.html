@@ -162,6 +162,19 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
 .cit-score{font-family:var(--mono);font-size:1.5rem;font-weight:700}
 .cit-label{font-size:.82rem;color:var(--text-dim)}
 
+/* Trend */
+.trend-box{display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.trend-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.trend-kicker{font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em}
+.trend-summary{font-size:.9rem;color:var(--text);font-weight:600;margin-top:.25rem}
+.trend-delta{font-family:var(--mono);font-size:1.1rem;font-weight:700}
+.trend-list{display:grid;gap:.6rem;margin-top:.85rem}
+.trend-row{display:grid;grid-template-columns:74px 82px 1fr;gap:.75rem;align-items:center}
+.trend-date{font-family:var(--mono);font-size:.75rem;color:var(--text-dim)}
+.trend-score{font-family:var(--mono);font-size:.78rem;color:var(--text)}
+.trend-bar{height:7px;background:var(--border);border-radius:999px;overflow:hidden}
+.trend-fill{display:block;height:100%;background:linear-gradient(90deg,#06b6d4,#22c55e)}
+
 /* Recommendations */
 .recs-section{margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)}
 .recs-toggle{background:none;border:none;color:var(--accent);cursor:pointer;
@@ -303,6 +316,17 @@ footer .credit{font-size:.72rem;color:var(--text-muted)}
         <div class="cit-label">Citability Score</div>
       </div>
       <div class="cit-label" id="cit-grade" style="margin-left:auto"></div>
+    </div>
+
+    <div class="trend-box" id="trend-box">
+      <div class="trend-head">
+        <div>
+          <div class="trend-kicker">Trend</div>
+          <div class="trend-summary" id="trend-summary">Baseline snapshot saved for this URL.</div>
+        </div>
+        <div class="trend-delta" id="trend-delta">—</div>
+      </div>
+      <div class="trend-list" id="trend-list"></div>
     </div>
 
     <div class="recs-section">
@@ -479,6 +503,46 @@ function renderResult(data,url){
   const rl=$('recs-list');rl.textContent='';rl.classList.remove('open');
   $('recs-toggle').classList.remove('open');
   for(const r of recs){const li=document.createElement('li');li.textContent=r;rl.appendChild(li)}
+
+  /* Trend */
+  const history=data.history;
+  const trendBox=$('trend-box');
+  if(history && history.total_snapshots){
+    trendBox.style.display='block';
+    const scoreDelta=history.score_delta;
+    const latestBand=(history.latest_band||'critical').toUpperCase();
+    let summary=`Current baseline: ${history.latest_score}/100 (${latestBand}).`;
+    if(history.total_snapshots >= 2 && scoreDelta !== null && scoreDelta !== undefined){
+      if(scoreDelta > 0) summary=`Improved from ${history.previous_score} to ${history.latest_score} since the previous snapshot.`;
+      else if(scoreDelta < 0) summary=`Dropped from ${history.previous_score} to ${history.latest_score} since the previous snapshot.`;
+      else summary=`Stable at ${history.latest_score}/100 since the previous snapshot.`;
+    }
+    $('trend-summary').textContent=summary;
+    const deltaNode=$('trend-delta');
+    if(scoreDelta === null || scoreDelta === undefined){
+      deltaNode.textContent='BASE';
+      deltaNode.style.color='var(--text-dim)';
+    }else{
+      deltaNode.textContent=(scoreDelta > 0 ? '+' : '') + scoreDelta;
+      deltaNode.style.color=scoreDelta >= 0 ? BANDS.good : BANDS.critical;
+    }
+    const trendList=$('trend-list');trendList.textContent='';
+    (history.entries||[]).slice(0,5).forEach(item=>{
+      const row=document.createElement('div');row.className='trend-row';
+      const date=document.createElement('span');date.className='trend-date';date.textContent=(item.timestamp||'').slice(0,10);
+      const score=document.createElement('span');score.className='trend-score';
+      const delta=(item.delta === null || item.delta === undefined) ? '—' : ((item.delta > 0 ? '+' : '') + item.delta);
+      score.textContent=`${item.score}/100 · ${delta}`;
+      const bar=document.createElement('div');bar.className='trend-bar';
+      const fill=document.createElement('span');fill.className='trend-fill';
+      fill.style.width=Math.max(4, Math.min(100, item.score||0))+'%';
+      bar.appendChild(fill);
+      row.appendChild(date);row.appendChild(score);row.appendChild(bar);
+      trendList.appendChild(row);
+    });
+  }else{
+    trendBox.style.display='none';
+  }
 
   /* Actions */
   const acts=$('actions');acts.textContent='';

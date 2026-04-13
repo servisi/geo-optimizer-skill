@@ -7,6 +7,8 @@ so that core modules, CLI, and tests can import from a single source.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 # ─── HTTP ────────────────────────────────────────────────────────────────────
 
 USER_AGENT = "GEO-Optimizer/2.0 (https://github.com/auriti-labs/geo-optimizer-skill)"
@@ -21,6 +23,13 @@ MAX_SUB_SITEMAPS: int = 10
 
 # Total URL limit extracted from all sitemaps — fix #124 (sitemap bomb)
 MAX_TOTAL_URLS: int = 10_000
+
+# ─── Local history / tracking ────────────────────────────────────────────────
+
+GEO_OPTIMIZER_HOME = Path.home() / ".geo-optimizer"
+TRACKING_DB_PATH = GEO_OPTIMIZER_HOME / "tracking.db"
+DEFAULT_HISTORY_RETENTION_DAYS = 90
+DEFAULT_HISTORY_LIMIT = 12
 
 
 # ─── AI bots — 3-tier classification (training/search/user) ──────────────────

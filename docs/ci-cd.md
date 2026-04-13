@@ -54,6 +54,18 @@ That's it. The action installs Python, installs `geo-optimizer-skill`, runs the 
 
 The step fails if the score drops below 70.
 
+### Detect regressions against the previous snapshot
+
+```yaml
+- name: Install GEO Optimizer
+  run: pip install geo-optimizer-skill
+
+- name: GEO regression check
+  run: geo audit --url https://yoursite.com --save-history --regression
+```
+
+`--regression` exits with code `1` when the score is lower than the previous saved snapshot for that URL. Local snapshots are stored in `~/.geo-optimizer/tracking.db`.
+
 ### SARIF upload (GitHub Security tab)
 
 ```yaml
@@ -206,3 +218,10 @@ geo audit --url https://yoursite.com --format json --output report.json
 ```
 
 Parse the JSON to get `score` (integer 0-100) and `band` (string). Use these to gate deployments or trigger alerts.
+
+For longitudinal monitoring, pair it with:
+
+```bash
+geo audit --url https://yoursite.com --save-history --regression
+geo history --url https://yoursite.com
+```

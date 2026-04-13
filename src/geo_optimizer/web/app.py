@@ -1001,6 +1001,9 @@ async def _run_audit(url: str) -> JSONResponse:
         report_id = _cache_key(url)
         response_data = dict(cached)
         response_data["report_url"] = f"/report/{report_id}"
+        history_summary = await asyncio.to_thread(_load_history_summary, url)
+        if history_summary:
+            response_data["history"] = history_summary
         return JSONResponse(content=response_data)
 
     # Run audit
@@ -1027,6 +1030,9 @@ async def _run_audit(url: str) -> JSONResponse:
 
     # Serialize result
     data = _audit_result_to_dict(result)
+    history_summary = await asyncio.to_thread(_save_and_load_history_summary, result)
+    if history_summary:
+        data["history"] = history_summary
 
     # Incrementa contatore audit sul DB persistente (AgencyPilot)
     await asyncio.to_thread(_increment_remote_stat, "audits")
@@ -1036,6 +1042,35 @@ async def _run_audit(url: str) -> JSONResponse:
     data["report_url"] = f"/report/{report_id}"
 
     return JSONResponse(content=data)
+
+
+def _load_history_summary(url: str) -> dict | None:
+    """Recupera una summary trend dalla history locale per la web demo."""
+    try:
+        from geo_optimizer.core.history import HistoryStore, summarize_history
+
+        store = HistoryStore()
+        history = store.build_history_result(url)
+        if history.total_snapshots == 0:
+            return None
+        return summarize_history(history)
+    except Exception as exc:  # pragma: no cover - best effort non-blocking
+        logger.warning("Unable to load local history for %s: %s", url, exc)
+        return None
+
+
+def _save_and_load_history_summary(result) -> dict | None:
+    """Salva l'audit web nella history locale e restituisce il trend aggiornato."""
+    try:
+        from geo_optimizer.core.history import HistoryStore, summarize_history
+
+        store = HistoryStore()
+        store.save_audit_result(result)
+        history = store.build_history_result(result.url)
+        return summarize_history(history)
+    except Exception as exc:  # pragma: no cover - best effort non-blocking
+        logger.warning("Unable to save local history for %s: %s", getattr(result, "url", "unknown"), exc)
+        return None
 
 
 def _audit_result_to_dict(result) -> dict:

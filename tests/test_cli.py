@@ -8,6 +8,7 @@ with all external dependencies mocked via unittest.mock.patch.
 import json
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -244,8 +245,10 @@ class TestCLIVersionAndHelp:
         assert result.exit_code == 0
         assert "audit" in result.output
         assert "diff" in result.output
+        assert "history" in result.output
         assert "llms" in result.output
         assert "schema" in result.output
+        assert "track" in result.output
         assert "GEO Optimizer" in result.output
 
     def test_audit_help(self, runner):
@@ -257,6 +260,8 @@ class TestCLIVersionAndHelp:
         assert "--format" in result.output
         assert "--output" in result.output
         assert "--verbose" in result.output
+        assert "--save-history" in result.output
+        assert "--regression" in result.output
 
     def test_llms_help(self, runner):
         """geo llms --help shows llms-specific options."""
@@ -515,6 +520,72 @@ class TestAuditCommand:
     @patch.dict("sys.modules", {"httpx": None})
     @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
     @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
+    def test_audit_save_history_json_output(self, mock_audit, _mock_validate, runner, sample_audit_result):
+        """--save-history aggiunge summary history all'output JSON."""
+        mock_audit.return_value = sample_audit_result
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "tracking.db")
+            result = runner.invoke(
+                cli,
+                [
+                    "audit",
+                    "--url",
+                    "https://example.com",
+                    "--format",
+                    "json",
+                    "--save-history",
+                    "--history-db",
+                    db_path,
+                ],
+            )
+
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["history"]["total_snapshots"] == 1
+        assert data["history"]["latest_score"] == 75
+        assert data["history"]["regression_detected"] is False
+
+    @patch.dict("sys.modules", {"httpx": None})
+    @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
+    def test_audit_regression_exits_with_code_one(self, mock_audit, _mock_validate, runner):
+        """--regression fallisce quando il punteggio scende rispetto allo snapshot precedente."""
+        baseline = AuditResult(
+            url="https://example.com",
+            timestamp="2026-01-15T12:00:00+00:00",
+            score=80,
+            band="good",
+            http_status=200,
+            page_size=1000,
+            score_breakdown={"robots": 18, "llms": 16, "schema": 12, "meta": 12, "content": 10, "signals": 4},
+        )
+        regression = AuditResult(
+            url="https://example.com",
+            timestamp="2026-01-22T12:00:00+00:00",
+            score=71,
+            band="good",
+            http_status=200,
+            page_size=1000,
+            score_breakdown={"robots": 18, "llms": 12, "schema": 10, "meta": 10, "content": 9, "signals": 4},
+        )
+        mock_audit.side_effect = [baseline, regression]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "tracking.db")
+            first = runner.invoke(
+                cli, ["audit", "--url", "https://example.com", "--save-history", "--history-db", db_path]
+            )
+            second = runner.invoke(
+                cli, ["audit", "--url", "https://example.com", "--regression", "--history-db", db_path]
+            )
+
+        assert first.exit_code == 0
+        assert second.exit_code == 1
+        assert "Regression detected" in second.output
+
+    @patch.dict("sys.modules", {"httpx": None})
+    @patch("geo_optimizer.cli.audit_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.audit_cmd.run_full_audit")
     def test_audit_no_recommendations(self, mock_audit, _mock_validate, runner):
         """Text output shows 'Great!' when there are no recommendations."""
         audit_result = AuditResult(
@@ -592,6 +663,70 @@ class TestDiffCommand:
         assert "Unsafe before URL" in result.output
 
 
+class TestHistoryAndTrackCommands:
+    """Tests for `geo history` and `geo track`."""
+
+    @patch("geo_optimizer.cli.history_cmd.validate_public_url", return_value=(True, None))
+    def test_history_text_output(self, _mock_validate, runner, sample_audit_result):
+        """geo history mostra il trend salvato per una URL."""
+        from geo_optimizer.core.history import HistoryStore
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "tracking.db")
+            store = HistoryStore(Path(db_path))
+            store.save_audit_result(
+                sample_audit_result,
+                retention_days=90,
+            )
+            store.save_audit_result(
+                AuditResult(
+                    url="https://example.com",
+                    timestamp="2026-01-22T12:00:00+00:00",
+                    score=81,
+                    band="good",
+                    http_status=200,
+                    page_size=15000,
+                    score_breakdown=sample_audit_result.score_breakdown,
+                    recommendations=["Only one thing left"],
+                ),
+                retention_days=90,
+            )
+            result = runner.invoke(cli, ["history", "--url", "https://example.com", "--history-db", db_path])
+
+        assert result.exit_code == 0
+        assert "GEO HISTORY" in result.output
+        assert "Snapshots: 2" in result.output
+        assert "2026-01-22" in result.output
+
+    @patch("geo_optimizer.cli.track_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.track_cmd.run_full_audit")
+    def test_track_report_writes_html(self, mock_audit, _mock_validate, runner, sample_audit_result):
+        """geo track --report genera un file HTML col trend salvato."""
+        mock_audit.return_value = sample_audit_result
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "tracking.db")
+            report_path = os.path.join(tmpdir, "report.html")
+            result = runner.invoke(
+                cli,
+                [
+                    "track",
+                    "--url",
+                    "https://example.com",
+                    "--report",
+                    "--history-db",
+                    db_path,
+                    "--output",
+                    report_path,
+                ],
+            )
+
+            assert result.exit_code == 0
+            assert "Report written to" in result.output
+            with open(report_path, encoding="utf-8") as f:
+                content = f.read()
+
+        assert "GEO History Report" in content
+        assert "https://example.com" in content
 
 
 # ============================================================================
@@ -1312,7 +1447,16 @@ class TestFormatters:
         assert data["url"] == "https://example.com"
         assert data["score"] == 75
         assert data["band"] == "good"
-        assert set(data["checks"].keys()) == {"robots_txt", "llms_txt", "schema_jsonld", "meta_tags", "content", "signals", "ai_discovery", "brand_entity"}
+        assert set(data["checks"].keys()) == {
+            "robots_txt",
+            "llms_txt",
+            "schema_jsonld",
+            "meta_tags",
+            "content",
+            "signals",
+            "ai_discovery",
+            "brand_entity",
+        }
 
     def test_format_audit_json_robots_details(self, sample_audit_result):
         """JSON robots_txt check includes correct details."""

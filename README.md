@@ -50,6 +50,15 @@ geo audit --sitemap https://yoursite.com/sitemap.xml --max-urls 25
 # Compare before/after versions of a page
 geo diff --before https://yoursite.com/page-old --after https://yoursite.com/page-new
 
+# Save history and detect regressions over time
+geo audit --url https://yoursite.com --save-history --regression
+
+# Show the saved trend for a site
+geo history --url https://yoursite.com
+
+# Run recurring monitoring and generate an HTML trend report
+geo track --url https://yoursite.com --report --output ./geo-track-report.html
+
 # Auto-generate all missing files (robots.txt, llms.txt, schema, meta)
 geo fix --url https://yoursite.com --apply
 
@@ -105,6 +114,8 @@ geo audit --url https://example.com --format html      # Self-contained report
 geo audit --url https://example.com --format sarif     # GitHub Code Scanning
 geo audit --url https://example.com --format junit     # Jenkins, GitLab CI
 geo audit --url https://example.com --format github    # GitHub Actions annotations
+geo history --url https://example.com                  # Saved score trend
+geo track --url https://example.com --report           # Monitoring HTML report
 ```
 
 ---
@@ -121,6 +132,12 @@ geo audit --url https://example.com --format github    # GitHub Actions annotati
 ```
 
 Works with GitHub Actions, GitLab CI, Jenkins, CircleCI, and any CI that runs Python.
+
+For longitudinal checks, persist snapshots and fail on regressions:
+
+```bash
+geo audit --url https://yoursite.com --save-history --regression
+```
 
 ---
 

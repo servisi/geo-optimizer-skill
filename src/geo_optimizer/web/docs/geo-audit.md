@@ -40,6 +40,12 @@ Plus a separate **Citability Score** (0-100) measuring content quality across 47
 # Standard audit
 geo audit --url https://yoursite.com
 
+# Save the snapshot in local history
+geo audit --url https://yoursite.com --save-history
+
+# Fail CI if the score regressed vs the previous saved snapshot
+geo audit --url https://yoursite.com --regression
+
 # Choose output format
 geo audit --url https://yoursite.com --format rich
 
@@ -59,6 +65,9 @@ geo audit --sitemap https://yoursite.com/sitemap.xml --format json
 | `--format` | No | Output format: `text` (default), `json`, `rich`, `html`, `sarif`, `junit`, `github` |
 | `--max-urls` | No | Maximum number of sitemap URLs to audit in batch mode (default: `50`) |
 | `--concurrency` | No | Concurrent page audits in batch mode (default: `5`) |
+| `--save-history` | No | Save the URL audit in local history (`~/.geo-optimizer/tracking.db`) |
+| `--regression` | No | Exit with code `1` if the score dropped vs the previous saved snapshot |
+| `--retention-days` | No | Retention window for local snapshots (default: `90`) |
 
 \* Use either `--url` or `--sitemap`.
 
@@ -75,6 +84,7 @@ geo audit --sitemap https://yoursite.com/sitemap.xml --format json
 | `github` | GitHub Actions step summary annotations |
 
 When using `--sitemap`, only `text` and `json` are supported.
+`--save-history` and `--regression` currently apply only to `--url` mode.
 
 ---
 

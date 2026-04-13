@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 
 import click
 
@@ -19,6 +20,8 @@ from geo_optimizer.cli.formatters import (
 )
 from geo_optimizer.core.audit import run_full_audit
 from geo_optimizer.core.batch_audit import run_batch_audit
+from geo_optimizer.core.history import HistoryStore, summarize_history
+from geo_optimizer.models.config import DEFAULT_HISTORY_RETENTION_DAYS
 from geo_optimizer.utils.validators import validate_public_url
 
 
@@ -42,6 +45,16 @@ from geo_optimizer.utils.validators import validate_public_url
 @click.option("--no-plugins", is_flag=True, help="Disable loading of third-party check plugins")
 @click.option("--max-urls", default=50, type=int, show_default=True, help="Maximum number of sitemap URLs to audit")
 @click.option("--concurrency", default=5, type=int, show_default=True, help="Concurrent page audits in sitemap mode")
+@click.option("--save-history", is_flag=True, help="Save the audit result in local GEO history")
+@click.option("--regression", is_flag=True, help="Exit with code 1 if score regressed vs the previous saved snapshot")
+@click.option(
+    "--retention-days",
+    default=DEFAULT_HISTORY_RETENTION_DAYS,
+    type=int,
+    show_default=True,
+    help="Retention window for local history snapshots",
+)
+@click.option("--history-db", default=None, hidden=True, help="Override local tracking DB path")
 @click.option(
     "--threshold",
     default=None,
@@ -60,17 +73,17 @@ def audit(
     no_plugins,
     max_urls,
     concurrency,
+    save_history,
+    regression,
+    retention_days,
+    history_db,
     threshold,
 ):
     """Audit a website's GEO (Generative Engine Optimization) readiness."""
     # Load project configuration (if available)
     from geo_optimizer.models.project_config import load_config
 
-    config_path = None
-    if config_file:
-        from pathlib import Path
-
-        config_path = Path(config_file)
+    config_path = Path(config_file) if config_file else None
 
     project_config = load_config(config_path)
 
@@ -104,6 +117,8 @@ def audit(
         raise click.UsageError("Missing '--url' or '--sitemap' option. Specify via CLI or in .geo-optimizer.yml")
     if url and sitemap:
         raise click.UsageError("Use either '--url' or '--sitemap', not both")
+    if sitemap and (save_history or regression):
+        raise click.UsageError("'--save-history' and '--regression' are supported only with '--url'")
 
     # Handle --clear-cache
     if clear_cache:
@@ -201,12 +216,28 @@ def audit(
             click.echo(f"\n❌ ERROR: {type(e).__name__}", err=True)
         sys.exit(1)
 
+    history_result = None
+    history_entry = None
+    persist_history = bool(url and (save_history or regression))
+    if persist_history:
+        store = HistoryStore(Path(history_db) if history_db else None)
+        history_entry = store.save_audit_result(result, retention_days=retention_days)
+        history_result = store.build_history_result(result.url, retention_days=retention_days)
+
     if sitemap and output_format == "json":
         output = format_batch_audit_json(result)
     elif sitemap:
         output = format_batch_audit_text(result)
     elif output_format == "json":
-        output = format_audit_json(result)
+        if persist_history:
+            import json
+
+            data = json.loads(format_audit_json(result))
+            if history_result:
+                data["history"] = summarize_history(history_result)
+            output = json.dumps(data, indent=2)
+        else:
+            output = format_audit_json(result)
     elif output_format == "rich":
         from geo_optimizer.cli.rich_formatter import format_audit_rich, is_rich_available
 
@@ -256,6 +287,18 @@ def audit(
         output = format_audit_junit(result)
     else:
         output = format_audit_text(result)
+        if persist_history and history_result:
+            output += (
+                "\n\n"
+                "============================================================\n"
+                "  HISTORY\n"
+                "============================================================\n"
+            )
+            output += f"\n  Snapshots stored: {history_result.total_snapshots}"
+            if history_entry and history_entry.delta is None:
+                output += "\n  Baseline snapshot saved"
+            elif history_entry:
+                output += f"\n  Delta vs previous snapshot: {history_entry.delta:+d}"
 
     if output_file:
         with open(output_file, "w", encoding="utf-8") as f:
@@ -269,12 +312,21 @@ def audit(
     # min_score from .geo-optimizer.yml → exit 2 (to distinguish from CLI)
     result_score = result.average_score if sitemap else result.score
 
+    regression_failed = bool(history_result and regression and history_result.regression_detected)
+
+    if regression_failed and output_format != "json":
+        click.echo("\n❌ Regression detected: score is lower than the previous saved snapshot", err=True)
+
+    exit_code = 0
     if min_score > 0 and result_score < min_score:
         click.echo(
             f"\n❌ Score {result_score}/100 below minimum required ({min_score})",
             err=True,
         )
         exit_code = 1 if threshold is not None else 2
+    if regression_failed:
+        exit_code = 1
+    if exit_code:
         sys.exit(exit_code)
 
     return result_score

@@ -575,6 +575,41 @@ class GapAnalysisResult:
     strengths: list[CategoryDelta] = field(default_factory=list)
 
 
+# ─── History / tracking ─────────────────────────────────────────────────────
+
+
+@dataclass
+class HistoryEntry:
+    """Snapshot storico di un audit GEO salvato localmente."""
+
+    url: str
+    timestamp: str
+    score: int = 0
+    band: str = "critical"
+    http_status: int = 0
+    recommendations_count: int = 0
+    score_breakdown: dict[str, int] = field(default_factory=dict)
+    delta: int | None = None
+
+
+@dataclass
+class HistoryResult:
+    """Serie temporale degli audit GEO salvati per una URL."""
+
+    url: str
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    retention_days: int = 0
+    total_snapshots: int = 0
+    latest_score: int | None = None
+    latest_band: str | None = None
+    previous_score: int | None = None
+    score_delta: int | None = None
+    regression_detected: bool = False
+    best_score: int | None = None
+    worst_score: int | None = None
+    entries: list[HistoryEntry] = field(default_factory=list)
+
+
 # ─── Schema analysis ─────────────────────────────────────────────────────────
 
 
