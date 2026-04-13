@@ -70,6 +70,7 @@ Initial foundational skills:
 - `geo_citation_readiness`
 - `geo_competitor_comparison`
 - `geo_schema_readiness`
+- `geo_ai_discovery_readiness`
 
 These are intentionally narrow. They define the contract for future skills without introducing a runtime agent engine.
 
