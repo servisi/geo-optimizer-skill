@@ -27,6 +27,8 @@ The catalog should grow only when a new skill:
   Interprets whether the current schema / structured-data layer is strong enough to support extractability, attribution clarity, and machine-readable understanding.
 - `geo_ai_discovery_readiness`
   Interprets whether AI bots and AI discovery endpoints make the site realistically discoverable by AI systems.
+- `geo_trust_signal_review`
+  Interprets whether the current trust, entity, and negative-signal layer is strong enough to support source confidence.
 
 ### Remediation skills
 
@@ -51,11 +53,12 @@ What the catalog covers well now:
 - citation-specific interpretation
 - schema / structured-data readiness interpretation
 - AI discovery and bot-access interpretation
+- trust and negative-signal interpretation
 - cross-site comparative gap analysis
 
 What the catalog does not cover yet:
 
-- focused trust/entity posture review
+- no major interpretation gap remains in the current roadmap scope
 
 These are the strongest remaining gaps because the engine already exposes the relevant evidence surfaces.
 
@@ -100,9 +103,6 @@ These are the strongest candidate areas based on the current engine and catalog.
 
 ### Interpretation skills worth building
 
-- `geo_trust_signal_review`
-  Focus on trust-stack, entity clarity, and anti-citation risks that undermine source reliability.
-
 ### Remediation skills worth building later
 
 - `geo_schema_repair_planner`
@@ -119,34 +119,19 @@ These are the strongest candidate areas based on the current engine and catalog.
 
 Recommended order for the next additions:
 
-1. `geo_trust_signal_review`
-2. `geo_schema_repair_planner` only if repeated workflow demand emerges
-3. `geo_citation_gap_comparison` only if competitor comparison becomes overloaded
+1. `geo_schema_repair_planner` only if repeated workflow demand emerges
+2. `geo_citation_gap_comparison` only if competitor comparison becomes overloaded
+3. `geo_ai_discovery_repair` only if AI discovery workflows become substantially larger
 
 ## Recommended Next 3 Skills
 
-### 1. `geo_trust_signal_review`
+### 1. `geo_schema_repair_planner`
 
 Why first:
 
-- trust is already exposed through `geo_trust_score` and negative-signal surfaces
-- it offers a focused interpretation layer distinct from citation readiness
-- it helps explain reliability and source-confidence weaknesses without becoming a generic content review
-
-Likely surfaces:
-
-- `mcp:geo_trust_score`
-- `mcp:geo_negative_signals`
-- `doc:docs/scoring-rubric.md`
-- `doc:docs/geo-audit.md`
-
-### 2. `geo_schema_repair_planner`
-
-Why second:
-
 - schema is now covered on the interpretation side, so the next schema-specific addition should only happen if maintainers need repeated schema-only remediation paths
 - this should stay deferred unless `geo_foundation_repair` proves too broad for recurring schema implementation work
-- it is less urgent than trust interpretation, but it is the next plausible focused extension
+- it is the next most plausible focused extension after the main interpretation layer is in place
 
 Likely surfaces:
 
@@ -156,13 +141,13 @@ Likely surfaces:
 - `doc:docs/scoring-rubric.md`
 - `doc:docs/geo-fix.md`
 
-### 3. `geo_citation_gap_comparison`
+### 2. `geo_citation_gap_comparison`
 
-Why third:
+Why second:
 
 - the comparison layer already exists, but a citation-specific comparison skill should remain deferred until maintainers see repeated need for that narrower competitive lens
 - this should come only after the interpretation catalog is broader and stable
-- it is a plausible future extension, but not yet justified as a near-term addition
+- it is a plausible future extension, but not yet justified as an immediate addition
 
 Likely surfaces:
 
@@ -171,6 +156,23 @@ Likely surfaces:
 - `mcp:geo_trust_score`
 - `doc:docs/scoring-rubric.md`
 - `doc:docs/geo-audit.md`
+
+### 3. `geo_ai_discovery_repair`
+
+Why third:
+
+- AI discovery interpretation now exists, but a dedicated repair skill should stay deferred unless maintainers repeatedly need narrower implementation workflows than `geo_foundation_repair`
+- this would only be justified if endpoint templates and bot-access fixes become a recurring specialized path
+- it is valid as a later remediation split, not as a current core catalog need
+
+Likely surfaces:
+
+- `mcp:geo_fix`
+- `mcp:geo_ai_discovery`
+- `mcp:geo_check_bots`
+- `doc:docs/ai-bots-reference.md`
+- `doc:docs/scoring-rubric.md`
+- `doc:docs/geo-fix.md`
 
 ## When Runtime Infrastructure Becomes Justified
 

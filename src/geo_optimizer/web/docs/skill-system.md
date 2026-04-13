@@ -71,6 +71,7 @@ Initial foundational skills:
 - `geo_competitor_comparison`
 - `geo_schema_readiness`
 - `geo_ai_discovery_readiness`
+- `geo_trust_signal_review`
 
 These are intentionally narrow. They define the contract for future skills without introducing a runtime agent engine.
 

@@ -19,6 +19,7 @@ def test_skill_catalog_loads_foundational_skills():
     assert "geo_competitor_comparison" in skill_ids
     assert "geo_schema_readiness" in skill_ids
     assert "geo_ai_discovery_readiness" in skill_ids
+    assert "geo_trust_signal_review" in skill_ids
 
 
 def test_skill_catalog_validation_has_no_failures():
