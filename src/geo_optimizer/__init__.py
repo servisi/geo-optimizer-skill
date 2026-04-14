@@ -15,7 +15,7 @@ Programmatic usage::
 
 from __future__ import annotations
 
-__version__ = "4.5.1"
+__version__ = "4.6.0"
 
 # ─── Public API ──────────────────────────────────────────────────────────────
 

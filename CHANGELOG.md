@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [4.6.0] — 2026-04-14
+
+### Added
+- **`geo_factual_accuracy` MCP tool** — audits unsourced claims, suspicious numeric/date mismatches, unverifiable wording, and broken source links so answer-grade content can be checked before or after publication (#386)
+- **`geo monitor` command** — passive AI-visibility readiness check for a domain, covering crawler access, `llms.txt`, AI discovery endpoints, trust stack, and local momentum from saved history (#52)
+- **`geo snapshots` command** — local archive for AI answers with query, model/provider metadata, full answer text, and extracted citations, backed by SQLite for later analysis (#380)
+- **Citation quality scoring for snapshots** — `geo snapshots --quality` assigns citation tiers, position scores, and contextual snippets to archived answers so teams can evaluate how strongly a brand is being cited inside AI responses (#381)
+
+### Changed
+- **Documentation coverage** — README, packaged docs, GitHub Pages mirror, and MCP docs now document monitor, snapshots, citation quality scoring, and factual-accuracy auditing
+- **Optional dependency range** — expanded the optional `rich` compatibility range to `<16.0` via the merged dependency maintenance PR
+
+### Tests
+- Added dedicated coverage for factual accuracy auditing, passive monitoring, snapshot archiving/querying, and citation-quality analysis on archived answers
+
+---
+
 ## [4.5.1] — 2026-04-13
 
 ### Fixed
