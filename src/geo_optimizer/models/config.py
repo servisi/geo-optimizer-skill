@@ -31,6 +31,25 @@ TRACKING_DB_PATH = GEO_OPTIMIZER_HOME / "tracking.db"
 DEFAULT_HISTORY_RETENTION_DAYS = 90
 DEFAULT_HISTORY_LIMIT = 12
 
+# ─── Passive AI visibility monitoring ────────────────────────────────────────
+
+MONITOR_SCORING = {
+    "citation_bot_access": 20,
+    "user_fetch_access": 10,
+    "llms_readiness": 15,
+    "ai_discovery_readiness": 15,
+    "entity_strength": 15,
+    "trust_strength": 15,
+    "momentum": 10,
+}
+
+MONITOR_BANDS = {
+    "strong": (80, 100),
+    "visible": (60, 79),
+    "emerging": (35, 59),
+    "low": (0, 34),
+}
+
 
 # ─── AI bots — 3-tier classification (training/search/user) ──────────────────
 #

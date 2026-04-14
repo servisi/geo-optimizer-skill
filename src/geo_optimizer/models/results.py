@@ -594,6 +594,40 @@ class FactualAccuracyResult:
     severity: str = "clean"
 
 
+# ─── Passive monitor ────────────────────────────────────────────────────────
+
+
+@dataclass
+class MonitorSignal:
+    """Segnale sintetico per il monitoraggio passivo della visibilita' AI."""
+
+    key: str
+    label: str
+    score: int = 0
+    max_score: int = 0
+    status: str = "missing"
+    details: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MonitorResult:
+    """Snapshot di visibilita' AI in modalita' passiva per un dominio."""
+
+    domain: str
+    url: str
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    mode: str = "passive"
+    direct_mentions_checked: bool = False
+    visibility_score: int = 0
+    band: str = "low"
+    total_snapshots: int = 0
+    score_delta: int | None = None
+    latest_geo_score: int | None = None
+    latest_geo_band: str | None = None
+    signals: list[MonitorSignal] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+
+
 # ─── History / tracking ─────────────────────────────────────────────────────
 
 

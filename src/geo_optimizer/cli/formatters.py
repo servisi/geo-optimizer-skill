@@ -33,7 +33,7 @@ from geo_optimizer.cli.scoring_helpers import (
     signals_score as _signals_score,
 )
 from geo_optimizer.models.config import SCORE_BANDS, SCORING
-from geo_optimizer.models.results import AuditDiffResult, AuditResult, BatchAuditResult, HistoryResult
+from geo_optimizer.models.results import AuditDiffResult, AuditResult, BatchAuditResult, HistoryResult, MonitorResult
 
 # Fix #409: max scores computed dynamically from SCORING (not hardcoded)
 _MAX_ROBOTS = sum(v for k, v in SCORING.items() if k.startswith("robots_"))
@@ -722,6 +722,47 @@ def format_history_report_html(result: HistoryResult) -> str:
         f"<tbody>{tbody}</tbody>"
         "</table></div></body></html>"
     )
+
+
+def format_monitor_json(result: MonitorResult) -> str:
+    """Formatta MonitorResult come JSON."""
+    return json.dumps(asdict(result), indent=2)
+
+
+def format_monitor_text(result: MonitorResult) -> str:
+    """Formatta il monitor passivo della visibilita' AI come testo."""
+    lines = []
+    lines.append("")
+    lines.append("🔍 " * 20)
+    lines.append("  GEO MONITOR — PASSIVE AI VISIBILITY")
+    lines.append("  github.com/auriti-labs/geo-optimizer-skill")
+    lines.append("🔍 " * 20)
+    lines.append("")
+    lines.append(f"   Domain: {result.domain}")
+    lines.append(f"   Homepage: {result.url}")
+    lines.append(f"   Visibility score: {result.visibility_score}/100 ({result.band.upper()}) | Mode: {result.mode}")
+    lines.append(
+        f"   Latest GEO score: {result.latest_geo_score}/100 ({(result.latest_geo_band or 'critical').upper()})"
+    )
+    delta_text = "n/a" if result.score_delta is None else f"{result.score_delta:+d}"
+    lines.append(f"   Local trend: {delta_text} | Snapshots stored: {result.total_snapshots}")
+
+    lines.append("")
+    lines.append(_section_header("1. PASSIVE SIGNALS"))
+    for signal in result.signals:
+        lines.append(f"  • {signal.label}: {signal.score}/{signal.max_score} [{signal.status.upper()}]")
+
+    lines.append("")
+    lines.append(_section_header("2. NEXT ACTIONS"))
+    if result.recommendations:
+        for item in result.recommendations[:5]:
+            lines.append(f"  • {item}")
+    else:
+        lines.append("  • No immediate action required")
+
+    lines.append("")
+    lines.append("  Note: passive mode does not query LLM APIs or verify direct brand mentions in answers.")
+    return "\n".join(lines)
 
 
 def _section_header(text: str) -> str:

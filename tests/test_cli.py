@@ -26,6 +26,8 @@ from geo_optimizer.models.results import (
     ContentResult,
     LlmsTxtResult,
     MetaResult,
+    MonitorResult,
+    MonitorSignal,
     RobotsResult,
     SchemaAnalysis,
     SchemaResult,
@@ -58,6 +60,7 @@ def _mock_cli_url_validation(monkeypatch):
     monkeypatch.setattr("geo_optimizer.cli.audit_cmd.validate_public_url", _fake_validate)
     monkeypatch.setattr("geo_optimizer.cli.llms_cmd.validate_public_url", _fake_validate)
     monkeypatch.setattr("geo_optimizer.cli.history_cmd.validate_public_url", _fake_validate)
+    monkeypatch.setattr("geo_optimizer.cli.monitor_cmd.validate_public_url", _fake_validate)
     monkeypatch.setattr("geo_optimizer.cli.track_cmd.validate_public_url", _fake_validate)
 
 
@@ -266,6 +269,7 @@ class TestCLIVersionAndHelp:
         assert "diff" in result.output
         assert "history" in result.output
         assert "llms" in result.output
+        assert "monitor" in result.output
         assert "schema" in result.output
         assert "track" in result.output
         assert "GEO Optimizer" in result.output
@@ -299,6 +303,14 @@ class TestCLIVersionAndHelp:
         assert "--after" in result.output
         assert "--format" in result.output
         assert "--output" in result.output
+
+    def test_monitor_help(self, runner):
+        """geo monitor --help mostra le opzioni del monitor passivo."""
+        result = runner.invoke(cli, ["monitor", "--help"])
+        assert result.exit_code == 0
+        assert "--domain" in result.output
+        assert "--save-history" in result.output
+        assert "--retention-days" in result.output
 
     def test_schema_help(self, runner):
         """geo schema --help shows schema-specific options."""
@@ -746,6 +758,68 @@ class TestHistoryAndTrackCommands:
 
         assert "GEO History Report" in content
         assert "https://example.com" in content
+
+
+class TestMonitorCommand:
+    """Tests for `geo monitor`."""
+
+    @patch("geo_optimizer.cli.monitor_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.monitor_cmd.run_passive_monitor")
+    def test_monitor_text_output(self, mock_monitor, _mock_validate, runner):
+        """geo monitor mostra lo snapshot passive in formato testo."""
+        mock_monitor.return_value = MonitorResult(
+            domain="example.com",
+            url="https://example.com",
+            timestamp="2026-04-14T10:00:00+00:00",
+            visibility_score=72,
+            band="visible",
+            total_snapshots=4,
+            score_delta=3,
+            latest_geo_score=78,
+            latest_geo_band="good",
+            signals=[
+                MonitorSignal(
+                    key="citation_bot_access",
+                    label="Citation bot access",
+                    score=15,
+                    max_score=20,
+                    status="partial",
+                )
+            ],
+            recommendations=["Publish /ai/faq.json"],
+        )
+
+        result = runner.invoke(cli, ["monitor", "--domain", "example.com"])
+
+        assert result.exit_code == 0
+        assert "GEO MONITOR" in result.output
+        assert "Visibility score: 72/100 (VISIBLE)" in result.output
+        assert "Publish /ai/faq.json" in result.output
+
+    @patch("geo_optimizer.cli.monitor_cmd.validate_public_url", return_value=(True, None))
+    @patch("geo_optimizer.cli.monitor_cmd.run_passive_monitor")
+    def test_monitor_json_output(self, mock_monitor, _mock_validate, runner):
+        """geo monitor --format json serializza il risultato."""
+        mock_monitor.return_value = MonitorResult(
+            domain="example.com",
+            url="https://example.com",
+            timestamp="2026-04-14T10:00:00+00:00",
+            visibility_score=61,
+            band="visible",
+            total_snapshots=2,
+            score_delta=-2,
+            latest_geo_score=70,
+            latest_geo_band="good",
+            signals=[],
+            recommendations=[],
+        )
+
+        result = runner.invoke(cli, ["monitor", "--domain", "example.com", "--format", "json"])
+        data = json.loads(result.output)
+
+        assert result.exit_code == 0
+        assert data["domain"] == "example.com"
+        assert data["visibility_score"] == 61
 
 
 # ============================================================================

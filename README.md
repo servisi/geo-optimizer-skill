@@ -56,6 +56,9 @@ geo audit --url https://yoursite.com --save-history --regression
 # Show the saved trend for a site
 geo history --url https://yoursite.com
 
+# Passive AI visibility snapshot for a domain
+geo monitor --domain yoursite.com
+
 # Run recurring monitoring and generate an HTML trend report
 geo track --url https://yoursite.com --report --output ./geo-track-report.html
 
@@ -114,6 +117,7 @@ geo audit --url https://example.com --format html      # Self-contained report
 geo audit --url https://example.com --format sarif     # GitHub Code Scanning
 geo audit --url https://example.com --format junit     # Jenkins, GitLab CI
 geo audit --url https://example.com --format github    # GitHub Actions annotations
+geo monitor --domain example.com                       # Passive AI visibility readiness
 geo history --url https://example.com                  # Saved score trend
 geo track --url https://example.com --report           # Monitoring HTML report
 ```
