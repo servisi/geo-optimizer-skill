@@ -165,6 +165,7 @@ Then ask: *"audit my site and fix what's missing"*
 | `geo_check_bots` | Check bot access via robots.txt |
 | `geo_trust_score` | 5-layer trust signal aggregation |
 | `geo_negative_signals` | 8 anti-citation signal detection |
+| `geo_factual_accuracy` | Audit unsourced claims, contradictions, and broken citations |
 
 ---
 

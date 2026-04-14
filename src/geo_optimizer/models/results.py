@@ -575,6 +575,25 @@ class GapAnalysisResult:
     strengths: list[CategoryDelta] = field(default_factory=list)
 
 
+# ─── Factual accuracy ────────────────────────────────────────────────────────
+
+
+@dataclass
+class FactualAccuracyResult:
+    """Audit euristico di claims, fonti e incoerenze fattuali."""
+
+    checked: bool = False
+    claims_found: int = 0
+    claims_sourced: int = 0
+    claims_unsourced: int = 0
+    unsourced_claims: list[str] = field(default_factory=list)
+    unverifiable_claims: list[str] = field(default_factory=list)
+    inconsistencies: list[str] = field(default_factory=list)
+    broken_source_links: list[str] = field(default_factory=list)
+    source_links_checked: int = 0
+    severity: str = "clean"
+
+
 # ─── History / tracking ─────────────────────────────────────────────────────
 
 

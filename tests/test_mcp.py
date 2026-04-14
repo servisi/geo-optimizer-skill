@@ -16,6 +16,7 @@ pytest.importorskip("mcp", reason="mcp non installato (pip install geo-optimizer
 
 from geo_optimizer.mcp.server import (
     geo_audit,
+    geo_factual_accuracy,
     geo_fix,
     geo_gap_analysis,
     geo_llms_generate,
@@ -26,6 +27,7 @@ from geo_optimizer.mcp.server import (
 from geo_optimizer.models.results import (
     AuditResult,
     ContentResult,
+    FactualAccuracyResult,
     FixItem,
     FixPlan,
     GapAction,
@@ -215,6 +217,40 @@ class TestGeoGapAnalysisTool:
     def test_gap_analysis_blocca_url_non_sicuro(self):
         """geo_gap_analysis rifiuta URL verso reti private."""
         result = geo_gap_analysis("http://192.168.0.1", "https://example.com")
+        data = json.loads(result)
+
+        assert "error" in data
+
+
+class TestGeoFactualAccuracyTool:
+    """Test per il tool MCP geo_factual_accuracy."""
+
+    @patch("geo_optimizer.core.factual_accuracy.run_factual_accuracy_audit")
+    def test_factual_accuracy_ritorna_json_valido(self, mock_factual):
+        """geo_factual_accuracy serializza il risultato dell'audit fattuale."""
+        mock_factual.return_value = FactualAccuracyResult(
+            checked=True,
+            claims_found=4,
+            claims_sourced=2,
+            claims_unsourced=1,
+            unsourced_claims=["Studies show 42% of users prefer GEO."],
+            inconsistencies=["Conflicting numeric claims for 'conversion rate': 42%, 45%"],
+            broken_source_links=["https://broken.example.com/report"],
+            source_links_checked=2,
+            severity="high",
+        )
+
+        result = geo_factual_accuracy("https://example.com/blog/post")
+        data = json.loads(result)
+
+        assert data["checked"] is True
+        assert data["claims_found"] == 4
+        assert data["severity"] == "high"
+        assert data["broken_source_links"] == ["https://broken.example.com/report"]
+
+    def test_factual_accuracy_blocca_url_non_sicuro(self):
+        """geo_factual_accuracy rifiuta URL verso reti private."""
+        result = geo_factual_accuracy("http://10.0.0.1/internal")
         data = json.loads(result)
 
         assert "error" in data

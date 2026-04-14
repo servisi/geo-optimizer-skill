@@ -265,7 +265,7 @@ Check AI discovery endpoints on a website. Verifies the presence of `/.well-know
 }
 ```
 
-### 8. `geo_check_bots`
+### 9. `geo_check_bots`
 
 Check which AI bots can access a website via robots.txt. Returns per-bot status (allowed/blocked/missing) with 3-tier classification (training/search/user) and citation bot verification.
 
@@ -286,6 +286,74 @@ Check which AI bots can access a website via robots.txt. Returns per-bot status 
     "GPTBot": { "description": "OpenAI (ChatGPT training)", "status": "blocked", "tier": "training" }
   },
   "summary": { "allowed": 20, "blocked": 2, "missing": 2 }
+}
+```
+
+### 10. `geo_trust_score`
+
+Return the Trust Stack Score for a website. Aggregates five trust layers: technical, identity, social, academic, and consistency.
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `url` | string | yes | URL of the site to evaluate |
+
+**Example output (abbreviated):**
+
+```json
+{
+  "url": "https://example.com",
+  "composite_score": 18,
+  "grade": "B",
+  "trust_level": "high"
+}
+```
+
+### 11. `geo_negative_signals`
+
+Check negative signals that reduce AI citation probability. Detects CTA overload, thin content, keyword stuffing, mixed signals, and other anti-citation patterns.
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `url` | string | yes | URL of the page to inspect |
+
+**Example output (abbreviated):**
+
+```json
+{
+  "checked": true,
+  "severity": "medium",
+  "signals_found": 2,
+  "cta_count": 4,
+  "has_keyword_stuffing": false
+}
+```
+
+### 12. `geo_factual_accuracy`
+
+Audit factual claims, sourcing quality, and obvious contradictions on a page. The tool flags unsourced numeric or evidence-style claims, surfaces unverifiable wording, highlights date/number inconsistencies, and checks linked sources for obvious failures.
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `url` | string | yes | URL of the page to audit |
+
+**Example output:**
+
+```json
+{
+  "checked": true,
+  "claims_found": 4,
+  "claims_sourced": 2,
+  "claims_unsourced": 1,
+  "unsourced_claims": [
+    "Studies show 42% of users prefer GEO workflows."
+  ],
+  "inconsistencies": [
+    "Conflicting numeric claims for 'conversion rate': 42%, 45%"
+  ],
+  "broken_source_links": [
+    "https://broken.example.com/report"
+  ],
+  "severity": "high"
 }
 ```
 

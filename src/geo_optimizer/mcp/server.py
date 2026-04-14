@@ -4,7 +4,7 @@ MCP Server for GEO Optimizer.
 Exposes core functionality as MCP tools usable from
 Claude Code, Cursor, Windsurf and any MCP client.
 
-Available tools (11):
+Available tools (12):
     geo_audit            — Full GEO audit (score 0-100)
     geo_fix              — Generate automatic fixes (robots, llms, schema, meta)
     geo_llms_generate    — Generate llms.txt content from sitemap
@@ -16,6 +16,7 @@ Available tools (11):
     geo_check_bots       — Check which AI bots can access via robots.txt
     geo_trust_score      — Trust Stack Score (5-layer trust signal aggregation)
     geo_negative_signals — Check negative signals that reduce AI citation probability
+    geo_factual_accuracy — Audit claims, sources and factual consistency
 
 Available resources:
     geo://ai-bots            — List of tracked AI bots
@@ -529,6 +530,37 @@ def geo_negative_signals(url: str) -> str:
         return _to_json(result.negative_signals)
     except Exception as e:
         logger.error("Error in geo_negative_signals for %s: %s", url, e)
+        return json.dumps({"error": "Internal error during operation", "url": url})
+
+
+# ─── Tool 11: geo_factual_accuracy (#386) ────────────────────────────────────
+
+
+@mcp.tool()
+def geo_factual_accuracy(url: str) -> str:
+    """Audit factual claims, sourcing quality, and obvious contradictions.
+
+    Detects numeric or evidence-style claims, flags unsourced assertions,
+    surfaces unverifiable wording, highlights simple date/number inconsistencies,
+    and checks linked sources for obvious failures.
+
+    Args:
+        url: URL of the page to audit (e.g. https://example.com/blog/post)
+    """
+    from geo_optimizer.utils.validators import validate_public_url
+
+    url = _normalize_url(url)
+    safe, reason = validate_public_url(url)
+    if not safe:
+        return json.dumps({"error": f"Unsafe URL: {reason}"})
+
+    try:
+        from geo_optimizer.core.factual_accuracy import run_factual_accuracy_audit
+
+        result = run_factual_accuracy_audit(url)
+        return _to_json(result)
+    except Exception as e:
+        logger.error("Error in geo_factual_accuracy for %s: %s", url, e)
         return json.dumps({"error": "Internal error during operation", "url": url})
 
 
