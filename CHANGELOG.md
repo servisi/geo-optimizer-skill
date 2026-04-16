@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [4.6.1] — 2026-04-16
+
+### Security
+- **Path traversal hardening** — `validate_safe_path()` now accepts an optional `base_dir` parameter that rejects resolved paths escaping the allowed directory
+- **Error disclosure fix** — `batch_audit.py` no longer exposes `str(exc)` in `AuditResult`; only the exception class name is returned
+- **Skill loader path containment** — `prompt_file` in skill YAML specs is now resolved and validated against the skill directory boundary
+- **CORS configuration warning** — runtime warning logged when `GEO_API_TOKEN` is set but `ALLOWED_ORIGINS` defaults to `*`
+
+### Added
+- **Audit performance budget** (#290) — `audit_duration_ms` field on `AuditResult` tracks wall-clock time; `AUDIT_TIMEOUT_SECONDS` (10s) budget with warning log when exceeded; duration shown in text and JSON output
+
+### Fixed
+- **Flaky history tests** — replaced hardcoded timestamps (2026-01-15) with relative timestamps so tests no longer fail after the 90-day retention window passes
+
+### Changed
+- **Documentation alignment** — corrected citability method count (42→47), MCP tool count (8/10→12), test count (1120→1189), and `SCORING_RUBRIC.md` status (v4.0.0-beta.1→v4.6.0) across README, CONTRIBUTING, CLAUDE.md, and site docs
+
+### Housekeeping
+- Closed #288 (plugin architecture — already implemented), #380, #381 (already shipped in v4.6.0)
+- Removed stale build artifacts (`UNKNOWN.egg-info`, `dist/`, `build/`)
+
+### Tests
+- 1193 tests (all mocked, zero network), up from 1189
+- 4 new performance budget tests
+
+---
+
 ## [4.6.0] — 2026-04-14
 
 ### Added
