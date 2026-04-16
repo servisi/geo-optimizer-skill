@@ -172,6 +172,10 @@ def format_audit_json(result: AuditResult) -> str:
     if hasattr(result, "rag_chunk") and result.rag_chunk and result.rag_chunk.checked:
         data["rag_chunk"] = asdict(result.rag_chunk)
 
+    # v4.7: Embedding Proximity Score (#354)
+    if hasattr(result, "embedding_proximity") and result.embedding_proximity and result.embedding_proximity.checked:
+        data["embedding_proximity"] = asdict(result.embedding_proximity)
+
     # Metadata
     data["http_status"] = result.http_status
     data["page_size"] = result.page_size
@@ -415,6 +419,15 @@ def format_audit_text(result: AuditResult) -> str:
         lines.append(f"  Heading boundaries: {rc.heading_as_boundary_ratio:.0%}")
         lines.append(f"  Anchor sentences: {rc.anchor_sentences}")
         lines.append(f"  Chunk readiness: {rc.chunk_readiness_score}/100")
+
+    # Embedding Proximity (#354)
+    ep = getattr(result, "embedding_proximity", None)
+    if ep and ep.checked and not ep.skipped_reason:
+        lines.append("")
+        lines.append(_section_header("14. EMBEDDING PROXIMITY"))
+        lines.append(f"  Model: {ep.model_name}")
+        lines.append(f"  Avg similarity: {ep.avg_similarity:.4f} | Top: {ep.top_similarity:.4f}")
+        lines.append(f"  Retrievable chunks: {ep.retrievable_chunks}/{ep.total_chunks}")
 
     # Score
     lines.append("")

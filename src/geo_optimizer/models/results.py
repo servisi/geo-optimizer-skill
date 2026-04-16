@@ -441,6 +441,23 @@ class RagChunkResult:
     chunk_readiness_score: int = 0
 
 
+# ─── Embedding Proximity (v4.7) ─────────────────────────────────────────────
+
+
+@dataclass
+class EmbeddingProximityResult:
+    """Embedding-based RAG retrieval simulation (#354)."""
+
+    checked: bool = False
+    skipped_reason: str | None = None
+    model_name: str = ""
+    query_scores: list[dict[str, Any]] = field(default_factory=list)
+    avg_similarity: float = 0.0
+    top_similarity: float = 0.0
+    retrievable_chunks: int = 0
+    total_chunks: int = 0
+
+
 # ─── Full audit ──────────────────────────────────────────────────────────────
 
 
@@ -488,6 +505,8 @@ class AuditResult:
     audit_duration_ms: int | None = None
     # v4.7: RAG chunk readiness (#353)
     rag_chunk: RagChunkResult = field(default_factory=RagChunkResult)
+    # v4.7: Embedding proximity score (#354)
+    embedding_proximity: EmbeddingProximityResult = field(default_factory=EmbeddingProximityResult)
 
 
 # ─── Batch audit ─────────────────────────────────────────────────────────────

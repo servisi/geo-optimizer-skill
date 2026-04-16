@@ -280,6 +280,7 @@ def _build_audit_result(
     prompt_injection=None,  # v4.4: Prompt Injection Detection (#276)
     trust_stack=None,  # v4.5: Trust Stack Score (#273)
     rag_chunk=None,  # v4.7: RAG Chunk Readiness (#353)
+    embedding_proximity=None,  # v4.7: Embedding Proximity Score (#354)
 ) -> AuditResult:
     """Build AuditResult from sub-audits (fix #97: shared sync/async logic).
 
@@ -341,6 +342,18 @@ def _build_audit_result(
         from geo_optimizer.models.results import RagChunkResult
 
         effective_rag_chunk = RagChunkResult()
+
+    # v4.7: Embedding Proximity Score (#354) — compute if not pre-computed
+    if embedding_proximity is not None:
+        effective_embedding = embedding_proximity
+    elif soup is not None:
+        from geo_optimizer.core.audit_embedding import audit_embedding_proximity
+
+        effective_embedding = audit_embedding_proximity(soup, soup_clean)
+    else:
+        from geo_optimizer.models.results import EmbeddingProximityResult
+
+        effective_embedding = EmbeddingProximityResult()
 
     # Compute score, breakdown, and band (v4.0: includes signals, ai_discovery)
     score = compute_geo_score(
@@ -436,6 +449,7 @@ def _build_audit_result(
         prompt_injection=effective_prompt_injection,
         trust_stack=effective_trust_stack,
         rag_chunk=effective_rag_chunk,
+        embedding_proximity=effective_embedding,
     )
 
 
