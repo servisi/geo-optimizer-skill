@@ -16,6 +16,8 @@ This documentation covers every tool and concept in the toolkit. → [README](..
 | [GEO History](geo-history.md) | Inspect saved score trends and regressions with `geo history` |
 | [GEO Track](geo-track.md) | Scheduled monitoring workflow with `geo track` and HTML trend reports |
 | [GEO Diff](geo-diff.md) | A/B comparison for `geo diff` — before/after score delta and regressions |
+| [GEO Coherence](geo-coherence.md) | Cross-page semantic coherence analysis `🆕 v4.7` |
+| [GEO Logs](geo-logs.md) | AI crawler server log analysis `🆕 v4.7` |
 | [Generating llms.txt](llms-txt.md) | Auto-generate `/llms.txt` from your sitemap for AI crawlers |
 | [Schema Injector](schema-injector.md) | Generate and inject JSON-LD structured data into your pages |
 | [Using SKILL.md as AI Context](ai-context.md) | Use the toolkit with Claude, ChatGPT, Gemini, Cursor, Windsurf |
