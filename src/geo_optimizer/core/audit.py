@@ -284,6 +284,7 @@ def _build_audit_result(
     content_decay=None,  # v4.7: Content Decay Predictor (#383)
     platform_citation=None,  # v4.7: Multi-Platform Citation Profile (#228)
     context_window=None,  # v4.9: Context Window Optimization (#370)
+    instruction_readiness=None,  # v4.9: Instruction Following Readiness (#371)
 ) -> AuditResult:
     """Build AuditResult from sub-audits (fix #97: shared sync/async logic).
 
@@ -382,6 +383,18 @@ def _build_audit_result(
 
         effective_context_window = ContextWindowResult()
 
+    # v4.9: Instruction Following Readiness (#371)
+    if instruction_readiness is not None:
+        effective_instruction = instruction_readiness
+    elif soup is not None:
+        from geo_optimizer.core.audit_instruction import audit_instruction_readiness
+
+        effective_instruction = audit_instruction_readiness(soup)
+    else:
+        from geo_optimizer.models.results import InstructionReadinessResult
+
+        effective_instruction = InstructionReadinessResult()
+
     # Compute score, breakdown, and band (v4.0: includes signals, ai_discovery)
     score = compute_geo_score(
         robots, llms, schema, meta, content, effective_signals, effective_ai_discovery, effective_brand_entity
@@ -479,6 +492,7 @@ def _build_audit_result(
         embedding_proximity=effective_embedding,
         content_decay=effective_decay,
         context_window=effective_context_window,
+        instruction_readiness=effective_instruction,
     )
 
     # v4.7: Multi-Platform Citation Profile (#228) — computed post-construction

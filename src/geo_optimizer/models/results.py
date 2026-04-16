@@ -729,6 +729,34 @@ class ContextWindowResult:
     context_efficiency_score: int = 0  # 0-100
 
 
+# ─── Instruction Following Readiness (v4.9) ─────────────────────────────────
+
+
+@dataclass
+class InstructionReadinessResult:
+    """AI agent instruction following readiness (#371). Informational — does not affect GEO score."""
+
+    checked: bool = False
+    # Action clarity: CTAs with descriptive text
+    labeled_buttons: int = 0
+    unlabeled_buttons: int = 0
+    action_clarity_score: int = 0  # 0-100
+    # Form machine-readability
+    total_inputs: int = 0
+    labeled_inputs: int = 0
+    typed_inputs: int = 0  # inputs with explicit type attribute
+    form_readability_score: int = 0  # 0-100
+    # Workflow linearity: navigation complexity
+    nav_links: int = 0
+    stateful_urls: bool = False  # URLs with query params or hash fragments
+    # Error recovery: machine-readable error patterns
+    has_aria_live: bool = False
+    has_error_roles: bool = False  # role="alert" or aria-invalid
+    # Summary
+    readiness_score: int = 0  # 0-100
+    readiness_level: str = "none"  # none | basic | ready | advanced
+
+
 # ─── Full audit ──────────────────────────────────────────────────────────────
 
 
@@ -786,6 +814,8 @@ class AuditResult:
     brand_sentiment: BrandSentimentResult = field(default_factory=BrandSentimentResult)
     # v4.9: Context window optimization (#370)
     context_window: ContextWindowResult = field(default_factory=ContextWindowResult)
+    # v4.9: Instruction following readiness (#371)
+    instruction_readiness: InstructionReadinessResult = field(default_factory=InstructionReadinessResult)
 
 
 # ─── Batch audit ─────────────────────────────────────────────────────────────
