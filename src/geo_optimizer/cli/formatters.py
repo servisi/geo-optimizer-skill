@@ -369,9 +369,9 @@ def format_audit_text(result: AuditResult) -> str:
         lines.append(_section_header("9. CDN AI CRAWLER ACCESS"))
         if result.cdn_check.any_blocked:
             lines.append("  ❌ AI crawlers blocked by CDN/WAF")
-            for bot in result.cdn_check.bot_results:
-                icon = "✅" if not bot["blocked"] and not bot["challenge_detected"] else "❌"
-                lines.append(f"  {icon} {bot['bot']}: HTTP {bot['status']}")
+            for bot_entry in result.cdn_check.bot_results:
+                icon = "✅" if not bot_entry["blocked"] and not bot_entry["challenge_detected"] else "❌"
+                lines.append(f"  {icon} {bot_entry['bot']}: HTTP {bot_entry['status']}")
         else:
             lines.append("  ✅ All AI crawlers can access the site")
 

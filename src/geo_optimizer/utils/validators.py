@@ -56,7 +56,9 @@ def _is_ip_blocked(ip_obj) -> bool:
 
     Fallback to catch networks not in the explicit blocklist.
     """
-    return ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast
+    return bool(
+        ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast
+    )
 
 
 def _validate_url_structure(url: str) -> tuple[bool, str | None, str | None]:
@@ -138,7 +140,7 @@ def resolve_and_validate_url(url: str) -> tuple[bool, str | None, list[str]]:
 
     ip_validi = []
     for _, _, _, _, sockaddr in infos:
-        ip_str = sockaddr[0]
+        ip_str = str(sockaddr[0])
         bloccato, msg = _check_ip_blocked(ip_str)
         if bloccato:
             hostname_display = hostname or "unknown"

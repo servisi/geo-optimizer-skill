@@ -61,7 +61,7 @@ def _truncate(text: str, max_len: int = PROMPT_INJECTION_SAMPLE_MAX_LEN) -> str:
 def _get_text_safe(element) -> str:
     """Safely extract text from a BeautifulSoup element."""
     try:
-        return element.get_text(strip=True)
+        return str(element.get_text(strip=True))
     except Exception:
         return ""
 

@@ -175,13 +175,13 @@ def _get_clean_text(soup, soup_clean=None) -> str:
         working = copy.deepcopy(soup_clean)
         for tag in working(["nav", "footer", "header"]):
             tag.decompose()
-        return working.get_text(separator=" ", strip=True)
+        return str(working.get_text(separator=" ", strip=True))
 
     # Fallback: build a clean copy from scratch with deepcopy (fix #285: avoid BS(str(soup)))
     working = copy.deepcopy(soup)
     for tag in working(["script", "style", "nav", "footer", "header"]):
         tag.decompose()
-    return working.get_text(separator=" ", strip=True)
+    return str(working.get_text(separator=" ", strip=True))
 
 
 def _extract_dates_from_soup(soup) -> dict[str, str | None]:

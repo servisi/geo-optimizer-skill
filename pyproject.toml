@@ -135,3 +135,36 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/test_integration.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+# Gradual adoption: strict on new modules, lenient on legacy
+exclude = [
+    "tests/",
+    "build/",
+    "dist/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "geo_optimizer.web.app",
+    "geo_optimizer.mcp.*",
+    "geo_optimizer.i18n.*",
+    "geo_optimizer.core.fixer",
+    "geo_optimizer.core.schema_injector",
+    "geo_optimizer.core.audit_cdn",
+    "geo_optimizer.core.llms_generator",
+    "geo_optimizer.utils.http",
+    "geo_optimizer.utils.http_async",
+    "geo_optimizer.models.project_config",
+    "geo_optimizer.skills.loader",
+    "mcp.*",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "mcp.*"
+follow_imports = "skip"

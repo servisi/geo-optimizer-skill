@@ -71,12 +71,15 @@ jobs:
           cache: pip
 
       - name: Install linting tools
-        run: pip install ruff pip-audit
+        run: pip install ruff pip-audit mypy
 
       - name: Run ruff
         run: |
           ruff check src/geo_optimizer/
           ruff format --check src/geo_optimizer/
+
+      - name: Run mypy
+        run: mypy src/geo_optimizer/
 
       - name: Audit dependencies
         run: |

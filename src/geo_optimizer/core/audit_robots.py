@@ -15,7 +15,7 @@ from geo_optimizer.utils.http import fetch_url
 from geo_optimizer.utils.robots_parser import classify_bot, parse_robots_txt
 
 
-def audit_robots_txt(base_url: str, bots: dict = None) -> RobotsResult:
+def audit_robots_txt(base_url: str, bots: dict | None = None) -> RobotsResult:
     """Check robots.txt for AI bot access. Returns RobotsResult.
 
     Args:
@@ -77,7 +77,7 @@ def audit_robots_txt(base_url: str, bots: dict = None) -> RobotsResult:
     return result
 
 
-def _audit_robots_from_response(r, bots: dict = None) -> RobotsResult:
+def _audit_robots_from_response(r, bots: dict | None = None) -> RobotsResult:
     """Analyze robots.txt from an already-downloaded HTTP response.
 
     Args:

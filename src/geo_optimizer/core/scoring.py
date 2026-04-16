@@ -104,7 +104,7 @@ def _score_schema(schema) -> int:
     s += SCORING["schema_organization"] if schema.has_organization else 0
     s += SCORING["schema_website"] if schema.has_website else 0
     s += SCORING["schema_sameas"] if schema.has_sameas else 0
-    return s
+    return int(s)
 
 
 def _score_meta(meta) -> int:

@@ -269,8 +269,8 @@ def _build_audit_result(
     page_size: int,
     soup=None,
     soup_clean=None,  # Fix #285: pre-cleaned soup (without script/style) to avoid re-parsing
-    extra_checks: dict = None,
-    signals: SignalsResult = None,  # v4.0: segnali tecnici
+    extra_checks: dict | None = None,
+    signals: SignalsResult | None = None,  # v4.0: segnali tecnici
     ai_discovery=None,  # Standard AI discovery endpoints (.well-known/ai.txt, ecc.)
     cdn_check=None,  # v4.2: CDN AI Crawler check (#225)
     js_rendering=None,  # v4.2: JS Rendering check (#226)
@@ -509,6 +509,8 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         base_url = "https://" + base_url
 
     # Fetch homepage (with optional cache)
+    r: CachedResponse | None
+    err: str | None
     if use_cache:
         from geo_optimizer.utils.cache import FileCache
 
