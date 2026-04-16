@@ -495,6 +495,30 @@ class SemanticCoherenceResult:
     language_consistency: float = 1.0
 
 
+# ─── Content Decay Prediction (v4.7) ────────────────────────────────────────
+
+
+@dataclass
+class DecaySignal:
+    """A single content decay signal (#383)."""
+
+    decay_type: str = ""  # temporal | statistical | version | event | price
+    text: str = ""
+    estimated_stale_days: int = 0
+    suggestion: str = ""
+
+
+@dataclass
+class ContentDecayResult:
+    """Content decay prediction for a page (#383)."""
+
+    checked: bool = False
+    signals: list[DecaySignal] = field(default_factory=list)
+    earliest_decay_days: int | None = None
+    decay_risk: str = "low"  # low | medium | high
+    evergreen_score: int = 100
+
+
 # ─── Full audit ──────────────────────────────────────────────────────────────
 
 
@@ -544,6 +568,8 @@ class AuditResult:
     rag_chunk: RagChunkResult = field(default_factory=RagChunkResult)
     # v4.7: Embedding proximity score (#354)
     embedding_proximity: EmbeddingProximityResult = field(default_factory=EmbeddingProximityResult)
+    # v4.7: Content decay prediction (#383)
+    content_decay: ContentDecayResult = field(default_factory=ContentDecayResult)
 
 
 # ─── Batch audit ─────────────────────────────────────────────────────────────

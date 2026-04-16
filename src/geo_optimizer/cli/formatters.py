@@ -176,6 +176,10 @@ def format_audit_json(result: AuditResult) -> str:
     if hasattr(result, "embedding_proximity") and result.embedding_proximity and result.embedding_proximity.checked:
         data["embedding_proximity"] = asdict(result.embedding_proximity)
 
+    # v4.7: Content Decay Predictor (#383)
+    if hasattr(result, "content_decay") and result.content_decay and result.content_decay.checked:
+        data["content_decay"] = asdict(result.content_decay)
+
     # Metadata
     data["http_status"] = result.http_status
     data["page_size"] = result.page_size
@@ -428,6 +432,18 @@ def format_audit_text(result: AuditResult) -> str:
         lines.append(f"  Model: {ep.model_name}")
         lines.append(f"  Avg similarity: {ep.avg_similarity:.4f} | Top: {ep.top_similarity:.4f}")
         lines.append(f"  Retrievable chunks: {ep.retrievable_chunks}/{ep.total_chunks}")
+
+    # Content Decay Predictor (#383)
+    cd = getattr(result, "content_decay", None)
+    if cd and cd.checked and cd.signals:
+        lines.append("")
+        lines.append(_section_header("15. CONTENT DECAY PREDICTION"))
+        risk_icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(cd.decay_risk, "⚪")
+        lines.append(f"  Risk: {risk_icon} {cd.decay_risk.upper()} | Evergreen: {cd.evergreen_score}/100")
+        if cd.earliest_decay_days is not None:
+            lines.append(f"  Earliest decay: ~{cd.earliest_decay_days} days")
+        for sig in cd.signals[:5]:
+            lines.append(f"  [{sig.decay_type}] {sig.text[:80]}")
 
     # Score
     lines.append("")

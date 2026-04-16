@@ -281,6 +281,7 @@ def _build_audit_result(
     trust_stack=None,  # v4.5: Trust Stack Score (#273)
     rag_chunk=None,  # v4.7: RAG Chunk Readiness (#353)
     embedding_proximity=None,  # v4.7: Embedding Proximity Score (#354)
+    content_decay=None,  # v4.7: Content Decay Predictor (#383)
 ) -> AuditResult:
     """Build AuditResult from sub-audits (fix #97: shared sync/async logic).
 
@@ -354,6 +355,18 @@ def _build_audit_result(
         from geo_optimizer.models.results import EmbeddingProximityResult
 
         effective_embedding = EmbeddingProximityResult()
+
+    # v4.7: Content Decay Predictor (#383)
+    if content_decay is not None:
+        effective_decay = content_decay
+    elif soup is not None:
+        from geo_optimizer.core.audit_decay import audit_content_decay
+
+        effective_decay = audit_content_decay(soup)
+    else:
+        from geo_optimizer.models.results import ContentDecayResult
+
+        effective_decay = ContentDecayResult()
 
     # Compute score, breakdown, and band (v4.0: includes signals, ai_discovery)
     score = compute_geo_score(
@@ -450,6 +463,7 @@ def _build_audit_result(
         trust_stack=effective_trust_stack,
         rag_chunk=effective_rag_chunk,
         embedding_proximity=effective_embedding,
+        content_decay=effective_decay,
     )
 
 
