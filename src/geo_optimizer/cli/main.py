@@ -38,6 +38,7 @@ from geo_optimizer.cli.diff_cmd import diff  # noqa: E402
 from geo_optimizer.cli.fix_cmd import fix  # noqa: E402
 from geo_optimizer.cli.history_cmd import history  # noqa: E402
 from geo_optimizer.cli.llms_cmd import llms  # noqa: E402
+from geo_optimizer.cli.logs_cmd import logs  # noqa: E402
 from geo_optimizer.cli.monitor_cmd import monitor  # noqa: E402
 from geo_optimizer.cli.schema_cmd import schema  # noqa: E402
 from geo_optimizer.cli.snapshots_cmd import snapshots  # noqa: E402
@@ -49,6 +50,7 @@ cli.add_command(diff)
 cli.add_command(fix)
 cli.add_command(history)
 cli.add_command(llms)
+cli.add_command(logs)
 cli.add_command(monitor)
 cli.add_command(schema)
 cli.add_command(snapshots)

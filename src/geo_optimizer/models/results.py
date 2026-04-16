@@ -519,6 +519,43 @@ class ContentDecayResult:
     evergreen_score: int = 100
 
 
+# ─── Server Log Analysis (v4.7) ─────────────────────────────────────────────
+
+
+@dataclass
+class BotStats:
+    """Statistics for a single AI bot from server logs (#227)."""
+
+    bot_name: str = ""
+    visits: int = 0
+    unique_pages: int = 0
+    first_seen: str = ""
+    last_seen: str = ""
+
+
+@dataclass
+class CrawledPage:
+    """A page crawled by AI bots (#227)."""
+
+    path: str = ""
+    total_visits: int = 0
+    bots: list[str] = field(default_factory=list)
+
+
+@dataclass
+class LogAnalysisResult:
+    """Server log analysis for AI crawler activity (#227)."""
+
+    checked: bool = False
+    log_file: str = ""
+    total_lines: int = 0
+    ai_requests: int = 0
+    date_range_start: str = ""
+    date_range_end: str = ""
+    bots: list[BotStats] = field(default_factory=list)
+    top_pages: list[CrawledPage] = field(default_factory=list)
+
+
 # ─── Full audit ──────────────────────────────────────────────────────────────
 
 
