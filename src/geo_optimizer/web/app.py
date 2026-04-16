@@ -143,8 +143,7 @@ _API_TOKEN: str | None = os.environ.get("GEO_API_TOKEN") or None
 
 if _API_TOKEN and "*" in _ALLOWED_ORIGINS:
     logging.getLogger(__name__).warning(
-        "GEO_API_TOKEN is set but CORS allows all origins (*). "
-        "Set ALLOWED_ORIGINS to restrict cross-origin access."
+        "GEO_API_TOKEN is set but CORS allows all origins (*). Set ALLOWED_ORIGINS to restrict cross-origin access."
     )
 
 
