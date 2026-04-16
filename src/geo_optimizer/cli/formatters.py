@@ -171,6 +171,8 @@ def format_audit_json(result: AuditResult) -> str:
     # Metadata
     data["http_status"] = result.http_status
     data["page_size"] = result.page_size
+    if result.audit_duration_ms is not None:
+        data["audit_duration_ms"] = result.audit_duration_ms
 
     return json.dumps(data, indent=2)
 
@@ -185,7 +187,10 @@ def format_audit_text(result: AuditResult) -> str:
     lines.append("  github.com/auriti-labs/geo-optimizer-skill")
     lines.append("🔍 " * 20)
     lines.append("")
-    lines.append(f"   Status: {result.http_status} | Size: {result.page_size:,} bytes")
+    status_line = f"   Status: {result.http_status} | Size: {result.page_size:,} bytes"
+    if result.audit_duration_ms is not None:
+        status_line += f" | Duration: {result.audit_duration_ms}ms"
+    lines.append(status_line)
 
     # Robots.txt
     lines.append("")

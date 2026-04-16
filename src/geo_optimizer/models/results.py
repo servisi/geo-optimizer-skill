@@ -467,6 +467,8 @@ class AuditResult:
     prompt_injection: PromptInjectionResult = field(default_factory=PromptInjectionResult)
     # v4.5: Trust Stack Score — informational, does not affect GEO score (#273)
     trust_stack: TrustStackResult = field(default_factory=TrustStackResult)
+    # v4.7: audit wall-clock duration in milliseconds (#290)
+    audit_duration_ms: int | None = None
 
 
 # ─── Batch audit ─────────────────────────────────────────────────────────────

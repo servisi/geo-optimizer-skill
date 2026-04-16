@@ -8,6 +8,8 @@ instead of printing — the CLI layer handles display and formatting.
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from urllib.parse import urljoin
 
 # ─── Re-exports from split modules (backward compatibility, #402) ────────────
@@ -41,6 +43,7 @@ from geo_optimizer.core.scoring import (  # noqa: F401 (re-exported for backward
 from geo_optimizer.models.config import (  # noqa: F401 (VALUABLE_SCHEMAS re-exported)
     ABOUT_LINK_PATTERNS,
     AI_BOTS,
+    AUDIT_TIMEOUT_SECONDS,
     CITATION_BOTS,
     CONTENT_MIN_WORDS,
     KEYWORD_STUFFING_THRESHOLD,
@@ -430,6 +433,7 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         use_cache: If True, use disk cache for HTTP requests.
         project_config: Optional ProjectConfig — if it has extra_bots, merges them with AI_BOTS (fix #120).
     """
+    _t0 = time.perf_counter()
     from bs4 import BeautifulSoup
 
     # Fix #120: if config has extra_bots, merge with AI_BOTS for this audit
@@ -470,6 +474,7 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
             error=str(err) if err else "Connection failed",
         )
         result.recommendations = [f"Unable to reach {base_url}: {err}"]
+        result.audit_duration_ms = int((time.perf_counter() - _t0) * 1000)
         return result
 
     # Fix #337: if homepage returns HTTP error, report it and skip analysis of the error page
@@ -482,6 +487,7 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         result.recommendations = [
             f"Site returned HTTP {r.status_code}. Check for Cloudflare/WAF blocks or server errors."
         ]
+        result.audit_duration_ms = int((time.perf_counter() - _t0) * 1000)
         return result
 
     import copy
@@ -563,7 +569,7 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
     )
 
     # Fix #97 + #104: use _build_audit_result for shared logic and plugin integration
-    return _build_audit_result(
+    result = _build_audit_result(
         base_url=base_url,
         robots=robots,
         llms=llms,
@@ -584,6 +590,12 @@ def run_full_audit(url: str, use_cache: bool = False, project_config=None) -> Au
         prompt_injection=prompt_injection_result,
         trust_stack=trust_stack_result,
     )
+    result.audit_duration_ms = int((time.perf_counter() - _t0) * 1000)
+    if result.audit_duration_ms > AUDIT_TIMEOUT_SECONDS * 1000:
+        logging.getLogger(__name__).warning(
+            "Audit exceeded %ds budget: %dms for %s", AUDIT_TIMEOUT_SECONDS, result.audit_duration_ms, base_url
+        )
+    return result
 
 
 async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
@@ -598,6 +610,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
 
     Requires: pip install geo-optimizer-skill[async]
     """
+    _t0 = time.perf_counter()
     from bs4 import BeautifulSoup
 
     from geo_optimizer.utils.http_async import fetch_urls_async
@@ -652,6 +665,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
             error=str(err_home) if err_home else "Connection failed",
         )
         result.recommendations = [f"Unable to reach {base_url}: {err_home}"]
+        result.audit_duration_ms = int((time.perf_counter() - _t0) * 1000)
         return result
 
     # Fix #337: if homepage returns HTTP error, report it and skip analysis of the error page
@@ -664,6 +678,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
         result.recommendations = [
             f"Site returned HTTP {r_home.status_code}. Check for Cloudflare/WAF blocks or server errors."
         ]
+        result.audit_duration_ms = int((time.perf_counter() - _t0) * 1000)
         return result
 
     import copy
@@ -730,7 +745,7 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
     )
 
     # Fix #97 + #104: use _build_audit_result for shared logic and plugin integration
-    return _build_audit_result(
+    result = _build_audit_result(
         base_url=base_url,
         robots=robots,
         llms=llms,
@@ -751,3 +766,9 @@ async def run_full_audit_async(url: str, project_config=None) -> AuditResult:
         prompt_injection=prompt_injection_result,
         trust_stack=trust_stack_result,
     )
+    result.audit_duration_ms = int((time.perf_counter() - _t0) * 1000)
+    if result.audit_duration_ms > AUDIT_TIMEOUT_SECONDS * 1000:
+        logging.getLogger(__name__).warning(
+            "Audit exceeded %ds budget: %dms for %s", AUDIT_TIMEOUT_SECONDS, result.audit_duration_ms, base_url
+        )
+    return result
