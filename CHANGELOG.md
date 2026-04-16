@@ -5,6 +5,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ---
 
+## [4.9.0] — 2026-04-16
+
+### Added
+- **Context Window Optimization** (#370) — analyzes how effectively content utilizes LLM context windows: token estimation, front-loading ratio, filler detection, truncation risk per platform (RAG/Perplexity/ChatGPT/Claude), efficiency score 0–100
+- **Instruction Following Readiness** (#371) — measures how easily AI agents can interact with a page: action clarity (labeled vs unlabeled CTAs), form machine-readability, workflow linearity, error recovery (aria-live, role=alert), readiness score 0–100 with 4 levels
+- **AGENTS.md** — structured guidance document for AI coding agents working on the codebase
+
+### Fixed
+- Ruff lint issues in `audit_instruction.py` (SIM103, UP034)
+- Formatter integration: context window (section 17) and instruction readiness (section 18) now appear in JSON and rich text output
+
+### Changed
+- `.gitignore` updated to exclude `local_cache/` and `.codex`
+- mypy type checking added to CI with gradual adoption (#129)
+
+### Tests
+- 1364 tests (all mocked, zero network), up from 1309
+- 55 new tests: 21 context window + 34 instruction readiness
+
+### RAG Intelligence — Complete
+The RAG cluster is now feature-complete with 4 checks:
+1. RAG Chunk Readiness (#353, v4.7.0)
+2. Embedding Proximity (#354, v4.7.0)
+3. Context Window Optimization (#370)
+4. Instruction Following Readiness (#371)
+
+---
+
 ## [4.8.0] — 2026-04-16
 
 ### Added
