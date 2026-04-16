@@ -119,9 +119,7 @@ def _has_label(el) -> bool:
     if el.get("aria-label"):
         return True
     # title attribute
-    if el.get("title"):
-        return True
-    return False
+    return bool(el.get("title"))
 
 
 def _analyze_forms(body) -> tuple[int, int, int]:
@@ -162,9 +160,7 @@ def _input_has_label(inp, body) -> bool:
     if inp_id and body.find("label", attrs={"for": inp_id}):
         return True
     # Wrapping <label>
-    if inp.find_parent("label"):
-        return True
-    return False
+    return bool(inp.find_parent("label"))
 
 
 def _action_clarity_score(labeled: int, unlabeled: int) -> int:
@@ -182,7 +178,7 @@ def _form_readability_score(total: int, labeled: int, typed: int) -> int:
         return 100  # No forms = no problem
     label_ratio = labeled / total
     type_ratio = typed / total
-    return min(int((label_ratio * 60 + type_ratio * 40)), 100)
+    return min(int(label_ratio * 60 + type_ratio * 40), 100)
 
 
 def _compute_readiness_score(

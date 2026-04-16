@@ -190,6 +190,14 @@ def format_audit_json(result: AuditResult) -> str:
         bs.pop("raw_response", None)  # exclude verbose raw response from JSON
         data["brand_sentiment"] = bs
 
+    # v4.9: Context Window Optimization (#370)
+    if hasattr(result, "context_window") and result.context_window and result.context_window.checked:
+        data["context_window"] = asdict(result.context_window)
+
+    # v4.9: Instruction Following Readiness (#371)
+    if hasattr(result, "instruction_readiness") and result.instruction_readiness and result.instruction_readiness.checked:
+        data["instruction_readiness"] = asdict(result.instruction_readiness)
+
     # Metadata
     data["http_status"] = result.http_status
     data["page_size"] = result.page_size
@@ -466,6 +474,28 @@ def format_audit_text(result: AuditResult) -> str:
                 lines.append(f"    ✅ {s}")
             for r in p.recommendations[:2]:
                 lines.append(f"    💡 {r}")
+
+    # Context Window Optimization (#370)
+    cw = getattr(result, "context_window", None)
+    if cw and cw.checked and cw.total_words > 0:
+        lines.append("")
+        lines.append(_section_header("17. CONTEXT WINDOW OPTIMIZATION"))
+        risk_icon = {"high": "🔴", "medium": "🟡", "low": "🟢", "none": "⚪"}.get(cw.truncation_risk, "⚪")
+        lines.append(f"  Tokens: ~{cw.total_tokens_estimate} ({cw.total_words} words)")
+        lines.append(f"  Front-loading: {cw.front_loaded_ratio:.0%} | Filler: {cw.filler_ratio:.0%}")
+        lines.append(f"  Truncation risk: {risk_icon} {cw.truncation_risk}")
+        lines.append(f"  Fits: {', '.join(cw.optimal_for) if cw.optimal_for else 'none'}")
+        lines.append(f"  Efficiency: {cw.context_efficiency_score}/100")
+
+    # Instruction Following Readiness (#371)
+    ir = getattr(result, "instruction_readiness", None)
+    if ir and ir.checked and ir.readiness_level != "none":
+        lines.append("")
+        lines.append(_section_header("18. INSTRUCTION FOLLOWING READINESS"))
+        lines.append(f"  Actions: {ir.labeled_buttons} labeled, {ir.unlabeled_buttons} unlabeled ({ir.action_clarity_score}/100)")
+        lines.append(f"  Forms: {ir.labeled_inputs}/{ir.total_inputs} labeled, {ir.typed_inputs} typed ({ir.form_readability_score}/100)")
+        lines.append(f"  Error recovery: aria-live {'✅' if ir.has_aria_live else '❌'} | roles {'✅' if ir.has_error_roles else '❌'}")
+        lines.append(f"  Readiness: {ir.readiness_score}/100 ({ir.readiness_level})")
 
     # Score
     lines.append("")
