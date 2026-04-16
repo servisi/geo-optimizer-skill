@@ -654,6 +654,34 @@ class MultiTurnResult:
     llm_model: str = ""
 
 
+# ─── Cross-Platform Citation Map (v4.7) ─────────────────────────────────────
+
+
+@dataclass
+class CitationMapEntry:
+    """A single entry in the cross-platform citation map (#356)."""
+
+    query: str = ""
+    platform: str = ""
+    brand_mentioned: bool = False
+    sentiment: str = ""  # positive | neutral | negative
+    faithfulness: float = 0.0
+    snippet: str = ""
+
+
+@dataclass
+class CitationMapResult:
+    """Cross-platform citation map aggregation (#356)."""
+
+    checked: bool = False
+    skipped_reason: str | None = None
+    brand: str = ""
+    entries: list[CitationMapEntry] = field(default_factory=list)
+    platforms_tested: int = 0
+    platforms_citing: int = 0
+    overall_visibility: float = 0.0  # 0-1
+
+
 # ─── Full audit ──────────────────────────────────────────────────────────────
 
 
