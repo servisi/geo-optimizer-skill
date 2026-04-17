@@ -19,9 +19,23 @@ from geo_optimizer.models.results import InstructionReadinessResult
 # Elements that represent interactive actions
 _BUTTON_TAGS = {"button", "a"}
 _INPUT_TYPES_EXPLICIT = {
-    "text", "email", "password", "tel", "url", "number", "date",
-    "datetime-local", "month", "week", "time", "search", "color", "range",
-    "file", "checkbox", "radio",
+    "text",
+    "email",
+    "password",
+    "tel",
+    "url",
+    "number",
+    "date",
+    "datetime-local",
+    "month",
+    "week",
+    "time",
+    "search",
+    "color",
+    "range",
+    "file",
+    "checkbox",
+    "radio",
 }
 
 
@@ -54,16 +68,17 @@ def audit_instruction_readiness(soup, raw_html: str = "") -> InstructionReadines
 
     # 4. Error recovery
     has_aria_live = bool(body.find(attrs={"aria-live": True}))
-    has_error_roles = bool(
-        body.find(attrs={"role": "alert"})
-        or body.find(attrs={"aria-invalid": True})
-    )
+    has_error_roles = bool(body.find(attrs={"role": "alert"}) or body.find(attrs={"aria-invalid": True}))
 
     # Compute sub-scores
     action_score = _action_clarity_score(labeled, unlabeled)
     form_score = _form_readability_score(total_inputs, labeled_inputs, typed_inputs)
     readiness_score = _compute_readiness_score(
-        action_score, form_score, stateful_urls, has_aria_live, has_error_roles,
+        action_score,
+        form_score,
+        stateful_urls,
+        has_aria_live,
+        has_error_roles,
     )
     readiness_level = _compute_level(readiness_score)
 

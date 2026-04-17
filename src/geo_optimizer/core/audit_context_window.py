@@ -22,10 +22,10 @@ _TOKENS_PER_WORD = 1.3
 
 # Platform context windows (in tokens)
 _PLATFORMS = {
-    "rag_chunk": 400,       # ~300 words, typical RAG chunk
-    "perplexity": 4000,     # Perplexity answer context
-    "chatgpt": 128000,      # GPT-4o
-    "claude": 200000,       # Claude 3.5+
+    "rag_chunk": 400,  # ~300 words, typical RAG chunk
+    "perplexity": 4000,  # Perplexity answer context
+    "chatgpt": 128000,  # GPT-4o
+    "claude": 200000,  # Claude 3.5+
 }
 
 # Filler patterns: navigation, boilerplate, repetitive CTAs
@@ -39,12 +39,12 @@ _FILLER_RE = re.compile(
 # Key info patterns: definitions, statistics, facts, answers
 _KEY_INFO_RE = re.compile(
     r"(?:"
-    r"\b\d+(?:\.\d+)?%"                          # percentages
-    r"|\b\d{4}\b"                                 # years
-    r"|\$\d+"                                     # dollar amounts
-    r"|\b(?:is|are|means?|refers?\s+to)\b"        # definitions
+    r"\b\d+(?:\.\d+)?%"  # percentages
+    r"|\b\d{4}\b"  # years
+    r"|\$\d+"  # dollar amounts
+    r"|\b(?:is|are|means?|refers?\s+to)\b"  # definitions
     r"|\b(?:according to|study|research|data)\b"  # citations
-    r"|\b(?:step \d|first|second|third)\b"        # structured info
+    r"|\b(?:step \d|first|second|third)\b"  # structured info
     r")",
     re.IGNORECASE,
 )

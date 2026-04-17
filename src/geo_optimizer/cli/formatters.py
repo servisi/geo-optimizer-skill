@@ -195,7 +195,11 @@ def format_audit_json(result: AuditResult) -> str:
         data["context_window"] = asdict(result.context_window)
 
     # v4.9: Instruction Following Readiness (#371)
-    if hasattr(result, "instruction_readiness") and result.instruction_readiness and result.instruction_readiness.checked:
+    if (
+        hasattr(result, "instruction_readiness")
+        and result.instruction_readiness
+        and result.instruction_readiness.checked
+    ):
         data["instruction_readiness"] = asdict(result.instruction_readiness)
 
     # Metadata
@@ -492,9 +496,15 @@ def format_audit_text(result: AuditResult) -> str:
     if ir and ir.checked and ir.readiness_level != "none":
         lines.append("")
         lines.append(_section_header("18. INSTRUCTION FOLLOWING READINESS"))
-        lines.append(f"  Actions: {ir.labeled_buttons} labeled, {ir.unlabeled_buttons} unlabeled ({ir.action_clarity_score}/100)")
-        lines.append(f"  Forms: {ir.labeled_inputs}/{ir.total_inputs} labeled, {ir.typed_inputs} typed ({ir.form_readability_score}/100)")
-        lines.append(f"  Error recovery: aria-live {'✅' if ir.has_aria_live else '❌'} | roles {'✅' if ir.has_error_roles else '❌'}")
+        lines.append(
+            f"  Actions: {ir.labeled_buttons} labeled, {ir.unlabeled_buttons} unlabeled ({ir.action_clarity_score}/100)"
+        )
+        lines.append(
+            f"  Forms: {ir.labeled_inputs}/{ir.total_inputs} labeled, {ir.typed_inputs} typed ({ir.form_readability_score}/100)"
+        )
+        lines.append(
+            f"  Error recovery: aria-live {'✅' if ir.has_aria_live else '❌'} | roles {'✅' if ir.has_error_roles else '❌'}"
+        )
         lines.append(f"  Readiness: {ir.readiness_score}/100 ({ir.readiness_level})")
 
     # Score
