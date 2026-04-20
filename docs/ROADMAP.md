@@ -18,13 +18,13 @@ Some of these themes will span multiple releases. Specific scope may shift as re
 
 | Version | Window | Codename | Theme |
 |---------|--------|----------|-------|
-| v4.10.0 | Late May / Early Jun 2026 | **Meridian** | Signal architecture refinement |
-| v4.11.0 | Mid / Late Jul 2026 | **Parallax** | Expanded retrieval surface analysis |
-| v4.12.0 | Sep 2026 | **Undertow** | Scoring model recalibration |
-| v4.13.0 | Nov 2026 | **Tessera** | Structural pattern recognition |
+| v4.10.0 | Late May / Early Jun 2026 | **Veil** | Signal architecture refinement |
+| v4.11.0 | Mid / Late Jul 2026 | **Static** | Expanded retrieval surface analysis |
+| v4.12.0 | Sep 2026 | **Ledger** | Scoring model recalibration |
+| v4.13.0 | Nov 2026 | **Quiet Glass** | Structural pattern recognition |
 | v4.14.0-rc1 | Jan 2027 | **Threshold** | Pre-release validation cycle |
-| v4.14.0-rc2 / v4.15.0 | Mar 2027 | **Aperture** | Stabilization and edge resolution |
-| v5.0.0 | May 2027 | **Cartograph** | Next-generation audit framework |
+| v4.14.0-rc2 / v4.15.0 | Mar 2027 | **Pale Signal** | Stabilization and edge resolution |
+| v5.0.0 | May 2027 | **Black Archive** | Next-generation audit framework |
 
 Release windows are estimates. Dates may shift based on validation outcomes and testing discipline.
 

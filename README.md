@@ -280,13 +280,13 @@ This project follows a deliberate release cadence — focused waves, not noisy p
 
 | Version | Window | Codename |
 |---------|--------|----------|
-| v4.10.0 | Late May / Early Jun 2026 | Meridian |
-| v4.11.0 | Mid / Late Jul 2026 | Parallax |
-| v4.12.0 | Sep 2026 | Undertow |
-| v4.13.0 | Nov 2026 | Tessera |
+| v4.10.0 | Late May / Early Jun 2026 | Veil |
+| v4.11.0 | Mid / Late Jul 2026 | Static |
+| v4.12.0 | Sep 2026 | Ledger |
+| v4.13.0 | Nov 2026 | Quiet Glass |
 | v4.14.0-rc1 | Jan 2027 | Threshold |
-| v4.14.0-rc2 / v4.15.0 | Mar 2027 | Aperture |
-| v5.0.0 | May 2027 | Cartograph |
+| v4.14.0-rc2 / v4.15.0 | Mar 2027 | Pale Signal |
+| v5.0.0 | May 2027 | Black Archive |
 
 Next focus areas: signal architecture, retrieval surface analysis, scoring recalibration, and structural pattern recognition. The v5.0 cycle represents a broader architectural evolution.
 

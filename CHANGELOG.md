@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · [SemVer](https://semv
 
 ## [Unreleased]
 
-Next planned release: **v4.10.0** (Meridian) — Late May / Early June 2026.
+Next planned release: **v4.10.0** (Veil) — Late May / Early June 2026.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the full release calendar and project direction.
 
