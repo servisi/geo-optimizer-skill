@@ -274,6 +274,26 @@ We focus on **technical infrastructure** (robots.txt, llms.txt, schema, meta) ov
 
 ---
 
+## Roadmap
+
+This project follows a deliberate release cadence — focused waves, not noisy patches.
+
+| Version | Window | Codename |
+|---------|--------|----------|
+| v4.10.0 | Late May / Early Jun 2026 | Meridian |
+| v4.11.0 | Mid / Late Jul 2026 | Parallax |
+| v4.12.0 | Sep 2026 | Undertow |
+| v4.13.0 | Nov 2026 | Tessera |
+| v4.14.0-rc1 | Jan 2027 | Threshold |
+| v4.14.0-rc2 / v4.15.0 | Mar 2027 | Aperture |
+| v5.0.0 | May 2027 | Cartograph |
+
+Next focus areas: signal architecture, retrieval surface analysis, scoring recalibration, and structural pattern recognition. The v5.0 cycle represents a broader architectural evolution.
+
+Full release calendar, philosophy, and direction → [docs/ROADMAP.md](docs/ROADMAP.md)
+
+---
+
 ## Security
 
 All URL inputs are validated against private IP ranges (RFC 1918, loopback, link-local, cloud metadata) with DNS pinning before any request. See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.

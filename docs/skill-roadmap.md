@@ -2,7 +2,7 @@
 
 Maintainer roadmap for the internal GEO skill catalog.
 
-This document exists to keep the catalog strategic, narrow, and grounded in real GEO Optimizer surfaces. It is not a product roadmap and it is not a prompt backlog.
+This document exists to keep the catalog strategic, narrow, and grounded in real GEO Optimizer surfaces. It is not a product roadmap and it is not a prompt backlog. For the product release calendar, see [ROADMAP.md](ROADMAP.md).
 
 ## Purpose
 
@@ -191,3 +191,7 @@ Strong justification signals would be:
 - pressure to render skill specs into runtime artifacts automatically
 
 Until then, the current catalog-plus-validation model is the right level of abstraction.
+
+---
+
+*For the product release calendar and project direction, see [ROADMAP.md](ROADMAP.md).*
