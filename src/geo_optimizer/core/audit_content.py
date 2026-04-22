@@ -58,7 +58,10 @@ def audit_content_quality(soup, url: str, soup_clean=None) -> ContentResult:
     all_links = soup.find_all("a", href=True)
     # Fix F-08: guard against empty base_domain (malformed URL)
     if base_domain:
-        external_links = [link for link in all_links if link["href"].startswith("http") and base_domain not in link["href"]]
+        external_links = [
+            link for link in all_links
+            if link["href"].startswith("http") and base_domain not in link["href"]
+        ]
     else:
         external_links = [link for link in all_links if link["href"].startswith("http")]
     result.external_links_count = len(external_links)
