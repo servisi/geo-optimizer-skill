@@ -59,8 +59,7 @@ def audit_content_quality(soup, url: str, soup_clean=None) -> ContentResult:
     # Fix F-08: guard against empty base_domain (malformed URL)
     if base_domain:
         external_links = [
-            link for link in all_links
-            if link["href"].startswith("http") and base_domain not in link["href"]
+            link for link in all_links if link["href"].startswith("http") and base_domain not in link["href"]
         ]
     else:
         external_links = [link for link in all_links if link["href"].startswith("http")]
